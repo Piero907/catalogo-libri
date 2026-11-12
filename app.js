@@ -356,11 +356,13 @@ function niceCase(s, words) {
   if (s !== s.toUpperCase()) return s;
   return words ? s.toLowerCase().replace(/(^|[\s'’-])(\S)/g, function (m, a, c) { return a + c.toUpperCase(); }) : capFirst(s);
 }
+var sameAs = {};                                  // foto di un libro gia' in elenco -> id del libro esistente
 function fromIsbn(id, code, price) {
   var b = get(id), s = S[id];
   if (!b) return;
   var ex = findByIsbn(code);
   if (ex && ex.id !== id) {
+    sameAs[id] = ex.id;
     state.books = state.books.filter(function (x) { return x.id !== id; });
     delete S[id];
     refreshRow(id); touch(); updateSummary();
@@ -399,9 +401,24 @@ function applyOcrText(id) {
   if (!hasData(b)) { s.st = 'error'; s.err = 'Non ho letto nulla di utile. Scrivi i dati a mano o prova con il codice a barre.'; }
   touch(); refreshRow(id); updateSummary();
 }
-/* Legge il prezzo di copertina stampato (es. «€ 9,90») da una foto, con il riconoscimento del testo sul telefono. */
-async function readPriceFromCanvas(canvas, onMsg) {
-  var worker = await getOcr(function (p) { if (onMsg) onMsg('Leggo il prezzo… ' + p + '%'); });
+/* Lettore leggero solo per il prezzo: lingua inglese soltanto (cifre e «€» bastano), si avvia ~3 volte più in fretta di quello
+   per le copertine e si può preparare in anticipo, mentre scatti la foto. */
+var priceOcrP = null;
+function getPriceOcr() {
+  if (priceOcrP) return priceOcrP;
+  priceOcrP = (async function () {
+    if (!window.Tesseract) throw { code: 'ocr' };
+    var abs = function (p) { return new URL(p, location.href).href; };
+    var w = await window.Tesseract.createWorker('eng', 1, { workerPath: abs('vendor/worker.min.js'), corePath: abs('vendor/core'), langPath: abs('vendor/lang') });
+    await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) });
+    return w;
+  })();
+  priceOcrP.catch(function () { priceOcrP = null; });
+  return priceOcrP;
+}
+function warmPriceOcr() { setTimeout(function () { getPriceOcr().catch(function () {}); }, 300); }
+async function readPriceFromCanvas(canvas) {
+  var worker = await getPriceOcr();
   var res = await worker.recognize(canvas);
   return L.extractPrice((res.data || {}).text || '');
 }
@@ -419,19 +436,7 @@ async function processPhoto(id, file) {
     syncThumbs(); refreshRow(id);
     var code = await decodeCanvasBarcode(canvas);
     if (!get(id)) return;
-    if (code) {
-      await fromIsbn(id, code);
-      // la stessa foto del retro di solito mostra anche il prezzo stampato: lo leggo e lo scrivo solo se il costo è vuoto
-      var pb = get(id);
-      if (settings.price && pb && pb.c == null) {
-        try {
-          var pr = await readPriceFromCanvas(canvas);
-          pb = get(id);
-          if (pb && pr != null && pb.c == null) { pb.c = pr; touch(); refreshRow(id); updateSummary(); }
-        } catch (e) { /* il prezzo si può sempre scrivere a mano */ }
-      }
-      return;
-    }
+    if (code) { await fromIsbn(id, code); return; }
 
     s.msg = 'Preparo il riconoscimento del testo (solo la prima volta)…'; setStatusText(id, s.msg);
     var worker = await getOcr(function (p) { setStatusText(id, 'Leggo il testo… ' + p + '%'); });
@@ -470,22 +475,84 @@ async function processPhoto(id, file) {
     refreshRow(id);
   }
 }
-function addPhotos(files) {
+function addPhotos(files, ask) {
   var list = Array.prototype.slice.call(files || []).filter(function (f) { return !f.type || f.type.indexOf('image/') === 0; }).slice(0, 60);
   if (!list.length) return;
   q = ''; flt = ''; $('#q').value = ''; setView('list');
+  var last = null;
   list.forEach(function (f) {
     var id = newId();
     state.books.push(blankBook({ id: id }));
     S[id] = { st: 'queued', file: f };
     photoPool(function () { return processPhoto(id, f); });
+    last = id;
   });
   renderList(); updateSummary();
+  if (ask && settings.price && list.length === 1) askPrice(last);
 }
+/* Seconda foto, facoltativa: il prezzo. La chiedo subito, senza aspettare che il libro sia riconosciuto. */
+var askId = null;
+function askPrice(id) {
+  askId = id;
+  warmPriceOcr();
+  $('#priceAsk').hidden = false;
+}
+function bookFor(id) { return get(id) || (sameAs[id] && get(sameAs[id])) || null; }
 
 /* ---------- scansione dal vivo ---------- */
 var stream = null, scanTimer = null, scanCtx = { count: 0, added: 0, last: '', lastAt: 0 }, torchOn = false, liveCanvas = null, pushed = false;
 var scanMode = 'add';                         // 'add': aggiunge; 'check': «Ce l'ho già?», controlla soltanto
+var priceTarget = null, scanPaused = false;   // libro appena scansionato a cui dare il prezzo
+function priceBar(txt, btnLabel, busy) {
+  $('#scanPriceTxt').textContent = txt;
+  var b = $('#scanPriceBtn');
+  b.innerHTML = icon('euro') + (btnLabel || 'Leggi il prezzo');
+  b.disabled = !!busy;
+  $('#scanPrice').hidden = false;
+}
+/* Ritaglia dal video la zona del riquadro (un po' allargata), tenendo conto di come il video riempie lo schermo. */
+function guideCanvas(full) {
+  var v = $('#scanVideo'), vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return null;
+  var x = 0, y = 0, w = vw, h = vh;
+  if (!full) {
+    try {
+      var r = v.getBoundingClientRect(), g = $('#scanGuide').getBoundingClientRect();
+      var sc = Math.max(r.width / vw, r.height / vh), ox = (r.width - vw * sc) / 2, oy = (r.height - vh * sc) / 2;
+      var gw = g.width / sc, gh = g.height / sc;
+      x = (g.left - r.left - ox) / sc - gw * 0.15; y = (g.top - r.top - oy) / sc - gh * 0.25; w = gw * 1.3; h = gh * 1.5;
+      x = Math.max(0, x); y = Math.max(0, y); w = Math.min(vw - x, w); h = Math.min(vh - y, h);
+      if (!(w > 40 && h > 20)) throw 0;
+    } catch (e) { x = vw * 0.08; y = vh * 0.3; w = vw * 0.84; h = vh * 0.4; }
+  }
+  var k = Math.min(2.5, Math.max(1, 900 / w));
+  if (w * k > 1280) k = 1280 / w;
+  if (h * k > 1280) k = Math.min(k, 1280 / h);
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  c.getContext('2d').drawImage(v, x, y, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+async function readLivePrice() {
+  var id = priceTarget, b = id && get(id);
+  if (!b || scanPaused) return;
+  scanPaused = true;
+  priceBar('Leggo il prezzo…', 'Leggo…', true);
+  var pr = null;
+  try {
+    var c = guideCanvas(false);
+    pr = c ? await readPriceFromCanvas(c) : null;
+    if (pr == null && scanning) { c = guideCanvas(true); pr = c ? await readPriceFromCanvas(c) : null; }   // prezzo fuori dal riquadro
+  } catch (e) { pr = null; }
+  scanPaused = false;
+  if (!scanning) return;
+  b = get(id);
+  if (!b || priceTarget !== id) return;
+  if (pr == null) { beep(false); priceBar('Non trovo il prezzo. Avvicinati al «€» stampato, con buona luce, e riprova. Oppure passa al libro successivo.', 'Riprova'); return; }
+  b.c = pr; touch();
+  beep(true); vibrate(40);
+  priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
+}
 function scanMsg(t) { $('#scanMsg').textContent = t; }
 async function startScan(mode) {
   scanMode = mode === 'check' ? 'check' : 'add';
@@ -511,6 +578,8 @@ async function startScan(mode) {
   } catch (e) {}
   scanCtx = { count: 0, added: 0, last: '', lastAt: 0 };
   $('#scanRes').hidden = true; $('#scanRes').innerHTML = ''; resCode = ''; resKind = '';
+  $('#scanPrice').hidden = true; priceTarget = null; scanPaused = false;
+  if (scanMode === 'add' && settings.price) warmPriceOcr();
   $('#scan').classList.toggle('checking', scanMode === 'check');
   if (scanMode === 'check') {
     $('#scanCount').textContent = 'Ce l\'ho già?';
@@ -540,6 +609,7 @@ function stopScan(fromPop) {
 }
 async function scanTick() {
   if (!scanning) return;
+  if (scanPaused) { scanTimer = setTimeout(scanTick, 200); return; }
   var v = $('#scanVideo');
   try {
     if (v.videoWidth) {
@@ -569,6 +639,7 @@ function onScanned(code) {
   if (scanMode === 'check') { onCheck(code); return; }
   var res = addIsbn(code);
   if (res.moved) {
+    if (settings.price && res.moved.c == null) { priceTarget = res.moved.id; priceBar('Prezzo? Inquadra il prezzo stampato nel riquadro e tocca «Leggi il prezzo».'); }
     beep(true); vibrate(50);
     scanCtx.count++; scanCtx.added++;
     $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
@@ -576,6 +647,7 @@ function onScanned(code) {
     return;
   }
   if (res.dup) {
+    if (res.dup.id !== priceTarget) { $('#scanPrice').hidden = true; priceTarget = null; }
     beep(false); vibrate(120);
     scanMsg((res.dup.w ? 'Già nei Desideri: ' : (tab === 'wish' ? 'Ce l\'hai già in Libreria: ' : 'Già in elenco: ')) + (res.dup.t || code));
     return;
@@ -585,6 +657,7 @@ function onScanned(code) {
   $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
   scanMsg('Aggiunto ' + code + '. Cerco il titolo…');
   var book = res.book;
+  if (settings.price) { priceTarget = book.id; priceBar('Prezzo? Inquadra il prezzo stampato nel riquadro e tocca «Leggi il prezzo». Se non ti serve, passa al libro successivo.'); }
   res.done.then(function () {
     if (!scanning) return;
     scanMsg(book.t ? '✓ ' + book.t : (book.nf ? 'Non trovato nelle banche dati: lo completi dopo.' : 'Titolo da completare più tardi.'));
@@ -632,6 +705,7 @@ function onCheck(code) {
     }, function () { if (scanning && resCode === code && resKind === 'no') showRes(code, 'no', null, false); });
   }
 }
+$('#scanPriceBtn').addEventListener('click', readLivePrice);
 $('#scanRes').addEventListener('click', function (e) {
   var btn = e.target.closest('[data-act]');
   if (!btn || !resCode) return;
@@ -753,7 +827,7 @@ function emptyHTML() {
     '<ol class="steps">' +
     '<li>Tocca <b>Scansiona</b> e inquadra il codice a barre sul retro: titolo, autore, editore e anno arrivano da una banca dati.</li>' +
     '<li>Per un libro senza codice leggibile, tocca <b>Foto</b> e inquadra la copertina: leggo il testo e ti propongo i libri che corrispondono.</li>' +
-    '<li>Il costo è il prezzo di copertina: lo leggo dalla foto del retro (con il codice a barre) o dal tasto fotocamera sulla scheda, altrimenti lo scrivi tu. Poi correggi quello che serve e scarica l\'elenco.</li></ol>' +
+    '<li>Il costo è il prezzo di copertina: dopo ogni libro ti chiedo una foto ravvicinata del prezzo stampato (puoi saltarla), altrimenti lo scrivi tu. Poi correggi quello che serve e scarica l\'elenco.</li></ol>' +
     '<p class="ex-label">Esempio di scheda</p>' + rowHTML(ex, {}, true) + '</section>';
 }
 function wishEmptyHTML() {
@@ -1089,7 +1163,7 @@ function setTab(t) {
   flt = '';
   $('#tipTxt').textContent = tab === 'wish'
     ? 'Sei nei Desideri: Scansiona, Foto e Digita aggiungono qui i libri da comprare.'
-    : 'Scansiona il codice a barre: è il modo più preciso. Foto del retro: leggo anche il prezzo. Digita per scrivere l\'ISBN.';
+    : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere l\'ISBN.';
   document.body.classList.toggle('wishtab', tab === 'wish');
   renderList(); updateSummary();
 }
@@ -1292,22 +1366,25 @@ function bindFile(sel, fn) {
 var priceId = null;
 bindFile('#filePrice', async function (f) {
   var id = priceId; priceId = null;
-  var b = id && get(id);
+  var b = id && bookFor(id);
   if (!b) return;
-  toast('Leggo il prezzo… (la prima volta ci mette un po\')');
+  toast('Leggo il prezzo…');
   try {
-    var canvas = await loadCanvas(f[0], 2000);
+    var canvas = await loadCanvas(f[0], 1280);
     var pr = await readPriceFromCanvas(canvas);
-    b = get(id);
+    b = bookFor(id);
     if (!b) return;
+    id = b.id;
     if (pr == null) { toast('Non trovo il prezzo in questa foto: avvicinati al «€» stampato oppure scrivilo a mano.'); return; }
     var old = b.c;
     b.c = pr; touch(); refreshRow(id); updateSummary();
     toast('Prezzo letto: ' + eur(pr) + '. Controllalo.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.c = old; touch(); refreshRow(id); updateSummary(); } } });
   } catch (e) { toast('Non riesco a leggere la foto. Scrivi il prezzo a mano.'); }
 });
-bindFile('#fileCam', addPhotos);
-bindFile('#fileGal', addPhotos);
+bindFile('#fileCam', function (f) { addPhotos(f, true); });
+bindFile('#fileGal', function (f) { addPhotos(f, false); });
+$('#priceShot').addEventListener('click', function () { $('#priceAsk').hidden = true; priceId = askId; askId = null; $('#filePrice').click(); });
+$('#priceSkip').addEventListener('click', function () { $('#priceAsk').hidden = true; askId = null; });
 bindFile('#fileBackup', function (f) { restore(f[0]); });
 $('#btnScan').addEventListener('click', startScan);
 $('#btnPhoto').addEventListener('click', function () { $('#fileCam').click(); });
@@ -1331,7 +1408,7 @@ $('#pickList').addEventListener('click', function (e) {
 $('#copyClose').addEventListener('click', function () { $('#copySheet').hidden = true; });
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
-  ['#statsSheet', '#exportSheet', '#pubSheet'].forEach(function (k) { $(k).hidden = true; });
+  ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });
 $('#q').addEventListener('input', function (e) { q = e.target.value; renderList(); });
@@ -1484,7 +1561,7 @@ $('#btnInstDiag').addEventListener('click', async function () {
   btn.disabled = false;
 });
 $('#gbKey').value = '';
-$('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Leggerò anche il prezzo dalle foto con il codice a barre.' : 'Non leggerò il prezzo dalle foto: usa «Foto prezzo» sulla scheda.'); });
+$('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: resta il tasto fotocamera sulla scheda del libro.'); });
 $('#gbKey').addEventListener('change', function (e) { settings.gbKey = e.target.value.trim(); saveSettings(); toast(settings.gbKey ? 'Chiave salvata.' : 'Chiave rimossa.'); });
 $('#btnClearGuess').addEventListener('click', function () {
   var snapshot = JSON.stringify(state.books), n = 0;

@@ -77,7 +77,7 @@
       </label>
       <label class="check">
         <input type="checkbox" id="optPrice" checked>
-        <span>Leggi il prezzo dalle foto del retro<small>Quando fotografi un libro con il codice a barre, legge anche il prezzo di copertina stampato (€). Rende la lettura di ogni foto un po' più lenta: spegni se fotografi tanti libri insieme.</small></span>
+        <span>Chiedi il prezzo dopo ogni libro<small>Dopo la foto di un libro ti chiedo una seconda foto, facoltativa, del prezzo stampato; con Scansiona compare il pulsante «Leggi il prezzo». Spegni se il prezzo non ti interessa.</small></span>
       </label>
       <div class="opts-row">
         <button class="btn" id="btnDiag">Prova la ricerca ISBN</button>
@@ -111,7 +111,7 @@
     <button class="btn" id="btnPhoto"></button>
     <button class="btn" id="btnType"></button>
   </div>
-  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Foto del retro: leggo anche il prezzo. Digita per scrivere l'ISBN.</p>
+  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere l'ISBN.</p>
 </div>
 
 <div class="scan" id="scan" hidden>
@@ -123,6 +123,7 @@
   </div>
   <div class="scan-mid"><div class="scan-guide" id="scanGuide"></div></div>
   <div class="scan-res" id="scanRes" hidden aria-live="polite"></div>
+  <div class="scan-price" id="scanPrice" hidden><span id="scanPriceTxt" aria-live="polite"></span><button class="btn primary" id="scanPriceBtn">Leggi il prezzo</button></div>
   <p class="scan-msg" id="scanMsg" role="status">Inquadra il codice a barre, di solito sul retro. Ogni libro viene aggiunto da solo.</p>
 </div>
 
@@ -157,6 +158,18 @@
     <p class="msg">Il telefono non ha permesso la copia automatica. Seleziona il testo, copialo e incollalo in Excel o Fogli Google.</p>
     <textarea class="big" id="copyBox" readonly aria-label="Elenco da copiare" style="height:180px"></textarea>
     <button class="btn primary" id="copyClose">Chiudi</button>
+  </div>
+</div>
+
+<div class="sheet" id="priceAsk" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="priceAskH">
+    <h2 id="priceAskH">E il prezzo?</h2>
+    <p class="msg">Fotografa <b>da vicino</b> il prezzo stampato (es. «€ 14,00»), di solito sul retro in basso. Intanto cerco il libro.</p>
+    <div class="row-btns">
+      <button class="btn" id="priceSkip">Salta</button>
+      <button class="btn primary" id="priceShot">Fotografa il prezzo</button>
+    </div>
+    <p class="hint">Puoi non farti più chiedere il prezzo: Opzioni › «Chiedi il prezzo dopo ogni libro».</p>
   </div>
 </div>
 

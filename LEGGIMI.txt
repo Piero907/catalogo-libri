@@ -89,18 +89,20 @@ COME SI USA
 - Digita: scrivi o incolla uno o piu' codici ISBN (uno per riga).
 - Il costo e' il PREZZO DI COPERTINA, che nessuna banca dati gratuita
   conosce per i libri italiani: l'app lo legge dal prezzo stampato
-  (es. "€ 9,90"), di solito sul retro vicino al codice a barre.
-  * Foto del retro: se nella foto c'e' il codice a barre, l'app legge
-    l'ISBN E il prezzo insieme (un solo scatto per libro). E' un po' piu'
-    lento; si puo' spegnere in Opzioni ("Leggi il prezzo dalle foto del retro").
-  * Scansiona dal vivo: legge solo il codice. Sulla scheda del libro, se il
-    costo e' vuoto, compaiono due pulsanti: la macchina fotografica (foto
-    del prezzo stampato: lo legge e lo scrive, con "Annulla") e il simbolo €
-    (apre la ricerca sul web con l'ISBN, per vedere il prezzo nei negozi).
-  * Il prezzo letto va sempre controllato: se la foto e' storta o il prezzo
-    e' scritto in modo insolito l'app puo' non trovarlo (scrivilo a mano) o,
-    raramente, leggere male una cifra. Un costo che hai gia' scritto tu non
-    viene mai sovrascritto.
+  (es. "€ 14,00"), di solito sul retro in basso.
+  * Foto: la prima foto e' per il libro (codice a barre o copertina).
+    Subito dopo l'app chiede "E il prezzo?": "Fotografa il prezzo" e
+    fai una foto DA VICINO al solo prezzo, oppure "Salta". Il libro viene
+    cercato intanto, senza aspettare.
+  * Scansiona dal vivo: dopo ogni codice a barre compare il pulsante
+    "Leggi il prezzo". Inquadra il prezzo nel riquadro e toccalo: niente
+    foto da scattare. Se non ti serve, passa al libro successivo.
+  * Se l'hai saltato: sulla scheda del libro il tasto fotocamera legge il
+    prezzo da una foto, il tasto € lo cerca sul web.
+  * Non ti interessa il prezzo? Opzioni > togli "Chiedi il prezzo dopo
+    ogni libro".
+  * Il prezzo letto va controllato: con foto storta o mossa l'app puo' non
+    trovarlo (scrivilo a mano) o, raramente, leggere male una cifra.
   * Prezzo di copertina = quello stampato sul libro, non quanto l'hai pagato.
 - Esporta: "Scarica Excel (.xlsx)" crea un vero file Excel (intestazione
   in grassetto, filtri, costo in euro, ISBN come testo). Ci sono anche
