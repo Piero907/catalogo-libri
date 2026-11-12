@@ -45,7 +45,7 @@ function pool(n) {
   }
   return function (fn) { return new Promise(function (res, rej) { q.push(function () { return fn().then(res, rej); }); next(); }); };
 }
-var lookupPool = pool(2), photoPool = pool(1);
+var lookupPool = pool(2), photoPool = pool(1), coverPool = pool(2);
 var eurFmt = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
 var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 
@@ -60,6 +60,8 @@ var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
 
 function newId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function get(id) { for (var i = 0; i < state.books.length; i++) if (state.books[i].id === id) return state.books[i]; return null; }
+function smallImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.img || b.imgL || s.thumb || ''; }
+function bigImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.imgL || b.img || s.big || s.thumb || ''; }
 function hasData(b) { return !!(b.t || b.a || b.e || b.y || b.i || b.c != null || b.n); }
 function inTab(b) { return !!b.w === (tab === 'wish'); }
 function tabBooks() { return state.books.filter(inTab); }
@@ -67,7 +69,7 @@ function blankBook(o) {
   return Object.assign({ id: newId(), t: '', a: '', e: '', y: '', c: null, i: '', g: [], img: '', nf: false, ts: Date.now(),
     sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish' }, o || {});
 }
-var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w'];
+var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w'];
 function isBusy(b) { var st = (S[b.id] || {}).st; return st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search'; }
 function cleanBook(x) {
   if (!x || typeof x !== 'object') return null;
@@ -80,6 +82,7 @@ function cleanBook(x) {
     i: L.str(x.i).replace(/[^\dXx]/g, '').toUpperCase(),
     g: Array.isArray(x.g) ? x.g.filter(function (k) { return ['t', 'a', 'e', 'y', 'i'].indexOf(k) >= 0; }) : [],
     img: /^https:\/\//.test(img) ? img : '',
+    imgL: /^https:\/\//.test(L.str(x.imgL)) ? L.str(x.imgL) : '',
     nf: !!x.nf,
     ts: Number(x.ts) || 0,
     sh: L.str(x.sh).slice(0, 80), n: L.str(x.n).slice(0, 2000), gen: L.str(x.gen).slice(0, 80),
@@ -102,6 +105,7 @@ function persist() {
 }
 function touch() {
   state.updated = Date.now();
+  backupReady = null;
   clearTimeout(tSave);
   tSave = setTimeout(persist, 350);
 }
@@ -277,6 +281,7 @@ async function doLookup(id) {
     if (r) {
       applyResult(b, r, code);
       delete s.st;
+      coverPool(function () { return probeCover(id); });
     } else {
       b.nf = true;
       guessEditor(b);
@@ -388,6 +393,7 @@ function applyCandidate(id, c) {
   if (c.pg && !b.pg) b.pg = c.pg;
   if (c.i && !findByIsbn(c.i)) b.i = c.i;
   if (c.img) b.img = c.img;
+  if (!b.img && s.big && !coverURL[id]) saveCoverData(id, s.big);
   b.g = ['e', 'y', 'i'].filter(function (k) { return b[k]; });
   if (s.price != null && b.c == null) b.c = s.price;
   b.nf = false;
@@ -399,6 +405,7 @@ function applyOcrText(id) {
   if (!b) return;
   var ta = L.splitTitleAuthor(s.lines || []);
   if (ta.t) { b.t = niceCase(ta.t, false); b.g.push('t'); }
+  if (s.big && !b.img && !coverURL[id]) saveCoverData(id, s.big);
   if (ta.a) { b.a = niceCase(ta.a, true); b.g.push('a'); }
   if (s.price != null && b.c == null) b.c = s.price;
   ['st', 'cands', 'lines', 'price', 'err', 'retry'].forEach(function (k) { delete s[k]; });
@@ -798,7 +805,7 @@ function summaryHTML(b, dups, status) {
   if (b.i && !L.toIsbn13(b.i)) tags += '<span class="tag bad">ISBN non valido</span>';
   else if (!b.t && b.i && !s.st && b.nf) tags += '<span class="tag warn">Non trovato</span>';
   var title = b.t || (b.i ? 'ISBN ' + b.i : 'Senza titolo');
-  var img = b.img || s.thumb || '';
+  var img = smallImg(b);
   var cover = img ? '<span class="sum-img zoom" data-act="zoom" title="Ingrandisci la copertina"><img src="' + esc(img) + '" alt="Copertina: tocca per ingrandire" loading="lazy" referrerpolicy="no-referrer"></span>'
     : '<span class="sum-img ph" style="--h:' + hue(b.t + b.a + b.i) + '" aria-hidden="true">' + esc((b.t || '?').replace(/^(il|lo|la|i|gli|le|un|uno|una|l')\s*/i, '').charAt(0).toUpperCase() || '?') + '</span>';
   return '<article class="row closed' + (status.indexOf('status err') >= 0 ? ' bad' : '') + '" data-id="' + b.id + '">' +
@@ -823,8 +830,9 @@ function rowHTML(b, dups, ex) {
   var busy = st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search';
   var fresh = st && !hasData(b);
   var dis = (busy || ex) ? ' disabled' : '';
-  var imgSrc = b.img || s.thumb || '';
-  var hasThumb = !!imgSrc || (!!st && !ex);
+  var imgSrc = smallImg(b);
+  var canShoot = !ex && !busy && !imgSrc && hasData(b);
+  var hasThumb = !!imgSrc || (!!st && !ex) || canShoot;
   var cls = 'row' + (busy ? ' busy' : '') + (st === 'error' ? ' bad' : '') + (hasThumb ? ' has-thumb' : '') + (ex ? ' ex' : '');
   function fieldTitle(k) { return b.g.indexOf(k) >= 0 ? ' title="Da verificare"' : ''; }
   function ta(k, label, val, ph) {
@@ -843,7 +851,9 @@ function rowHTML(b, dups, ex) {
   else if (st === 'choose') status = '<div class="status"><span class="txt">Trovate ' + ((s.cands || []).length) + ' possibili edizioni.</span><button class="btn primary" data-act="choose">Scegli</button></div>';
   else if (st === 'error') status = '<div class="status err" role="alert"><span class="txt">' + esc(s.err || 'Operazione non riuscita.') + '</span>' + (s.retry ? '<button class="btn" data-act="retry">Riprova</button>' : '') + '</div>';
 
-  var thumb = '<div class="thumb' + (hasThumb ? '' : ' empty') + (imgSrc && !ex ? ' zoom" data-act="zoom" role="button" tabindex="0" title="Ingrandisci la copertina' : '') + '">' + (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="" referrerpolicy="no-referrer">' : '') + '</div>';
+  var thumb = canShoot
+    ? '<button class="thumb add" data-act="coverphoto" title="Fotografa la copertina" aria-label="Fotografa la copertina">' + icon('cam') + '</button>'
+    : '<div class="thumb' + (hasThumb ? '' : ' empty') + (imgSrc && !ex ? ' zoom" data-act="zoom" role="button" tabindex="0" title="Ingrandisci la copertina' : '') + '">' + (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="" referrerpolicy="no-referrer">' : '') + '</div>';
   var body;
   if (fresh) {
     cls += ' fresh';
@@ -889,7 +899,7 @@ function wishEmptyHTML() {
 /* vista copertine */
 function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h % 360; }
 function coverHTML(b) {
-  var s = S[b.id] || {}, img = b.img || s.thumb || '';
+  var s = S[b.id] || {}, img = bigImg(b);
   var badge = isBusy(b) ? '<span class="badge">…</span>' : b.p ? '<span class="badge loan">Prestato</span>' : b.g.length ? '<span class="badge warn">Da verificare</span>' : '';
   return '<button class="cover" data-id="' + b.id + '" aria-label="' + esc([b.t || 'Senza titolo', b.a].filter(Boolean).join(', ')) + '">' +
     '<span class="art">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' :
@@ -904,7 +914,7 @@ function autosizeAll(root) {
   els.forEach(function (e, i) { if (hs[i]) e.style.height = hs[i] + 'px'; });
 }
 function syncThumbs() {
-  var any = state.books.some(function (b) { return b.img || (S[b.id] && S[b.id].thumb); });
+  var any = state.books.some(function (b) { return !!smallImg(b); });
   document.body.classList.toggle('thumbs', any);
 }
 function fillDatalists() {
@@ -1109,10 +1119,34 @@ function saveXLSX() {
   toast('File Excel scaricato: lo trovi nei Download.');
 }
 /* ---------- backup ---------- */
-function backupData() { return JSON.stringify({ app: 'catalogo-libri', v: 3, books: storable() }); }
+var backupReady = null;
+function coverIds() { return Object.keys(coverURL).filter(function (id) { return !!get(id); }); }
+/* Senza foto tue il backup e' pronto subito; con le foto va preparato prima (si leggono dal telefono), cosi' la condivisione parte al tocco. */
+function backupData() { return coverIds().length ? backupReady : JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable() }); }
+async function buildBackup() {
+  var o = { app: 'catalogo-libri', v: 4, books: storable() }, ids = coverIds();
+  if (ids.length) {
+    o.covers = {};
+    var all = await idbAll();
+    for (var i = 0; i < all.length; i++) if (ids.indexOf(all[i][0]) >= 0) o.covers[all[i][0]] = await blobToDataURL(all[i][1]);
+  }
+  return JSON.stringify(o);
+}
+function prepBackup() {
+  var btns = [$('#btnShareBackup'), $('#btnBackup')], n = coverIds().length;
+  if (!n) { btns.forEach(function (x) { x.disabled = false; }); return; }
+  btns.forEach(function (x) { x.disabled = true; });
+  $('#backupNote').textContent = 'Preparo il backup con ' + n + (n === 1 ? ' tua foto' : ' tue foto') + ' di copertina…';
+  buildBackup().then(function (data) {
+    backupReady = data;
+    btns.forEach(function (x) { x.disabled = false; });
+    $('#backupNote').textContent = 'Il backup comprende ' + n + (n === 1 ? ' tua foto' : ' tue foto') + ' di copertina (' + (data.length / 1048576).toFixed(1).replace('.', ',') + ' MB).';
+  }, function () { btns.forEach(function (x) { x.disabled = false; }); $('#backupNote').textContent = 'Non riesco a leggere le tue foto: il backup comprenderà solo i dati dei libri.'; backupReady = JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable() }); });
+}
 function markBackup() { settings.lastBackup = Date.now(); saveSettings(); updateBackupInfo(); if (noticeKind === 'backup') $('#notice').hidden = true; }
 function backup() {
   if (!storable().length) { toast('L\'elenco è vuoto: non c\'è niente da salvare.'); return; }
+  if (!backupData()) { openExport(); toast('Preparo il backup con le tue foto: riprova tra un attimo.'); return; }
   downloadBlob('catalogo-libri-backup-' + today() + '.json', backupData(), 'application/json');
   markBackup();
   toast('Backup scaricato. Tienine una copia anche fuori dal telefono (Drive, email).');
@@ -1122,6 +1156,7 @@ function backup() {
 async function shareBackup() {
   if (!storable().length) { toast('L\'elenco è vuoto: non c\'è niente da salvare.'); return; }
   var data = backupData(), base = 'catalogo-libri-backup-' + today(), file = null;
+  if (!data) { openExport(); toast('Preparo il backup con le tue foto: riprova tra un attimo.'); return; }
   try {
     var cands = [new File([data], base + '.json', { type: 'application/json' }), new File([data], base + '.txt', { type: 'text/plain' })];
     for (var i = 0; i < cands.length && !file; i++) if (navigator.canShare && navigator.canShare({ files: [cands[i]] })) file = cands[i];
@@ -1148,7 +1183,7 @@ function checkBackupNag() {
   if (!due) { if (noticeKind === 'backup') { $('#notice').hidden = true; noticeKind = ''; } return; }
   if (noticeKind === 'backup' || !$('#notice').hidden) return;
   notice('Ultimo backup: ' + L.agoText(settings.lastBackup) + '. I ' + n + ' libri sono salvati solo su questo telefono: se cambi telefono o cancelli i dati di Chrome li perdi.',
-    'Fai il backup', shareBackup, function () { settings.snooze = Date.now(); saveSettings(); }, 'backup');
+    'Fai il backup', function () { if (coverIds().length) openExport(); else shareBackup(); }, function () { settings.snooze = Date.now(); saveSettings(); }, 'backup');
 }
 function restore(file) {
   var rd = new FileReader();
@@ -1161,43 +1196,178 @@ function restore(file) {
       var n = 0;
       incoming.forEach(function (b) { if (!have[b.id]) { state.books.push(b); n++; } });
       if (!incoming.length && !Array.isArray(d.books)) throw new Error('formato');
+      var nc = 0;
+      if (d.covers && typeof d.covers === 'object') Object.keys(d.covers).forEach(function (id) {
+        if (get(id) && !coverURL[id] && /^data:image\//.test(d.covers[id])) { nc++; saveCoverData(id, d.covers[id]); }
+      });
       touch(); renderList(); updateSummary();
-      toast(n + (n === 1 ? ' libro ripristinato.' : ' libri ripristinati.'));
+      toast(n + (n === 1 ? ' libro ripristinato' : ' libri ripristinati') + (nc ? ', ' + nc + ' foto di copertina.' : '.'));
     } catch (e) { toast('Il file non è un backup valido.'); }
   };
   rd.readAsText(file);
 }
 
+/* ---------- copertine: le tue foto (salvate sul telefono) e versioni grandi ---------- */
+var coverURL = {};          // id libro -> immagine della tua foto (dal database del telefono)
+var coverPhotoId = null, noBig = {}, probing = {};
+var idbP = null;
+function idb() {
+  if (idbP) return idbP;
+  idbP = new Promise(function (res, rej) {
+    if (!window.indexedDB) { rej(new Error('IndexedDB non disponibile')); return; }
+    var r = indexedDB.open('catalogo-libri', 1);
+    r.onupgradeneeded = function () { r.result.createObjectStore('covers'); };
+    r.onsuccess = function () { res(r.result); };
+    r.onerror = function () { rej(r.error); };
+  });
+  idbP.catch(function () { idbP = null; });
+  return idbP;
+}
+function idbDo(mode, fn) {
+  return idb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction('covers', mode);
+      fn(tx.objectStore('covers'));
+      tx.oncomplete = function () { res(); };
+      tx.onerror = tx.onabort = function () { rej(tx.error || new Error('db')); };
+    });
+  });
+}
+function idbAll() {
+  return idb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var out = [], tx = db.transaction('covers', 'readonly'), rq = tx.objectStore('covers').openCursor();
+      rq.onsuccess = function () { var c = rq.result; if (c) { out.push([String(c.key), c.value]); c.continue(); } };
+      tx.oncomplete = function () { res(out); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+function blobToDataURL(blob) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(String(r.result)); }; r.onerror = rej; r.readAsDataURL(blob); }); }
+function askPersist() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(function (p) { if (!p) navigator.storage.persist(); }); } catch (e) {} }
+async function loadCovers() {
+  try {
+    var all = await idbAll(), keep = 0, gone = [];
+    all.forEach(function (kv) {
+      if (get(kv[0])) { coverURL[kv[0]] = URL.createObjectURL(kv[1]); keep++; }
+      else gone.push(kv[0]);                                   // libro eliminato: tolgo anche la foto
+    });
+    if (gone.length) idbDo('readwrite', function (st) { gone.forEach(function (k) { st.delete(k); }); }).catch(function () {});
+    if (keep) { syncThumbs(); renderList(); }
+  } catch (e) { /* senza database le tue foto non si possono salvare: restano le copertine scaricate */ }
+}
+async function saveCover(id, blob) {
+  await idbDo('readwrite', function (st) { st.put(blob, id); });
+  if (coverURL[id]) URL.revokeObjectURL(coverURL[id]);
+  coverURL[id] = URL.createObjectURL(blob);
+  askPersist();
+  touch(); syncThumbs(); refreshRow(id);
+}
+/* foto -> JPEG di al massimo 900 px, salvato sul telefono */
+async function saveCoverCanvas(id, canvas) {
+  var c = scaled(canvas, 900);
+  var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.82); });
+  if (!blob) throw new Error('jpeg');
+  await saveCover(id, blob);
+}
+function saveCoverData(id, du) {
+  var img = new Image();
+  img.onload = function () {
+    var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    saveCoverCanvas(id, c).catch(function () {});
+  };
+  img.src = du;
+}
+async function removeCover(id) {
+  await idbDo('readwrite', function (st) { st.delete(id); });
+  if (coverURL[id]) URL.revokeObjectURL(coverURL[id]);
+  delete coverURL[id];
+  touch(); syncThumbs(); refreshRow(id);
+}
+/* Prova un'immagine: vale come copertina grande se arriva, e' larga almeno 250 px e ha le proporzioni di un libro. */
+function testImage(u) {
+  return new Promise(function (res) {
+    var im = new Image(), t = setTimeout(function () { res(false); }, 12000);
+    im.referrerPolicy = 'no-referrer';
+    im.onload = function () { clearTimeout(t); var w = im.naturalWidth, r = im.naturalHeight / Math.max(1, w); res(w >= 250 && r > 1.05 && r < 2.1); };
+    im.onerror = function () { clearTimeout(t); res(false); };
+    im.src = u;
+  });
+}
+/* Cerca la copertina grande: prima quella ufficiale di Google (scheda completa del volume), poi Open Library. La ricorda nel libro. */
+function probeCover(id) {
+  var b = get(id);
+  if (!b || b.imgL || coverURL[id] || !(b.img || L.toIsbn13(b.i))) return Promise.resolve(!!(b && (b.imgL || coverURL[id])));
+  if (probing[id]) return probing[id];
+  probing[id] = (async function () {
+    var cands = [], gid = L.googleVolumeId(b.img);
+    if (gid && navigator.onLine !== false) {
+      try {
+        var j = await L.getJson(fetch.bind(window), 'https://www.googleapis.com/books/v1/volumes/' + encodeURIComponent(gid) + '?fields=volumeInfo/imageLinks' + (settings.gbKey ? '&key=' + encodeURIComponent(settings.gbKey) : ''), { waits: [], timeout: 10000 });
+        var gu = L.bestGoogleImage(j);
+        if (gu) cands.push(gu);
+      } catch (e) { /* limite o rete: resta Open Library */ }
+    }
+    cands = cands.concat(L.coverCandidates(b.img, b.i));
+    for (var i = 0; i < cands.length; i++) {
+      if (await testImage(cands[i])) {
+        var x = get(id);
+        if (x && !x.imgL) { x.imgL = cands[i]; touch(); refreshRow(id); }
+        return true;
+      }
+    }
+    return false;
+  })();
+  return probing[id].then(function (ok) { delete probing[id]; if (!ok) noBig[id] = true; return ok; });
+}
+async function improveCovers() {
+  var todo = state.books.filter(function (b) { return !b.imgL && !coverURL[b.id] && (b.img || L.toIsbn13(b.i)); });
+  if (!todo.length) { toast('Non ci sono copertine da migliorare.'); return; }
+  if (navigator.onLine === false) { toast('Sei offline. Riprova quando c\'è connessione.'); return; }
+  var btn = $('#btnCovers'), done = 0, found = 0;
+  btn.disabled = true;
+  await Promise.all(todo.map(function (b) {
+    return coverPool(async function () {
+      delete noBig[b.id];
+      if (await probeCover(b.id)) found++;
+      btn.textContent = 'Cerco le copertine… ' + (++done) + '/' + todo.length;
+    });
+  }));
+  btn.disabled = false; btn.textContent = 'Cerca copertine più grandi';
+  renderList();
+  toast('Trovate ' + found + ' copertine grandi su ' + todo.length + '.' + (found < todo.length ? ' Per le altre puoi usare una tua foto: tocca la copertina e poi «Usa una mia foto».' : ''));
+}
+
 /* ---------- copertina in grande ---------- */
-var lbToken = 0, lbPushed = false, lbTimer = null;
+var lbToken = 0, lbPushed = false, lbId = null;
+function lbButtons(b) {
+  var local = !!coverURL[b.id];
+  $('#lbPhoto').textContent = local ? 'Rifai la foto' : 'Usa una mia foto';
+  $('#lbReset').hidden = !local;
+  $('#lbReset').textContent = (b.imgL || b.img) ? 'Torna alla copertina scaricata' : 'Togli la mia foto';
+}
 function openCover(id) {
-  var b = get(id), s = S[id] || {};
+  var b = get(id);
   if (!b) return;
-  var small = b.img || s.thumb;
-  if (!small) return;
-  // stessa immagine della miniatura, ma piu' grande: copertina della banca dati, oppure la tua foto
-  var cands = b.img ? L.coverCandidates(b.img, b.i).map(function (u) { return { u: u, photo: false }; }) : (s.big ? [{ u: s.big, photo: true }] : []);
-  var tok = ++lbToken, best = 150, pending = cands.length, img = $('#lbImg');
-  img.src = small;
+  var src = bigImg(b);
+  if (!src) return;
+  lbId = id;
+  var tok = ++lbToken, img = $('#lbImg');
+  img.src = src;
   $('#lbCap').textContent = [b.t || 'Senza titolo', b.a].filter(Boolean).join(' — ');
-  $('#lbNote').textContent = pending ? 'Cerco un\'immagine più grande…' : '';
+  lbButtons(b);
+  var tryBig = !coverURL[id] && !b.imgL && !noBig[id] && !!(b.img || L.toIsbn13(b.i));
+  $('#lbNote').textContent = tryBig ? 'Cerco un\'immagine più grande…'
+    : (!coverURL[id] && !b.imgL && b.img ? 'Non esiste una versione più grande: per una copertina migliore usa una tua foto.' : '');
   $('#lightbox').hidden = false;
   if (!lbPushed) { try { history.pushState({ lb: 1 }, ''); lbPushed = true; } catch (e) {} }
   $('#lbClose').focus({ preventScroll: true });
-  clearTimeout(lbTimer);
-  function done() { if (tok !== lbToken) return; if (--pending <= 0) $('#lbNote').textContent = ''; }
-  lbTimer = setTimeout(function () { if (tok === lbToken) $('#lbNote').textContent = ''; }, 9000);
-  cands.forEach(function (c) {
-    var im = new Image();
-    im.referrerPolicy = 'no-referrer';
-    im.onload = function () {
-      if (tok !== lbToken) return;
-      var w = im.naturalWidth, h = im.naturalHeight, r = h / Math.max(1, w);
-      if (w > best * 1.2 && w >= 200 && (c.photo || (r > 1.05 && r < 2.1))) { best = w; img.src = c.u; }
-      done();
-    };
-    im.onerror = done;
-    im.src = c.u;
+  if (tryBig) probeCover(id).then(function (ok) {
+    if (tok !== lbToken) return;
+    var x = get(id);
+    if (ok && x && x.imgL && !coverURL[id]) { img.src = x.imgL; $('#lbNote').textContent = ''; }
+    else if (!coverURL[id]) $('#lbNote').textContent = 'Non esiste una versione più grande: per una copertina migliore usa una tua foto.';
   });
 }
 function closeCover(fromPop) {
@@ -1209,7 +1379,28 @@ function closeCover(fromPop) {
   lbPushed = false;
 }
 $('#lbClose').addEventListener('click', function () { closeCover(false); });
-$('#lightbox').addEventListener('click', function (e) { if (e.target.id !== 'lbImg') closeCover(false); });
+$('#lbPhoto').addEventListener('click', function (e) { e.stopPropagation(); coverPhotoId = lbId; $('#fileCover').click(); });
+$('#lbReset').addEventListener('click', async function (e) {
+  e.stopPropagation();
+  var id = lbId, b = get(id);
+  if (!b) return;
+  try { await removeCover(id); } catch (err) { toast('Non riesco a togliere la foto.'); return; }
+  var src = bigImg(b);
+  if (!src) { closeCover(false); toast('Foto tolta.'); return; }
+  $('#lbImg').src = src; $('#lbNote').textContent = ''; lbButtons(b);
+});
+bindFile('#fileCover', async function (f) {
+  var id = coverPhotoId; coverPhotoId = null;
+  if (!id || !get(id)) return;
+  try {
+    var canvas = await loadCanvas(f[0], 1400);
+    await saveCoverCanvas(id, canvas);
+    if (!$('#lightbox').hidden && lbId === id) { $('#lbImg').src = coverURL[id]; $('#lbNote').textContent = '✓ Copertina salvata sul telefono (e nel backup).'; lbButtons(get(id)); }
+    else toast('Copertina salvata sul telefono (e nel backup).');
+  } catch (e) { toast('Non riesco a salvare la foto sul telefono.'); }
+});
+$('#btnCovers').addEventListener('click', improveCovers);
+$('#lightbox').addEventListener('click', function (e) { if (e.target === e.currentTarget || e.target.id === 'lbCap' || e.target.id === 'lbNote') closeCover(false); });
 window.addEventListener('popstate', function () { if (!$('#lightbox').hidden) { lbPushed = false; closeCover(true); } });
 
 /* ---------- prestiti ---------- */
@@ -1435,6 +1626,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'loan') openLoan(id);
   else if (act === 'toggle') toggleRow(id);
   else if (act === 'zoom') openCover(id);
+  else if (act === 'coverphoto') { coverPhotoId = id; $('#fileCover').click(); }
   else if (act === 'bought') moveToLib(id);
   else if (act === 'pricephoto') { priceId = id; $('#filePrice').click(); }
   else if (act === 'priceweb') {
@@ -1548,6 +1740,8 @@ function openExport() {
   var n = exportBooks().length;
   $('#exportMsg').textContent = n ? 'Esporto i ' + n + (n === 1 ? ' libro' : ' libri') + ' della scheda ' + (tab === 'wish' ? 'Desideri' : 'Libreria') + ', con le colonne che hanno dei dati.' : 'La scheda ' + (tab === 'wish' ? 'Desideri' : 'Libreria') + ' è vuota.';
   updateBackupInfo();
+  $('#backupNote').textContent = '';
+  prepBackup();
   $('#exportSheet').hidden = false;
 }
 $('#btnExport').addEventListener('click', openExport);
@@ -1716,6 +1910,8 @@ $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 setTab('lib');
 updateBackupInfo();
+loadCovers();
+try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(function (p) { if (!p && state.books.length >= 5) askPersist(); }); } catch (e) {}
 updateSummary();
 persist();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}

@@ -473,14 +473,26 @@
     return n && n > 0 && n < 500 ? n : null;
   }
 
-  /* Versioni piu' grandi di una copertina: Open Library grande, immagine dell'editore su Google, Open Library per ISBN.
+  /* id del volume Google dentro l'indirizzo della miniatura (books.google.com/books/content?id=...) */
+  function googleVolumeId(img) {
+    var u = str(img);
+    if (!/books\.google(?:usercontent)?\.[a-z.]+\//i.test(u)) return '';
+    var m = u.match(/[?&]id=([\w-]+)/);
+    return m ? m[1] : '';
+  }
+  /* Dalla scheda completa del volume Google: la copertina grande ufficiale, se Google ce l'ha (large > medium > extraLarge > small). */
+  function bestGoogleImage(json) {
+    var l = json && json.volumeInfo && json.volumeInfo.imageLinks;
+    if (!l) return '';
+    var u = l.large || l.medium || l.extraLarge || l.small || '';
+    return u ? httpsUrl(u).replace(/&edge=curl/g, '') : '';
+  }
+  /* Versioni piu' grandi di una copertina su Open Library (grande dello stesso id, oppure per ISBN).
      Nessuna e' garantita: l'app le prova e tiene solo quelle che arrivano davvero e hanno le proporzioni di una copertina. */
   function coverCandidates(img, isbn) {
     var out = [], u = str(img);
     var ol = u.match(/^(https:\/\/covers\.openlibrary\.org\/b\/(?:id|isbn|olid)\/[^\/?]+?)-[SM]\.jpg/i);
     if (ol) out.push(ol[1] + '-L.jpg');
-    var g = /books\.google(?:usercontent)?\.[a-z.]+\//i.test(u) && u.match(/[?&]id=([\w-]+)/);
-    if (g) out.push('https://books.google.com/books/publisher/content/images/frontcover/' + g[1] + '?fife=w800-h1200&source=gbs_api');
     var c = toIsbn13(isbn);
     if (c) out.push('https://covers.openlibrary.org/b/isbn/' + c + '-L.jpg?default=false');
     return out.filter(function (x, i) { return x !== u && out.indexOf(x) === i; });
@@ -689,6 +701,6 @@
     scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice,
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
-    computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates
+    computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson
   };
 });

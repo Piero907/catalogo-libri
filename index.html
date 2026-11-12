@@ -97,6 +97,7 @@
         <button class="btn" id="btnPubs">Uniforma le case editrici</button>
         <button class="btn" id="btnGuessPub">Deduci le case editrici mancanti</button>
         <button class="btn" id="btnFill">Completa genere, pagine e copertine</button>
+        <button class="btn" id="btnCovers">Cerca copertine più grandi</button>
         <button class="btn" id="btnClearGuess">Svuota le ipotesi</button>
       </div>
       <p class="opts-h">Backup</p>
@@ -172,6 +173,7 @@
   <img id="lbImg" alt="Copertina" referrerpolicy="no-referrer">
   <p class="lb-cap" id="lbCap"></p>
   <p class="lb-note" id="lbNote" aria-live="polite"></p>
+  <div class="lb-acts"><button class="btn" id="lbPhoto">Usa una mia foto</button><button class="btn" id="lbReset" hidden>Togli la mia foto</button></div>
 </div>
 
 <div class="sheet" id="priceAsk" hidden>
@@ -232,6 +234,7 @@
     </div>
     <h3>Backup</h3>
     <p class="msg" id="backupInfo"></p>
+    <p class="msg" id="backupNote"></p>
     <div class="menu">
       <button class="btn primary" id="btnShareBackup">Condividi backup (Drive, email, WhatsApp…)</button>
       <button class="btn" id="btnBackup">Scarica backup</button>
@@ -247,6 +250,7 @@
 <datalist id="loanNames"></datalist>
 
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<input class="sr" id="fileCover" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="filePrice" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileGal" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileBackup" type="file" accept="application/json,.json,text/plain,.txt" tabindex="-1" aria-hidden="true">

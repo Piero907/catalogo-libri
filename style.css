@@ -349,3 +349,11 @@ button.bar-row:hover,button.bar-row:focus-visible{background:var(--surface2)}
 .lb-note{margin:0;font-size:13px;color:#ffffffb0;min-height:1em}
 .lb-x{position:absolute;top:10px;right:10px;width:48px;height:48px;border-radius:12px;border:1px solid #ffffff40;background:#0006;color:#fff;font-size:28px;line-height:1;cursor:pointer}
 .lb-x:focus-visible{outline:2px solid #fff}
+
+/* ---- copertine: fotografa / foto tua ---- */
+.thumb.add{display:grid;place-items:center;width:48px;height:72px;padding:0;border:1.5px dashed var(--line);border-radius:6px;background:var(--surface2);color:var(--muted);cursor:pointer}
+.thumb.add svg{width:22px;height:22px}
+.thumb.add:hover,.thumb.add:focus-visible{border-color:var(--accent);color:var(--accent)}
+.lb-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.lb-acts .btn{background:#ffffff1a;border-color:#ffffff40;color:#fff;min-height:44px}
+#backupNote:empty{display:none}

@@ -119,11 +119,24 @@ la freccetta per aprire la scheda con tutti i dati e modificarli; la
 freccetta in alto a destra la richiude. I libri senza titolo (per esempio
 non trovati) si aprono da soli perche' vanno completati a mano.
 Tocca la copertina per vederla in grande (si chiude con la X, toccando
-fuori o con il tasto "indietro"). Le copertine salvate sono piccole: l'app
-cerca da sola una versione grande su Google Libri e Open Library e la
-mostra se esiste; altrimenti resta quella piccola ingrandita. Per i libri
-riconosciuti da una tua foto ingrandisce la foto (solo finche' l'app resta
-aperta: la foto non viene salvata).
+fuori o con il tasto "indietro").
+
+COPERTINE
+---------
+- Le banche dati danno copertine piccole. Per ogni libro trovato l'app
+  cerca da sola la versione grande ufficiale (Google Libri, poi Open
+  Library per ISBN) e la usa nella vista Copertine e nell'ingrandimento.
+  Per i libri gia' inseriti: Opzioni > "Cerca copertine piu' grandi".
+  Molti libri italiani non hanno una versione grande: in quel caso...
+- ...usa una TUA FOTO: tocca la copertina e poi "Usa una mia foto" (per i
+  libri senza copertina c'e' il riquadro tratteggiato con la fotocamera
+  nella scheda aperta). La foto resta salvata sul telefono, si vede ovunque
+  al posto di quella scaricata ed entra nel backup. "Torna alla copertina
+  scaricata" la toglie.
+- Se riconosci un libro fotografandone la copertina (Foto) e non esiste una
+  copertina scaricata, la tua foto diventa la copertina.
+- Con le foto il backup e' piu' pesante (circa 0,1 MB a foto) e richiede un
+  attimo per essere preparato quando apri Esporta.
 Preferisci vedere sempre tutto? Opzioni > "Mostra le schede sempre aperte"
 (sullo schermo largo torna la vista a tabella).
 
