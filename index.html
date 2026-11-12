@@ -25,10 +25,13 @@
 
   <div class="notice" id="notice" hidden><span id="noticeTxt"></span><button id="noticeBtn" hidden></button><button class="x" id="noticeX" aria-label="Chiudi l'avviso">×</button></div>
 
-  <nav class="tabs" role="tablist" aria-label="Elenchi">
-    <button role="tab" id="tabLib" aria-selected="true">Libreria <span class="cnt" id="cntLib"></span></button>
-    <button role="tab" id="tabWish" aria-selected="false">Desideri <span class="cnt" id="cntWish"></span></button>
-  </nav>
+  <div class="tabbar">
+    <nav class="tabs" role="tablist" aria-label="Elenchi">
+      <button role="tab" id="tabLib" aria-selected="true">Libreria <span class="cnt" id="cntLib"></span></button>
+      <button role="tab" id="tabWish" aria-selected="false">Desideri <span class="cnt" id="cntWish"></span></button>
+    </nav>
+    <button class="quick loan" id="fltLoan" aria-pressed="false" title="Mostra solo i libri in prestito"><span id="icoLoan" aria-hidden="true"></span>Prestati <span class="cnt" id="cntLoan">0</span></button>
+  </div>
 
   <section class="tools" aria-label="Strumenti">
     <input id="q" type="search" placeholder="Cerca nell'elenco" aria-label="Cerca nell'elenco" autocomplete="off">
@@ -50,7 +53,6 @@
   <div class="chips">
     <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
     <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
-    <button class="chip loan" id="fltLoan" aria-pressed="false" hidden>In prestito</button>
   </div>
 
   <details class="opts">
@@ -70,6 +72,10 @@
           <li>Vai in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credenziali</a> › «Crea credenziali» › «Chiave API».</li>
           <li>Copia la chiave e incollala qui sopra.</li>
         </ol>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optOpenAll">
+        <span>Mostra le schede sempre aperte<small>Di solito ogni libro mostra solo titolo e autore e si apre con la freccetta. Con questa opzione vedi subito tutti i campi (sullo schermo largo, come una tabella).</small></span>
       </label>
       <label class="check">
         <input type="checkbox" id="optExtra" checked>

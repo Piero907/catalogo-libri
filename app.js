@@ -23,13 +23,15 @@ var ICON = {
   check: '<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
   down: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   loan: '<path d="M5 4h9a2 2 0 0 1 2 2v3M5 4v14a2 2 0 0 0 2 2h7"/><path d="M13 15h8M18 12l3 3-3 3"/>',
-  bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>'
+  bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
+  chev: '<path d="M6 9l6 6 6-6"/>'
 };
 function icon(n) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
 $('#btnScan').innerHTML = icon('scan') + 'Scansiona';
 $('#btnPhoto').innerHTML = icon('cam') + 'Foto';
 $('#btnType').innerHTML = icon('key') + 'Digita';
 $('#btnCheck').innerHTML = icon('check') + 'Ce l\'ho già?';
+$('#icoLoan').innerHTML = icon('loan');
 $('#btnStats').innerHTML = icon('chart') + 'Statistiche';
 $('#btnExport').innerHTML = icon('down') + 'Esporta';
 
@@ -51,7 +53,8 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list' };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false };
+var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
 var q = '', sortBy = 'recent', flt = '', tab = 'lib';   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
 var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
 
@@ -113,6 +116,7 @@ function loadAll() {
     settings.gbKey = L.str(s.gbKey); settings.price = s.price !== false; settings.extra = s.extra !== false;
     settings.lastBackup = Number(s.lastBackup) || 0; settings.snooze = Number(s.snooze) || 0;
     settings.view = s.view === 'grid' ? 'grid' : 'list';
+    settings.openAll = s.openAll === true;
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -674,7 +678,7 @@ function showRes(code, kind, book, info) {
   if (kind === 'have') {
     o = '<p class="res-h ok">✓ Ce l\'hai già</p><p class="res-t">' + esc(book.t || code) + '</p>' +
       (shelfLine(book) ? '<p class="res-s">' + esc(shelfLine(book)) + '</p>' : '') +
-      (book.p ? '<p class="res-s loan">Prestato a ' + esc(book.p) + (book.pd ? ' dal ' + esc(L.itDate(book.pd)) : '') + '</p>' : '');
+      (book.p ? '<p class="res-s loan">' + esc(prestatoA(book.p)) + (book.pd ? ' dal ' + esc(L.itDate(book.pd)) : '') + '</p>' : '');
   } else if (kind === 'wish') {
     o = '<p class="res-h wish">★ È nella tua lista dei Desideri</p><p class="res-t">' + esc(book.t || code) + '</p>' +
       '<div class="res-b"><button class="btn primary" data-act="bought">L\'ho comprato: spostalo in Libreria</button></div>';
@@ -734,7 +738,9 @@ function visible() {
   var nq = L.norm(q);
   if (nq) a = a.filter(function (b) { return L.norm([b.t, b.a, b.e, b.i, b.sh, b.gen, b.n, b.p].join(' ')).indexOf(nq) >= 0; });
   if (flt === 'guess') a = a.filter(function (b) { return b.g.length; });
-  if (flt === 'loan') a = a.filter(function (b) { return b.p; });
+  if (flt === 'loan') {
+    return a.filter(function (b) { return b.p; }).sort(function (x, y) { return (x.pd || '9') < (y.pd || '9') ? -1 : (x.pd || '9') > (y.pd || '9') ? 1 : cmpFor('titolo')(x, y); });
+  }
   return a.sort(cmpFor(sortBy));
 }
 function cmpFor(k) {
@@ -761,12 +767,51 @@ function computeDups() {
 }
 function flagsHTML(b, dups) {
   var s = S[b.id] || {}, o = '';
-  if (b.p) o += '<span class="tag loan tap" data-act="loan" role="button" tabindex="0" title="In prestito' + (b.pd ? ' dal ' + esc(L.itDate(b.pd)) + ' (' + esc(L.agoText(Date.parse(b.pd))) + ')' : '') + '. Toccalo per segnarlo come restituito.">Prestato a ' + esc(b.p) + '</span>';
+  if (b.p) o += '<span class="tag loan tap" data-act="loan" role="button" tabindex="0" title="In prestito' + (b.pd ? ' dal ' + esc(L.itDate(b.pd)) : '') + '. Toccalo per segnarlo come restituito.">' + esc(loanText(b)) + '</span>';
   if (b.g.length) o += '<span class="tag warn tap" data-act="verify" role="button" tabindex="0" title="Dati dedotti (dalla copertina o dal codice ISBN): controllali, potrebbero non coincidere con il tuo libro. Toccalo quando hai controllato.">Da verificare ✓</span>';
   if (dups && dups[b.id]) o += '<span class="tag" title="Un altro libro nell\'elenco ha lo stesso ISBN o lo stesso titolo e autore">Doppione?</span>';
   if (b.i && !L.toIsbn13(b.i)) o += '<span class="tag bad" title="La cifra di controllo non torna: ricontrolla le cifre">ISBN non valido</span>';
   else if (!b.t && b.i && !s.st) o += b.nf ? '<span class="tag warn" title="Nessuna banca dati conosce questo codice: scrivi i dati a mano">Non trovato</span>' : '<span class="tag" title="Titolo ancora da cercare">Da completare</span>';
   return o;
+}
+/* Scheda chiusa (solo titolo e autore) o aperta (tutti i campi). Di regola chiusa; aperta da sola se manca il titolo
+   e il libro non e' in lavorazione (va compilato a mano). Una volta aperta resta aperta finche' non la chiudi. */
+function isOpen(b) {
+  if (settings.openAll) return true;
+  if (openState[b.id] != null) return openState[b.id];
+  var st = (S[b.id] || {}).st, busy = st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search';
+  if (!b.t && !busy) { openState[b.id] = true; return true; }
+  return false;
+}
+function prestatoA(p) { return 'Prestato ' + (/^[aA]/.test(p) ? 'ad ' : 'a ') + p; }   // «ad Anna», «a Marco»
+function loanText(b) {
+  if (!b.pd) return prestatoA(b.p);
+  var ago = L.agoText(Date.parse(b.pd));
+  return prestatoA(b.p) + ' · ' + (ago === 'oggi' ? 'da oggi' : ago === 'ieri' ? 'da ieri' : 'da ' + ago.replace(/ fa$/, ''));
+}
+function summaryHTML(b, dups, status) {
+  var s = S[b.id] || {}, tags = '';
+  if (b.p) tags += '<span class="tag loan tap" data-act="loan" role="button" tabindex="0" title="Tocca per segnarlo come restituito">' + esc(loanText(b)) + '</span>';
+  if (b.g.length) tags += '<span class="tag warn">Da verificare</span>';
+  if (dups && dups[b.id]) tags += '<span class="tag">Doppione?</span>';
+  if (b.i && !L.toIsbn13(b.i)) tags += '<span class="tag bad">ISBN non valido</span>';
+  else if (!b.t && b.i && !s.st && b.nf) tags += '<span class="tag warn">Non trovato</span>';
+  var title = b.t || (b.i ? 'ISBN ' + b.i : 'Senza titolo');
+  return '<article class="row closed' + (status.indexOf('status err') >= 0 ? ' bad' : '') + '" data-id="' + b.id + '">' +
+    '<div class="sum" data-act="toggle" role="button" tabindex="0" aria-expanded="false" aria-label="' + esc(title + (b.a ? ', ' + b.a : '') + '. Apri la scheda') + '">' +
+    '<span class="sum-t' + (b.t ? '' : ' none') + '">' + esc(title) + '</span>' +
+    (b.a ? '<span class="sum-a">' + esc(b.a) + '</span>' : '') +
+    (tags ? '<span class="sum-tags">' + tags + '</span>' : '') +
+    '<span class="chev" aria-hidden="true">' + icon('chev') + '</span></div>' + status + '</article>';
+}
+function toggleRow(id) {
+  var b = get(id);
+  if (!b) return;
+  var open = !isOpen(b);
+  openState[id] = open;
+  refreshRow(id);
+  var el = rowEl(id);
+  if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
 }
 function bar(txt) { return '<div class="status"><span class="bar"></span><span class="txt">' + esc(txt) + '</span></div>'; }
 function rowHTML(b, dups, ex) {
@@ -801,8 +846,10 @@ function rowHTML(b, dups, ex) {
     var acts = (st === 'error' || st === 'choose') ? '<div class="tail"><button class="ico danger" data-act="del" aria-label="Elimina" title="Elimina">' + icon('x') + '</button></div>' : '';
     return '<article class="' + cls + '" data-id="' + b.id + '">' + (hasThumb ? thumb : '') + status + acts + '</article>';
   } else {
+    if (!ex && !isOpen(b)) return summaryHTML(b, dups, status);
     var canLookup = !busy && !ex && !b.t && L.toIsbn13(b.i);
-    body =
+    if (!ex && !settings.openAll) cls += ' open';
+    body = (!ex && !settings.openAll ? '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80, 'shelfList') + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80, 'genreList') +
@@ -875,9 +922,15 @@ function renderList() {
   fillDatalists();
   var vis = visible(), n = tabBooks().length;
   document.body.classList.toggle('gridview', settings.view === 'grid');
-  $('#thead').hidden = n === 0 || settings.view === 'grid';
+  document.body.classList.toggle('openall', settings.openAll);
+  $('#thead').hidden = n === 0 || settings.view === 'grid' || !settings.openAll;
   if (!n) { list.innerHTML = tab === 'wish' ? wishEmptyHTML() : emptyHTML(); autosizeAll(list); return; }
-  if (!vis.length) { list.innerHTML = '<p class="none">Nessun libro corrisponde ai filtri.</p>'; return; }
+  if (!vis.length) {
+    list.innerHTML = flt === 'loan' && !q
+      ? '<p class="none">Nessun libro in prestito. Per prestarne uno apri la sua scheda con la freccetta e tocca il tasto con la freccia verso destra.</p>'
+      : '<p class="none">Nessun libro corrisponde ai filtri.</p>';
+    return;
+  }
   if (settings.view === 'grid') { list.innerHTML = '<div class="grid">' + vis.map(coverHTML).join('') + '</div>'; return; }
   var dups = computeDups();
   list.innerHTML = vis.map(function (b) { return rowHTML(b, dups); }).join('');
@@ -916,10 +969,9 @@ function updateSummary() {
   fg.textContent = 'Da verificare · ' + g;
   fg.hidden = g === 0 && flt !== 'guess';
   fg.setAttribute('aria-pressed', flt === 'guess' ? 'true' : 'false');
-  var fl = $('#fltLoan');
-  fl.textContent = 'In prestito · ' + loans;
-  fl.hidden = loans === 0 && flt !== 'loan';
-  fl.setAttribute('aria-pressed', flt === 'loan' ? 'true' : 'false');
+  var allLoans = state.books.filter(function (b) { return !b.w && b.p; }).length;
+  $('#cntLoan').textContent = allLoans;
+  $('#fltLoan').setAttribute('aria-pressed', flt === 'loan' ? 'true' : 'false');
   var td = todoRows().length;
   var bt = $('#btnTodo');
   bt.hidden = td === 0;
@@ -1136,7 +1188,7 @@ function saveLoan() {
   b.pd = /^\d{4}-\d\d-\d\d$/.test($('#loanDate').value) ? $('#loanDate').value : today();
   var id = loanId; closeLoan();
   touch(); refreshRow(id); updateSummary();
-  toast('Prestato a ' + b.p + '.');
+  toast(prestatoA(b.p) + '.');
 }
 function returnLoan() {
   var b = get(loanId);
@@ -1175,6 +1227,7 @@ function setView(v) {
   b.setAttribute('aria-label', settings.view === 'grid' ? 'Mostra come elenco' : 'Mostra le copertine');
 }
 function openFromGrid(id) {
+  openState[id] = true;
   setView('list');
   renderList();
   var el = rowEl(id);
@@ -1317,7 +1370,7 @@ list.addEventListener('change', function (e) {
   }
 });
 list.addEventListener('keydown', function (e) {
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && (e.target.dataset.act === 'verify' || e.target.dataset.act === 'loan') && e.target.classList.contains('tag')) { e.preventDefault(); e.target.click(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && (((e.target.dataset.act === 'verify' || e.target.dataset.act === 'loan') && e.target.classList.contains('tag')) || (e.target.dataset.act === 'toggle' && e.target.classList.contains('sum')))) { e.preventDefault(); e.target.click(); return; }
   if (e.key === 'Enter' && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) { e.preventDefault(); e.target.blur(); }
 });
 list.addEventListener('click', function (e) {
@@ -1332,6 +1385,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'retry') retryRow(id);
   else if (act === 'choose') openPick(id);
   else if (act === 'loan') openLoan(id);
+  else if (act === 'toggle') toggleRow(id);
   else if (act === 'bought') moveToLib(id);
   else if (act === 'pricephoto') { priceId = id; $('#filePrice').click(); }
   else if (act === 'priceweb') {
@@ -1414,7 +1468,18 @@ document.addEventListener('keydown', function (e) {
 $('#q').addEventListener('input', function (e) { q = e.target.value; renderList(); });
 $('#sort').addEventListener('change', function (e) { sortBy = e.target.value; renderList(); });
 $('#fltGuess').addEventListener('click', function () { flt = flt === 'guess' ? '' : 'guess'; updateSummary(); renderList(); });
-$('#fltLoan').addEventListener('click', function () { flt = flt === 'loan' ? '' : 'loan'; updateSummary(); renderList(); });
+$('#fltLoan').addEventListener('click', function () {
+  var on = !(flt === 'loan' && tab === 'lib');
+  if (tab !== 'lib') setTab('lib');
+  flt = on ? 'loan' : '';
+  updateSummary(); renderList();
+  if (on) toast(allLoansText());
+});
+function allLoansText() {
+  var n = state.books.filter(function (b) { return !b.w && b.p; }).length;
+  return n ? (n === 1 ? '1 libro in prestito.' : n + ' libri in prestito, dai più vecchi.') + ' Tocca di nuovo «Prestati» per vederli tutti.' : 'Nessun libro in prestito.';
+}
+$('#optOpenAll').addEventListener('change', function (e) { settings.openAll = e.target.checked; openState = {}; saveSettings(); renderList(); });
 $('#tabLib').addEventListener('click', function () { setTab('lib'); });
 $('#tabWish').addEventListener('click', function () { setTab('wish'); });
 $('#btnView').addEventListener('click', function () { setView(settings.view === 'grid' ? 'list' : 'grid'); renderList(); });
@@ -1597,6 +1662,7 @@ loadAll();
 $('#gbKey').value = settings.gbKey;
 $('#optPrice').checked = settings.price;
 $('#optExtra').checked = settings.extra;
+$('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 setTab('lib');
 updateBackupInfo();
@@ -1607,6 +1673,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 if (navigator.onLine !== false && todoRows().length) setTimeout(runTodo, 800);
-window.__app = { state: state, S: S, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; } };
 })();

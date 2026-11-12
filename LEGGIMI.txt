@@ -110,6 +110,16 @@ COME SI USA
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
 
+SCHEDE CHIUSE E APERTE
+----------------------
+Ogni libro mostra solo titolo e autore (piu' le etichette importanti, come
+"Prestato a Marco · da 3 settimane" o "Da verificare"). Tocca il libro o
+la freccetta per aprire la scheda con tutti i dati e modificarli; la
+freccetta in alto a destra la richiude. I libri senza titolo (per esempio
+non trovati) si aprono da soli perche' vanno completati a mano.
+Preferisci vedere sempre tutto? Opzioni > "Mostra le schede sempre aperte"
+(sullo schermo largo torna la vista a tabella).
+
 LIBRERIA E DESIDERI
 -------------------
 In alto ci sono due schede. "Desideri" e' la lista dei libri da comprare:
@@ -130,7 +140,9 @@ PRESTITI
 --------
 Sulla scheda del libro il pulsante con la freccia serve a prestarlo: scrivi
 a chi e da quando. Compare l'etichetta "Prestato a ..."; toccala quando te
-lo restituiscono. Il filtro "In prestito" mostra tutti i libri fuori casa;
+lo restituiscono. Il pulsante "Prestati", accanto a Libreria e Desideri, mostra
+subito tutti i libri fuori casa, dai prestiti piu' vecchi (toccalo di nuovo
+per vedere tutto);
 anche "Ce l'ho gia'?" e le Statistiche ti ricordano a chi li hai dati.
 
 SCAFFALE, GENERE, PAGINE, NOTE

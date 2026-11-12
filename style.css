@@ -296,3 +296,41 @@ button.bar-row:hover,button.bar-row:focus-visible{background:var(--surface2)}
 .scan-price .btn:disabled{opacity:.7}
 #priceAsk .hint{margin:4px 0 0}
 .sheet .hint{font-size:13px;color:var(--muted)}
+
+/* ---- schede chiuse (solo titolo e autore) ---- */
+.row.closed{display:block;padding:0}
+.sum{display:grid;grid-template-columns:minmax(0,1fr) 32px;column-gap:8px;row-gap:2px;align-items:center;padding:12px 10px 12px 14px;min-height:60px;cursor:pointer;border-radius:13px;-webkit-tap-highlight-color:transparent}
+.sum:hover{background:var(--surface2)}
+.sum:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sum-t{grid-column:1;font-weight:600;font-size:16.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.sum-t.none{color:var(--muted);font-weight:500}
+.sum-a{grid-column:1;font-size:14.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum-tags{grid-column:1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.sum .chev{grid-column:2;grid-row:1 / span 3;display:grid;place-items:center;width:32px;height:32px;color:var(--muted)}
+.sum .chev svg,.chev-btn svg{width:22px;height:22px}
+.row.closed .status{margin:0 12px 12px}
+.chev-btn{position:absolute;top:6px;right:6px;z-index:1;width:44px;height:44px;border:0;border-radius:10px;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.chev-btn svg{transform:rotate(180deg)}
+.chev-btn:hover{background:var(--surface2);color:var(--ink)}
+.row.open .head{padding-right:40px}
+.row.open:not(.has-thumb) .head{padding-right:44px}
+
+/* ---- barra schede + pulsante Prestati ---- */
+.tabbar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:0 0 12px}
+.tabbar .tabs{margin:0}
+.quick{display:inline-flex;align-items:center;gap:8px;min-height:50px;padding:0 14px;border-radius:14px;border:1px solid var(--info-line);background:var(--info-bg);color:var(--info);font-weight:600;font-size:15px;cursor:pointer}
+.quick svg{width:20px;height:20px}
+.quick .cnt{font-variant-numeric:tabular-nums;font-weight:600;min-width:1.4em;padding:1px 7px;border-radius:999px;background:var(--surface);color:var(--info);font-size:13px;text-align:center}
+.quick[aria-pressed="true"]{background:var(--info);border-color:var(--info);color:var(--info-bg)}
+.quick[aria-pressed="true"] .cnt{background:var(--info-bg)}
+
+@media (min-width:880px){
+  body:not(.openall) .row.open{padding-right:56px}
+  body:not(.openall) .row.open .lbl{display:block}
+}
+@media (max-width:430px){
+  .tabbar{gap:6px}
+  .tabs button{padding:6px 10px;gap:6px}
+  .quick{padding:0 12px;gap:6px}
+  .quick svg{display:none}
+}
