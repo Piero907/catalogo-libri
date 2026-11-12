@@ -1,0 +1,264 @@
+CATALOGO LIBRI - come metterlo sul telefono
+============================================
+
+Questa cartella contiene un sito-app (PWA). Non serve installare nulla sul
+computer: basta pubblicarla una volta su internet (gratis) e poi installarla
+sul telefono. La fotocamera del telefono funziona solo se il sito e' https,
+e gli host qui sotto lo fanno in automatico.
+
+
+PASSO 1 - Pubblicare la cartella (5 minuti, gratis)
+---------------------------------------------------
+1. Decomprimi lo zip sul computer: otterrai la cartella "libri-app".
+2. Apri https://app.netlify.com/drop
+3. Trascina l'intera cartella "libri-app" nel riquadro.
+4. Dopo pochi secondi Netlify ti da' un indirizzo del tipo
+   https://nome-casuale.netlify.app  -> e' la tua app.
+5. Crea (o accedi a) un account gratuito Netlify per tenere il sito attivo:
+   senza account il sito potrebbe essere cancellato dopo un po'.
+6. Se vuoi un nome piu' bello: Site configuration > Change site name.
+
+(La cartella pesa circa 13 MB: dentro "vendor" c'e' il motore che legge il
+testo delle copertine, cosi' funziona anche offline.)
+
+
+IN ALTERNATIVA: GITHUB PAGES (gratis, senza crediti)
+---------------------------------------------------
+Serve un computer (dal telefono GitHub non carica le cartelle).
+1. Vai su github.com e crea un account gratuito (o entra con il tuo).
+2. In alto a destra "+" > "New repository". Nome: catalogo-libri.
+   Lascia "Public" (con l'account gratuito Pages funziona solo con i
+   repository pubblici: dentro c'e' solo il codice dell'app, i tuoi libri
+   restano sul telefono). Premi "Create repository".
+3. Nella pagina che si apre clicca il link "uploading an existing file".
+   Apri la cartella libri-app, seleziona TUTTO quello che c'e' dentro
+   (index.html, app.js, le cartelle icons e vendor...) e trascinalo nella
+   pagina. Aspetta che finisca e premi "Commit changes" in fondo.
+   Controllo: nella pagina principale del repository deve vedersi
+   index.html (non una cartella libri-app).
+4. "Settings" (in alto nel repository) > "Pages" (menu a sinistra).
+   In "Build and deployment": Source "Deploy from a branch", Branch "main"
+   e cartella "/ (root)", poi "Save".
+5. Dopo 1-3 minuti ricarica la pagina: in alto compare "Your site is live
+   at https://TUONOME.github.io/catalogo-libri/". E' l'indirizzo dell'app.
+Per aggiornare l'app in futuro: nel repository "Add file" > "Upload files",
+trascina i file nuovi (sostituiscono quelli vecchi con lo stesso nome) e
+"Commit changes". Nessun credito da consumare.
+ATTENZIONE: i libri sono legati all'indirizzo. Prima di cambiare fai il
+backup dall'app vecchia (Esporta o Opzioni > Scarica backup), poi nella
+nuova usa "Ripristina da backup". Se l'app vecchia non si apre perche' il
+sito e' fermo, attiva la modalita' aereo e riaprila: parte dalla copia
+salvata sul telefono, e il backup si scarica anche offline.
+
+PASSO 2 - Installarla sul telefono Android (senza APK)
+------------------------------------------------------
+1. Apri l'indirizzo con Chrome sul telefono.
+2. Menu (tre puntini) > "Installa app" (oppure "Aggiungi a schermata Home").
+3. Compare l'icona "Libri". Si apre a schermo intero come una vera app.
+4. Alla prima apertura serve internet: scarica il motore di lettura. Dopo,
+   l'app parte anche offline (la ricerca dei dati online richiede rete;
+   i codici inseriti senza rete vengono messi in coda).
+
+
+PASSO 3 (facoltativo) - Ottenere un vero file APK
+-------------------------------------------------
+1. Vai su https://www.pwabuilder.com e incolla l'indirizzo della tua app.
+2. Premi "Start", poi "Package for stores" > Android.
+3. Lascia le impostazioni proposte (firma: "New") e premi "Download".
+4. Nello zip scaricato c'e' un file .apk (per installare sul telefono) e un
+   .aab (serve solo per Google Play: ignoralo).
+5. Copia l'.apk sul telefono e aprilo. Android chiedera' di consentire
+   l'installazione da "origini sconosciute" per l'app con cui l'hai aperto.
+
+Nota: senza il file assetlinks.json (che PWABuilder fornisce nello zip, da
+mettere nella cartella ".well-known" del sito) l'APK mostra in alto una
+barra con l'indirizzo. Funziona uguale, e' solo estetica. Per un uso
+personale il passo 2 e' piu' semplice e da' lo stesso risultato.
+
+
+COME SI USA
+-----------
+- Scansiona: inquadra il codice a barre sul retro del libro. Ogni libro
+  riconosciuto viene aggiunto e il telefono fa un "bip"; poi passi al
+  successivo senza toccare nulla. Titolo, autore, editore e anno arrivano
+  da Google Libri / Open Library: e' il metodo piu' preciso.
+- Foto: fotografa la copertina (o il codice). L'app legge il testo sul
+  telefono, cerca il libro e, se e' certa, lo compila da sola; se ci sono
+  piu' possibilita' ti fa scegliere. I dati ricavati dalla copertina hanno
+  l'etichetta "Da verificare".
+- Digita: scrivi o incolla uno o piu' codici ISBN (uno per riga).
+- Il costo e' il PREZZO DI COPERTINA, che nessuna banca dati gratuita
+  conosce per i libri italiani: l'app lo legge dal prezzo stampato
+  (es. "€ 9,90"), di solito sul retro vicino al codice a barre.
+  * Foto del retro: se nella foto c'e' il codice a barre, l'app legge
+    l'ISBN E il prezzo insieme (un solo scatto per libro). E' un po' piu'
+    lento; si puo' spegnere in Opzioni ("Leggi il prezzo dalle foto del retro").
+  * Scansiona dal vivo: legge solo il codice. Sulla scheda del libro, se il
+    costo e' vuoto, compaiono due pulsanti: la macchina fotografica (foto
+    del prezzo stampato: lo legge e lo scrive, con "Annulla") e il simbolo €
+    (apre la ricerca sul web con l'ISBN, per vedere il prezzo nei negozi).
+  * Il prezzo letto va sempre controllato: se la foto e' storta o il prezzo
+    e' scritto in modo insolito l'app puo' non trovarlo (scrivilo a mano) o,
+    raramente, leggere male una cifra. Un costo che hai gia' scritto tu non
+    viene mai sovrascritto.
+  * Prezzo di copertina = quello stampato sul libro, non quanto l'hai pagato.
+- Esporta: "Scarica Excel (.xlsx)" crea un vero file Excel (intestazione
+  in grassetto, filtri, costo in euro, ISBN come testo). Ci sono anche
+  "Copia per Excel o Fogli Google" e "Scarica CSV". Si esporta la scheda
+  che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
+  genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
+
+LIBRERIA E DESIDERI
+-------------------
+In alto ci sono due schede. "Desideri" e' la lista dei libri da comprare:
+mentre sei li', Scansiona, Foto e Digita aggiungono i libri ai Desideri.
+Quando ne compri uno tocca "Comprato" sulla scheda e passa in Libreria (se
+lo scansioni dalla Libreria ci passa da solo). Il totale in alto e' quello
+della scheda aperta.
+
+CE L'HO GIA'?
+-------------
+Il pulsante "Ce l'ho gia'?" apre la fotocamera ma NON aggiunge niente:
+inquadri un codice a barre (in libreria, in negozio, a una bancarella) e
+l'app dice subito se il libro e' gia' tuo, con lo scaffale e l'eventuale
+prestito, oppure se e' nei Desideri. Se non ce l'hai cerca il titolo e ti
+propone "Aggiungi alla Libreria" o "Aggiungi ai Desideri".
+
+PRESTITI
+--------
+Sulla scheda del libro il pulsante con la freccia serve a prestarlo: scrivi
+a chi e da quando. Compare l'etichetta "Prestato a ..."; toccala quando te
+lo restituiscono. Il filtro "In prestito" mostra tutti i libri fuori casa;
+anche "Ce l'ho gia'?" e le Statistiche ti ricordano a chi li hai dati.
+
+SCAFFALE, GENERE, PAGINE, NOTE
+------------------------------
+Ogni scheda ha questi campi in piu' (si nascondono in Opzioni). Genere e
+pagine si compilano da soli quando Google Libri o Open Library li conoscono
+(il genere arriva in inglese e lo traduco quando posso). Per i libri gia'
+inseriti: Opzioni > "Completa genere, pagine e copertine" (una ricerca per
+libro: con molti libri serve la chiave Google). Lo scaffale lo scrivi tu e
+l'app ti propone quelli gia' usati. La ricerca in alto cerca anche in
+scaffale, genere, note e nome di chi ha il libro; l'elenco si puo' ordinare
+anche per casa editrice, anno e scaffale.
+
+COPERTINE E STATISTICHE
+-----------------------
+"Copertine" mostra la libreria come una parete di copertine (quelle che
+mancano sono rettangoli colorati con il titolo); tocca un libro per aprirne
+la scheda. "Statistiche" mostra numero di libri, valore di copertina,
+prezzo medio, pagine, prestiti, e le classifiche di autori, case editrici,
+generi, scaffali e decenni: tocca un nome per vedere quei libri.
+
+SISTEMARE L'ELENCO (Opzioni)
+----------------------------
+- "Segna tutto come verificato": toglie in un colpo l'etichetta "Da
+  verificare" da tutti i libri (subito dopo c'e' "Annulla").
+- "Uniforma le case editrici": trova i nomi scritti in modi diversi (es.
+  "TEA" e "Tea Tascabili", "Mondadori" e "Arnoldo Mondadori Editore", o
+  libri con lo stesso codice editore nell'ISBN) e per ogni gruppo ti fa
+  scegliere il nome da usare. Sono solo proposte: togli la spunta "cambia"
+  ai nomi da lasciare come sono (per esempio un marchio diverso dello stesso
+  gruppo). C'e' "Annulla".
+
+
+SE LA RICERCA ISBN NON FUNZIONA: LA CHIAVE GOOGLE (consigliata)
+--------------------------------------------------------------
+Senza chiave Google Libri accetta poche richieste anonime e spesso risponde
+"limite raggiunto" (errore 429). Con una chiave personale gratuita il
+limite diventa tuo e il problema sparisce. Si crea una volta sola:
+1. Vai su https://console.cloud.google.com/projectcreate con il tuo account
+   Google e crea un progetto (il nome e' libero).
+2. Apri https://console.cloud.google.com/apis/library/books.googleapis.com
+   e premi "Abilita" (Books API). Google potrebbe chiederti di attivare la
+   fatturazione: se succede, per un uso personale cosi' limitato non
+   dovrebbero esserci addebiti, ma controlla le condizioni mostrate.
+3. Vai in https://console.cloud.google.com/apis/credentials > "Crea
+   credenziali" > "Chiave API" e copia la chiave.
+4. Nell'app: Opzioni > "Chiave Google Libri" e incollala.
+Poi premi "Riprova" sui libri in errore (o il pulsante "Completa n libri").
+
+DOVE CERCA L'APP I LIBRI E COME SOMMA I DATI
+--------------------------------------------
+1. Google Libri e Open Library partono INSIEME (Google e' la fonte che
+   ha la precedenza: di solito e' la piu' completa e la piu' veloce).
+   I dati si SOMMANO: se Google non conosce la casa editrice (o l'anno, o
+   l'autore) e Open Library si', il campo vuoto viene riempito dall'altra
+   fonte. Con titolo, autore, editore e anno gia' completi non serve altro.
+2. Crossref (gratuita, senza chiave): si interroga solo se dopo il passo 1
+   manca ancora qualcosa. Utile soprattutto per l'editoria universitaria.
+3. Se Google risponde "limite raggiunto" ma Open Library conosce il libro,
+   l'app va avanti con Open Library; se nessuna fonte risponde, la scheda
+   mostra "Riprova" (non scrive "non trovato" quando il problema e' la rete).
+Il catalogo SBN delle biblioteche italiane e' stato tolto: dal browser non
+e' raggiungibile.
+
+CASA EDITRICE MANCANTE: LA DEDUCE DALL'ISBN
+-------------------------------------------
+Molte banche dati non hanno la casa editrice. Ma l'ISBN contiene il codice
+dell'editore: i libri italiani (978-88-...) della stessa casa editrice
+condividono le prime cifre (per esempio 978-88-502-... = TEA).
+- Se manca l'editore, l'app guarda gli altri libri del TUO elenco con lo
+  stesso codice editore e copia il nome che hai gia' (per questo piu' libri
+  completi hai, piu' funziona).
+- Se non ne ha, usa una piccola tabella di editori molto noti
+  (Mondadori, Einaudi, Feltrinelli, Garzanti, Il Mulino, Rizzoli, Bompiani,
+  Adelphi, TEA). Gli altri editori restano vuoti: non invento nulla.
+- Il nome dedotto e' sempre segnato "Da verificare". Funziona solo per
+  ISBN italiani; alcuni editori hanno piu' marchi con lo stesso codice.
+- Su un elenco gia' fatto: Opzioni > "Deduci le case editrici mancanti"
+  (c'e' "Annulla" subito dopo).
+Se le fonti dicono "non trovato" la scheda resta con l'ISBN: tocca la lente
+per cercarlo sul web e scrivi i dati a mano (o rifai una Foto).
+
+SE L'APP NON SI INSTALLA DA CHROME
+----------------------------------
+- Apri l'indirizzo https della versione pubblicata (per esempio
+  https://nome.netlify.app) direttamente in Chrome. Non funziona dal file
+  salvato sul telefono/computer, ne' da un link aperto dentro WhatsApp,
+  Gmail o altre app: copia l'indirizzo e incollalo in Chrome.
+- Su Android: Menu (tre puntini) > "Installa app". Se vedi solo "Aggiungi a
+  schermata Home" e non "Installa app", Chrome non la ritiene installabile.
+- Opzioni > "Perche' non si installa?" controlla da solo https, Chrome,
+  funzionamento offline e scheda dell'app, e dice cosa manca.
+- Se "Perche' non si installa?" dice "errore 401" sulla scheda dell'app: il
+  sito su Netlify e' protetto (password o accesso riservato) e Chrome, e
+  Google che prepara l'app, non possono leggere i file. Su Netlify apri il
+  progetto > Project configuration > Access & security (o "Site protection /
+  Visitor access") e togli la protezione, poi ricontrolla. Un sito con
+  password non si puo' installare come app.
+- Se Chrome propone solo "Installa e crea scorciatoia" con la scritta
+  "Questa app non puo' essere installata", per Chrome il sito non e' una
+  app installabile. Controlla in Chrome che si aprano queste due pagine
+  (sostituisci con il tuo indirizzo): .../manifest.json e
+  .../icons/icon-192.png. Se danno errore 404 manca qualcosa: ricarica su
+  Netlify la cartella "libri-app" intera, con "icons" e "vendor" dentro.
+- Se il sito e' a posto ma Chrome non propone comunque "Installa app", il
+  problema e' nel telefono: Chrome crea l'app tramite Google Play, quindi
+  servono Play Store e Servizi Google Play aggiornati e la connessione
+  attiva. Aggiorna Chrome e Play Store e riavvia il telefono.
+- Dopo aver ripubblicato su Netlify, chiudi e riapri l'app / ricarica la
+  pagina una volta prima di riprovare.
+
+COME AGGIORNARE L'APP DOPO UNA MODIFICA
+--------------------------------------
+Su Netlify: apri il sito > Deploys > trascina di nuovo la cartella nel
+riquadro. Sul telefono chiudi l'app del tutto e riaprila (a volte due volte).
+I libri gia' inseriti restano.
+
+ATTENZIONE: I DATI STANNO SOLO SUL TELEFONO - IL BACKUP
+-------------------------------------------------------
+L'elenco e' salvato nel browser del telefono. Se cancelli i dati di Chrome,
+disinstalli l'app o cambi telefono, si perde. Per questo:
+- Esporta > "Condividi backup" apre il menu di condivisione del telefono:
+  scegli Drive, Gmail, WhatsApp (anche a te stesso)... Il file si chiama
+  catalogo-libri-backup-DATA. Chrome a volte non permette di condividere
+  file .json: in quel caso lo stesso backup parte come file .txt (il
+  contenuto e' identico). Se la condivisione non c'e', il file si scarica.
+- "Scarica backup" lo salva nei Download del telefono.
+- Con almeno 10 libri, se l'ultimo backup ha piu' di 2 settimane e nel
+  frattempo hai cambiato qualcosa, compare un avviso "Fai il backup" (la X
+  lo rimanda di 2 settimane). In Esporta vedi quando hai fatto l'ultimo.
+- "Ripristina da backup" accetta il file .json o .txt e aggiunge i libri
+  che mancano, senza cancellare quelli che hai. Il backup contiene entrambe
+  le liste, con prestiti, scaffali e note (non la chiave Google).

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogo libri</title>
+<meta name="theme-color" content="#1B6A4F">
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Catalogo libri</h1>
+      <p class="summary" id="summary" aria-live="polite"></p>
+    </div>
+    <div class="sync" id="sync" role="status"><span class="dot"></span><span id="syncTxt">Salvato su questo telefono</span></div>
+  </header>
+
+  <div class="notice" id="notice" hidden><span id="noticeTxt"></span><button id="noticeBtn" hidden></button><button class="x" id="noticeX" aria-label="Chiudi l'avviso">×</button></div>
+
+  <nav class="tabs" role="tablist" aria-label="Elenchi">
+    <button role="tab" id="tabLib" aria-selected="true">Libreria <span class="cnt" id="cntLib"></span></button>
+    <button role="tab" id="tabWish" aria-selected="false">Desideri <span class="cnt" id="cntWish"></span></button>
+  </nav>
+
+  <section class="tools" aria-label="Strumenti">
+    <input id="q" type="search" placeholder="Cerca nell'elenco" aria-label="Cerca nell'elenco" autocomplete="off">
+    <select id="sort" aria-label="Ordina per">
+      <option value="recent">Più recenti</option>
+      <option value="titolo">Titolo A–Z</option>
+      <option value="autore">Autore A–Z</option>
+      <option value="editore">Casa editrice</option>
+      <option value="anno">Anno</option>
+      <option value="scaffale">Scaffale</option>
+    </select>
+    <div class="acts">
+      <button class="btn sm" id="btnView"></button>
+      <button class="btn sm" id="btnCheck"></button>
+      <button class="btn sm" id="btnStats"></button>
+      <button class="btn sm" id="btnExport"></button>
+    </div>
+  </section>
+  <div class="chips">
+    <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
+    <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
+    <button class="chip loan" id="fltLoan" aria-pressed="false" hidden>In prestito</button>
+  </div>
+
+  <details class="opts">
+    <summary>Opzioni</summary>
+    <div class="opts-body">
+      <div class="opts-row">
+        <button class="btn" id="btnGallery">Scegli foto dalla galleria</button>
+        <button class="btn" id="btnInstall" hidden>Installa l'app</button>
+      </div>
+      <label class="field">
+        <span>Chiave Google Libri (facoltativa)</span>
+        <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla qui la chiave, se Google limita le ricerche">
+        <p class="hint">Serve se compare «limite di richieste». È gratis e si crea una volta sola:</p>
+        <ol class="hint keysteps">
+          <li>Apri <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> con il tuo account Google e crea un progetto.</li>
+          <li>Apri <a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Books API</a> e premi «Abilita».</li>
+          <li>Vai in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credenziali</a> › «Crea credenziali» › «Chiave API».</li>
+          <li>Copia la chiave e incollala qui sopra.</li>
+        </ol>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optExtra" checked>
+        <span>Mostra scaffale, genere, pagine e note<small>Campi in più sulla scheda di ogni libro. Genere e pagine si compilano da soli quando Google Libri o Open Library li conoscono; finiscono anche nel file Excel.</small></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optPrice" checked>
+        <span>Leggi il prezzo dalle foto del retro<small>Quando fotografi un libro con il codice a barre, legge anche il prezzo di copertina stampato (€). Rende la lettura di ogni foto un po' più lenta: spegni se fotografi tanti libri insieme.</small></span>
+      </label>
+      <div class="opts-row">
+        <button class="btn" id="btnDiag">Prova la ricerca ISBN</button>
+        <button class="btn" id="btnInstDiag">Perché non si installa?</button>
+      </div>
+      <div class="diag" id="diagOut" hidden aria-live="polite"></div>
+      <div class="diag" id="instOut" hidden aria-live="polite"></div>
+      <p class="opts-h">Sistema l'elenco</p>
+      <div class="opts-row">
+        <button class="btn" id="btnVerifyAll">Segna tutto come verificato</button>
+        <button class="btn" id="btnPubs">Uniforma le case editrici</button>
+        <button class="btn" id="btnGuessPub">Deduci le case editrici mancanti</button>
+        <button class="btn" id="btnFill">Completa genere, pagine e copertine</button>
+        <button class="btn" id="btnClearGuess">Svuota le ipotesi</button>
+      </div>
+      <p class="opts-h">Backup</p>
+      <div class="opts-row">
+        <button class="btn" id="btnBackupOpen">Backup ed esportazione</button>
+      </div>
+      <p class="hint">I libri sono salvati solo su questo telefono: fai ogni tanto un backup e tienilo su Drive o nella mail.</p>
+    </div>
+  </details>
+
+  <div class="thead" id="thead" aria-hidden="true"><span></span><span>Titolo</span><span>Autore</span><span>Casa editrice</span><span>Anno</span><span>Costo €</span><span>ISBN</span><span></span></div>
+  <div id="list"></div>
+</main>
+
+<div class="dock">
+  <div class="dock-in">
+    <button class="btn primary" id="btnScan"></button>
+    <button class="btn" id="btnPhoto"></button>
+    <button class="btn" id="btnType"></button>
+  </div>
+  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Foto del retro: leggo anche il prezzo. Digita per scrivere l'ISBN.</p>
+</div>
+
+<div class="scan" id="scan" hidden>
+  <video id="scanVideo" playsinline muted></video>
+  <div class="scan-top">
+    <button class="btn" id="scanClose">Fine</button>
+    <span class="scan-count" id="scanCount">0 aggiunti</span>
+    <button class="btn" id="scanTorch" hidden>Torcia</button>
+  </div>
+  <div class="scan-mid"><div class="scan-guide" id="scanGuide"></div></div>
+  <div class="scan-res" id="scanRes" hidden aria-live="polite"></div>
+  <p class="scan-msg" id="scanMsg" role="status">Inquadra il codice a barre, di solito sul retro. Ogni libro viene aggiunto da solo.</p>
+</div>
+
+<div class="sheet" id="isbnSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="isbnH">
+    <h2 id="isbnH">Digita l'ISBN</h2>
+    <p class="msg">Uno o più codici, anche con i trattini. Per più libri vai a capo o separa con la virgola.</p>
+    <textarea class="big" id="isbnText" inputmode="text" autocomplete="off" aria-label="Codici ISBN" placeholder="978-88-06-21935-2"></textarea>
+    <p class="msg bad" id="isbnErr" hidden></p>
+    <div class="row-btns">
+      <button class="btn" id="isbnCancel">Annulla</button>
+      <button class="btn primary" id="isbnGo">Cerca</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="pickSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="pickH">
+    <h2 id="pickH">Quale libro è?</h2>
+    <p class="msg" id="pickMsg">Ho letto il testo della copertina. Tocca il libro giusto: editore e anno dipendono dall'edizione, controllali dopo.</p>
+    <ul class="cands" id="pickList"></ul>
+    <div class="row-btns">
+      <button class="btn" id="pickText">Nessuno: tieni il testo letto</button>
+      <button class="btn" id="pickClose">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="copySheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="copyH">
+    <h2 id="copyH">Copia l'elenco</h2>
+    <p class="msg">Il telefono non ha permesso la copia automatica. Seleziona il testo, copialo e incollalo in Excel o Fogli Google.</p>
+    <textarea class="big" id="copyBox" readonly aria-label="Elenco da copiare" style="height:180px"></textarea>
+    <button class="btn primary" id="copyClose">Chiudi</button>
+  </div>
+</div>
+
+<div class="sheet" id="loanSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="loanH">
+    <h2 id="loanH">Presta il libro</h2>
+    <p class="msg" id="loanBook"></p>
+    <label class="field"><span>A chi</span><input id="loanWho" type="text" list="loanNames" autocomplete="off" placeholder="Nome"></label>
+    <label class="field"><span>Dal giorno</span><input id="loanDate" type="date"></label>
+    <p class="msg bad" id="loanErr" hidden></p>
+    <div class="row-btns">
+      <button class="btn" id="loanCancel">Annulla</button>
+      <button class="btn" id="loanBack" hidden>Restituito</button>
+      <button class="btn primary" id="loanSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="sheet-in wide" role="dialog" aria-modal="true" aria-labelledby="statsH">
+    <h2 id="statsH">Statistiche</h2>
+    <div id="statsBody"></div>
+    <button class="btn" id="statsClose">Chiudi</button>
+  </div>
+</div>
+
+<div class="sheet" id="pubSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="pubH">
+    <h2 id="pubH">Uniforma le case editrici</h2>
+    <p class="msg">Questi nomi sembrano la stessa casa editrice. Per ogni gruppo scegli il nome da usare; togli la spunta «cambia» ai nomi da lasciare come sono.</p>
+    <div id="pubList"></div>
+    <div class="row-btns">
+      <button class="btn" id="pubCancel">Annulla</button>
+      <button class="btn primary" id="pubApply">Applica</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="exportSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="exportH">
+    <h2 id="exportH">Esporta</h2>
+    <p class="msg" id="exportMsg"></p>
+    <div class="menu">
+      <button class="btn" id="btnXlsx">Scarica Excel (.xlsx)</button>
+      <button class="btn" id="btnCopy">Copia per Excel o Fogli Google</button>
+      <button class="btn" id="btnCsv">Scarica CSV</button>
+    </div>
+    <h3>Backup</h3>
+    <p class="msg" id="backupInfo"></p>
+    <div class="menu">
+      <button class="btn primary" id="btnShareBackup">Condividi backup (Drive, email, WhatsApp…)</button>
+      <button class="btn" id="btnBackup">Scarica backup</button>
+      <button class="btn" id="btnRestore">Ripristina da backup</button>
+    </div>
+    <p class="msg">Il backup contiene entrambe le liste, con prestiti, scaffali e note. «Ripristina» aggiunge i libri che mancano, senza cancellare quelli che hai.</p>
+    <button class="btn" id="exportClose">Chiudi</button>
+  </div>
+</div>
+
+<datalist id="shelfList"></datalist>
+<datalist id="genreList"></datalist>
+<datalist id="loanNames"></datalist>
+
+<input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<input class="sr" id="filePrice" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<input class="sr" id="fileGal" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true">
+<input class="sr" id="fileBackup" type="file" accept="application/json,.json,text/plain,.txt" tabindex="-1" aria-hidden="true">
+
+<div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button id="toastBtn" hidden></button></div>
+
+<script src="vendor/zxing.min.js"></script>
+<script src="vendor/tesseract.min.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
