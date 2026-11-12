@@ -797,11 +797,14 @@ function summaryHTML(b, dups, status) {
   if (b.i && !L.toIsbn13(b.i)) tags += '<span class="tag bad">ISBN non valido</span>';
   else if (!b.t && b.i && !s.st && b.nf) tags += '<span class="tag warn">Non trovato</span>';
   var title = b.t || (b.i ? 'ISBN ' + b.i : 'Senza titolo');
+  var img = b.img || s.thumb || '';
+  var cover = img ? '<span class="sum-img"><img src="' + esc(img) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></span>'
+    : '<span class="sum-img ph" style="--h:' + hue(b.t + b.a + b.i) + '" aria-hidden="true">' + esc((b.t || '?').replace(/^(il|lo|la|i|gli|le|un|uno|una|l')\s*/i, '').charAt(0).toUpperCase() || '?') + '</span>';
   return '<article class="row closed' + (status.indexOf('status err') >= 0 ? ' bad' : '') + '" data-id="' + b.id + '">' +
-    '<div class="sum" data-act="toggle" role="button" tabindex="0" aria-expanded="false" aria-label="' + esc(title + (b.a ? ', ' + b.a : '') + '. Apri la scheda') + '">' +
-    '<span class="sum-t' + (b.t ? '' : ' none') + '">' + esc(title) + '</span>' +
+    '<div class="sum" data-act="toggle" role="button" tabindex="0" aria-expanded="false" aria-label="' + esc(title + (b.a ? ', ' + b.a : '') + '. Apri la scheda') + '">' + cover +
+    '<span class="sum-txt"><span class="sum-t' + (b.t ? '' : ' none') + '">' + esc(title) + '</span>' +
     (b.a ? '<span class="sum-a">' + esc(b.a) + '</span>' : '') +
-    (tags ? '<span class="sum-tags">' + tags + '</span>' : '') +
+    (tags ? '<span class="sum-tags">' + tags + '</span>' : '') + '</span>' +
     '<span class="chev" aria-hidden="true">' + icon('chev') + '</span></div>' + status + '</article>';
 }
 function toggleRow(id) {

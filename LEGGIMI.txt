@@ -112,7 +112,8 @@ COME SI USA
 
 SCHEDE CHIUSE E APERTE
 ----------------------
-Ogni libro mostra solo titolo e autore (piu' le etichette importanti, come
+Ogni libro mostra la copertina (o un riquadro con l'iniziale, se manca),
+titolo e autore (piu' le etichette importanti, come
 "Prestato a Marco · da 3 settimane" o "Da verificare"). Tocca il libro o
 la freccetta per aprire la scheda con tutti i dati e modificarli; la
 freccetta in alto a destra la richiude. I libri senza titolo (per esempio
