@@ -212,7 +212,41 @@
       return { id: 'c:' + title, t: title, a: names.join(', '), e: str(it.publisher), y: yearOf(dp ? dp[0] : ''), i: isbn, isbns: [isbn], img: '', lang: '', src: 'Crossref' };
     }).filter(function (c) { return c.t; });
   }
-  var SRC_ORDER = ['g', 'o', 'c'];   // per i campi contesi vince la prima fonte; quelli vuoti si riempiono con le altre
+  /* ---------- catalogo SBN (biblioteche italiane), tramite il tuo intermediario Cloudflare ---------- */
+  function sbnClean(t) { return str(t).replace(/\*/g, '').replace(/\s*\[[^\]]*\]\s*/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function sentenceCase(t) { t = str(t).toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* classificazione Dewey: "823.7 NARRATIVA INGLESE" (testo, elenco o oggetti) -> "Narrativa inglese" */
+  function deweyGenre(x) {
+    var v = Array.isArray(x) ? x[0] : x;
+    if (v && typeof v === 'object') v = v.descrizione || v.valore || v.label || v.testo || v.dewey || Object.keys(v).map(function (k) { return typeof v[k] === 'string' ? v[k] : ''; }).join(' ');
+    v = str(v).replace(/^[\d.\s]+/, '').replace(/\(\d+\.?\)/g, '').replace(/\s+/g, ' ').trim();
+    if (!v || v.length > 50) return '';
+    return v === v.toUpperCase() ? sentenceCase(v) : v;
+  }
+  /* json = risposta di search.json?isbn= (briefRecords) con, se c'e', la scheda completa in json.full */
+  function parseSbn(json, isbn) {
+    var r = json && Array.isArray(json.briefRecords) ? json.briefRecords[0] : null;
+    if (!r) return null;
+    var full = (json.full && typeof json.full === 'object') ? json.full : {};
+    var raw = str(r.titolo || full.titolo), parts = raw.split(' / ');
+    var title = sbnClean(parts[0]).replace(/^\d+\s*:\s*/, '').replace(/\s+:\s+/g, ': ').replace(/\s*[.;,]\s*$/, '');
+    var au = str(r.autorePrincipale || full.autorePrincipale).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    var m = au.match(/^([^,]+),\s*(.+)$/);
+    if (m) au = m[2].trim() + ' ' + m[1].trim();
+    if (!au && parts[1]) au = sbnClean(parts[1].split(' ; ')[0]).replace(/^(a cura di|di)\s+/i, '');
+    var pub = str(r.pubblicazione || full.pubblicazione), first = pub.split(/\s;\s/)[0];
+    var e = sbnClean((first.split(/\s:\s/)[1] || '').replace(/,[^,]*\d{4}[^,]*$/, '').replace(/[\[\]]/g, ''));
+    if (/^s\.?\s?n\.?$/i.test(e)) e = '';
+    var years = (pub.match(/\d{4}/g) || []).map(Number).filter(function (y) { return y >= 1450 && y <= 2100; });
+    var pm = str(full.descrizioneFisica).match(/(\d+)\s*p\./);
+    if (!title) return null;
+    return { id: 's:' + isbn, t: title, a: au, e: e, y: years.length ? String(years[years.length - 1]) : '', i: isbn, isbns: [isbn], img: '', lang: '',
+      gen: deweyGenre(full.classificazioneDewey), pg: pm ? pagesOf(pm[1]) : '', src: 'SBN' };
+  }
+  function sbnUrl(base, isbn) {
+    try { var u = new URL(str(base)); if (u.protocol !== 'https:') return ''; u.searchParams.set('isbn', isbn); return u.href; } catch (e) { return ''; }
+  }
+  var SRC_ORDER = ['g', 'o', 's', 'c'];   // per i campi contesi vince la prima fonte; quelli vuoti si riempiono con le altre
   /* Cerca un ISBN-13 su Google Libri e Open Library INSIEME (piu' veloce) e somma i dati: Google ha la precedenza,
      i campi che mancano (editore, anno, autore...) vengono presi dalle altre fonti. Crossref si aggiunge solo se ancora
      manca qualcosa. Ritorna il libro, oppure null SOLO se le banche dati principali hanno risposto e non lo conoscono.
@@ -228,7 +262,7 @@
       if (e && e.status === 429) rate = true;
       errors.push(src + ': ' + (e && e.status ? 'errore ' + e.status : (e && e.bad ? 'risposta non valida' : 'nessuna risposta')));
     }
-    var got = { g: null, o: null, c: null };
+    var got = { g: null, o: null, s: null, c: null };
     var gFailed = false, oFailed = false;
     function best() {
       var base = null;
@@ -248,6 +282,12 @@
         return openLibrarySearch(j2, isbn)[0] || null;
       } catch (e2) { note('Open Library', e2); oFailed = true; return null; }
     }
+    async function trySbn() {
+      var u = opts.sbnUrl ? sbnUrl(opts.sbnUrl, isbn) : '';
+      if (!u) return null;
+      try { return parseSbn(await getJson(f, u, { waits: [], timeout: 9000 }), isbn); }
+      catch (e) { return null; }            // fonte accessoria: se non risponde si va avanti
+    }
     async function tryCrossref() {
       try { return parseCrossref(await getJson(f, CROSSREF_URL + isbn, { waits: [], timeout: 8000 }), isbn)[0] || null; }
       catch (e) { return null; }            // fonte accessoria: se non risponde si va avanti
@@ -263,9 +303,10 @@
     // 1) Google Libri e Open Library, insieme
     var first = await Promise.all([
       google('isbn:' + isbn, false).catch(function (e) { note('Google Libri', e); gFailed = true; return null; }),
-      tryOl()
+      tryOl(),
+      trySbn()
     ]);
-    got.g = first[0]; got.o = first[1];
+    got.g = first[0]; got.o = first[1]; got.s = first[2];
     // 2) Crossref solo se ancora manca qualcosa
     if (!complete()) got.c = await tryCrossref();
     // 3) ultima spiaggia per Google: codice semplice e ISBN-10 (solo se l'ISBN coincide)
@@ -281,7 +322,9 @@
       return null;
     }
     book.i = isbn;
-    book.src = [got.g && 'Google Libri', got.o && 'Open Library', got.c && 'Crossref'].filter(Boolean).join(' + ');
+    // per i libri italiani il catalogo delle biblioteche e' il piu' affidabile su editore e anno di quella edizione
+    if (got.s && isbn.indexOf('97888') === 0) { if (got.s.e) book.e = got.s.e; if (got.s.y) book.y = got.s.y; }
+    book.src = [got.g && 'Google Libri', got.o && 'Open Library', got.s && 'SBN', got.c && 'Crossref'].filter(Boolean).join(' + ');
     return book;
   }
 
@@ -336,6 +379,12 @@
       function (j) { var l = parseOpenLibrary(j, '9780140328721'); return l.length ? 'risponde: ' + l[0].t : 'risponde ma non trova il libro di prova'; });
     await probe('Crossref', CROSSREF_URL.replace('rows=5', 'rows=1') + '9780262033848',
       function (j) { return (j && j.message) ? 'risponde' : 'risposta non valida'; });
+    if (opts.sbnUrl) {
+      var su = sbnUrl(opts.sbnUrl, '9788806219352');
+      if (!su) out.push({ name: 'Catalogo SBN', ok: false, msg: 'indirizzo dell\'intermediario non valido (deve iniziare con https://)' });
+      else await probe('Catalogo SBN', su, function (j) { var l = parseSbn(j, '9788806219352'); return l ? 'risponde: ' + l.t + (l.e ? ' (' + l.e + ', ' + l.y + ')' : '') : (j && j.error ? 'l\'intermediario risponde ma dice: ' + j.error : 'risponde ma non trova il libro di prova'); },
+        'nessuna risposta: controlla l\'indirizzo dell\'intermediario Cloudflare');
+    }
     return out;
   }
   async function searchText(query, opts) {
@@ -504,16 +553,20 @@
     { k: 't', h: 'Titolo', w: 42 }, { k: 'a', h: 'Autore', w: 28 }, { k: 'e', h: 'Casa editrice', w: 22 },
     { k: 'y', h: 'Anno', w: 7, type: 'n' }, { k: 'c', h: 'Costo', w: 11, type: 'c' }, { k: 'i', h: 'ISBN', w: 16, type: 'x' },
     { k: 'sh', h: 'Scaffale', w: 16, opt: true }, { k: 'gen', h: 'Genere', w: 16, opt: true }, { k: 'pg', h: 'Pagine', w: 8, type: 'n', opt: true },
-    { k: 'n', h: 'Note', w: 36, opt: true }, { k: 'p', h: 'Prestato a', w: 16, opt: true }, { k: 'pd', h: 'Data prestito', w: 13, opt: true }
+    { k: 'n', h: 'Note', w: 36, opt: true }, { k: 'p', h: 'Prestato a', w: 16, opt: true }, { k: 'pd', h: 'Data prestito', w: 13, opt: true },
+    { k: 'rs', h: 'Lettura', w: 12, opt: true }, { k: 'rt', h: 'Voto', w: 7, type: 'n', opt: true }, { k: 'rd', h: 'Data lettura', w: 13, opt: true }
   ];
+  var READ_LABEL = { da: 'Da leggere', in: 'In lettura', ok: 'Letto' };
   function colsFor(books) {
-    return COLS.filter(function (c) { return !c.opt || books.some(function (b) { return b[c.k] != null && String(b[c.k]) !== ''; }); });
+    return COLS.filter(function (c) { return !c.opt || books.some(function (b) { return b[c.k] != null && String(b[c.k]) !== '' && b[c.k] !== 0; }); });
   }
   function itDate(iso) { var m = String(iso || '').match(/^(\d{4})-(\d\d)-(\d\d)$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : str(iso); }
   function cellText(b, c) {
     var v = b[c.k];
     if (c.k === 'c') return v == null ? '' : fmtNum(v);
-    if (c.k === 'pd') return itDate(v);
+    if (c.k === 'pd' || c.k === 'rd') return itDate(v);
+    if (c.k === 'rs') return READ_LABEL[v] || '';
+    if (c.k === 'rt') return v ? String(v) : '';
     return v == null ? '' : String(v);
   }
   function rowsFor(books) {
@@ -579,11 +632,12 @@
       var rn = r + 2;
       rows.push('<row r="' + rn + '">' + cols.map(function (c, i) {
         var ref = colLetter(i) + rn, v = b[c.k];
-        if (v == null || v === '') return '';
+        if (v == null || v === '' || v === 0) return '';
+        if (c.k === 'rs') v = READ_LABEL[v] || '';
         if (c.type === 'c') return typeof v === 'number' && isFinite(v) ? '<c r="' + ref + '" s="2"><v>' + v + '</v></c>' : '';
         if (c.type === 'n') { var n = parseInt(v, 10); return isFinite(n) && String(n) === String(v).trim() ? '<c r="' + ref + '"><v>' + n + '</v></c>' : txt(ref, v); }
         if (c.type === 'x') return txt(ref, v, 3);
-        return txt(ref, c.k === 'pd' ? itDate(v) : v);
+        return txt(ref, (c.k === 'pd' || c.k === 'rd') ? itDate(v) : v);
       }).join('') + '</row>');
     });
     var NS = 'http://schemas.openxmlformats.org/', M = NS + 'spreadsheetml/2006/main', R = NS + 'officeDocument/2006/relationships';
@@ -654,13 +708,44 @@
     }).sort(function (x, y) { return y.total - x.total; });
   }
 
+  /* ---------- doppioni: stesso ISBN, oppure stesso titolo e autore, nella stessa lista ---------- */
+  function dupGroups(books) {
+    var parent = {}, list = (books || []).filter(Boolean);
+    function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+    list.forEach(function (b) { parent[b.id] = b.id; });
+    var seen = {};
+    list.forEach(function (b) {
+      var w = b.w ? 'w' : 'l', keys = [], iso = toIsbn13(b.i);
+      if (iso) keys.push(w + 'i:' + iso);
+      if (b.t) keys.push(w + 't:' + norm(b.t) + '|' + norm(b.a));
+      keys.forEach(function (k) { if (seen[k]) parent[find(b.id)] = find(seen[k]); else seen[k] = b.id; });
+    });
+    var g = {};
+    list.forEach(function (b) { var r = find(b.id); (g[r] = g[r] || []).push(b); });
+    return Object.keys(g).map(function (k) { return g[k]; }).filter(function (x) { return x.length > 1; });
+  }
+  var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd'];
+  /* Tiene il libro piu' completo (a parita', il piu' vecchio) e lo riempie con i dati degli altri; le note si sommano. */
+  function mergeBooks(group) {
+    function filled(b) { return MERGE_KEYS.filter(function (k) { return b[k] != null && b[k] !== '' && b[k] !== 0; }).length + (b.n ? 1 : 0); }
+    var sorted = group.slice().sort(function (x, y) { return filled(y) - filled(x) || (x.ts || 0) - (y.ts || 0); });
+    var keep = JSON.parse(JSON.stringify(sorted[0]));
+    sorted.slice(1).forEach(function (o) {
+      MERGE_KEYS.forEach(function (k) { if ((keep[k] == null || keep[k] === '' || keep[k] === 0) && o[k] != null && o[k] !== '' && o[k] !== 0) keep[k] = o[k]; });
+      if (o.n && (keep.n || '').indexOf(o.n) < 0) keep.n = keep.n ? keep.n + ' · ' + o.n : o.n;
+    });
+    keep.g = (keep.g || []).filter(function (k) { return keep[k]; });
+    return { keep: keep, removed: sorted.slice(1).map(function (b) { return b.id; }) };
+  }
+
   /* ---------- statistiche ---------- */
   function top(map, n) {
     return Object.keys(map).map(function (k) { return { k: k, n: map[k] }; })
       .sort(function (a, b) { return b.n - a.n || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0); }).slice(0, n || 8);
   }
   function computeStats(books) {
-    var st = { n: 0, total: 0, priced: 0, pages: 0, paged: 0, guess: 0, noPrice: 0, loans: [], authors: {}, publishers: {}, genres: {}, shelves: {}, decades: {} };
+    var st = { n: 0, total: 0, priced: 0, pages: 0, paged: 0, guess: 0, noPrice: 0, loans: [], authors: {}, publishers: {}, genres: {}, shelves: {}, decades: {},
+      read: 0, reading: 0, toRead: 0, rated: 0, ratingSum: 0, readYears: {}, pagesRead: 0 };
     (books || []).forEach(function (b) {
       st.n++;
       if (typeof b.c === 'number' && isFinite(b.c)) { st.total += b.c; st.priced++; } else st.noPrice++;
@@ -672,8 +757,14 @@
       if (b.gen) st.genres[b.gen] = (st.genres[b.gen] || 0) + 1;
       if (b.sh) st.shelves[b.sh] = (st.shelves[b.sh] || 0) + 1;
       var y = parseInt(b.y, 10); if (y > 1000) { var d = Math.floor(y / 10) * 10; st.decades[d] = (st.decades[d] || 0) + 1; }
+      if (b.rs === 'ok') { st.read++; if (pg > 0) st.pagesRead += pg; var ry = str(b.rd).slice(0, 4); if (/^\d{4}$/.test(ry)) st.readYears[ry] = (st.readYears[ry] || 0) + 1; }
+      else if (b.rs === 'in') st.reading++;
+      else if (b.rs === 'da') st.toRead++;
+      if (b.rt > 0) { st.rated++; st.ratingSum += b.rt; }
     });
     st.avg = st.priced ? st.total / st.priced : 0;
+    st.avgRating = st.rated ? st.ratingSum / st.rated : 0;
+    st.byReadYear = Object.keys(st.readYears).sort().map(function (k) { return { k: k, n: st.readYears[k] }; });
     st.loans.sort(function (a, b) { return a.pd < b.pd ? -1 : a.pd > b.pd ? 1 : 0; });
     st.topAuthors = top(st.authors, 8); st.topPublishers = top(st.publishers, 8); st.topGenres = top(st.genres, 8); st.topShelves = top(st.shelves, 10);
     st.byDecade = Object.keys(st.decades).map(Number).sort(function (a, b) { return a - b; }).map(function (d) { return { k: d + '–' + (d + 9), n: st.decades[d] }; });
@@ -701,6 +792,7 @@
     scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice,
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
-    computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson
+    computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,
+    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, mergeBooks: mergeBooks, READ_LABEL: READ_LABEL
   };
 });

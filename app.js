@@ -53,23 +53,24 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0 };
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
-var q = '', sortBy = 'recent', flt = '', tab = 'lib';   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
+var q = '', sortBy = 'recent', flt = '', tab = 'lib', readFlt = '';   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
 var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
 
 function newId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function get(id) { for (var i = 0; i < state.books.length; i++) if (state.books[i].id === id) return state.books[i]; return null; }
 function smallImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.img || b.imgL || s.thumb || ''; }
 function bigImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.imgL || b.img || s.big || s.thumb || ''; }
+function lookupOpts() { return { gbKey: settings.gbKey, sbnUrl: settings.sbnUrl }; }
 function hasData(b) { return !!(b.t || b.a || b.e || b.y || b.i || b.c != null || b.n); }
 function inTab(b) { return !!b.w === (tab === 'wish'); }
 function tabBooks() { return state.books.filter(inTab); }
 function blankBook(o) {
   return Object.assign({ id: newId(), t: '', a: '', e: '', y: '', c: null, i: '', g: [], img: '', nf: false, ts: Date.now(),
-    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish' }, o || {});
+    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '' }, o || {});
 }
-var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w'];
+var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd'];
 function isBusy(b) { var st = (S[b.id] || {}).st; return st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search'; }
 function cleanBook(x) {
   if (!x || typeof x !== 'object') return null;
@@ -88,7 +89,10 @@ function cleanBook(x) {
     sh: L.str(x.sh).slice(0, 80), n: L.str(x.n).slice(0, 2000), gen: L.str(x.gen).slice(0, 80),
     pg: L.str(x.pg).replace(/\D/g, '').slice(0, 5), p: L.str(x.p).slice(0, 80),
     pd: /^\d{4}-\d\d-\d\d$/.test(L.str(x.pd)) ? x.pd : '',
-    w: !!x.w
+    w: !!x.w,
+    rs: ['da', 'in', 'ok'].indexOf(x.rs) >= 0 ? x.rs : '',
+    rt: Math.max(0, Math.min(5, parseInt(x.rt, 10) || 0)),
+    rd: /^\d{4}-\d\d-\d\d$/.test(L.str(x.rd)) ? x.rd : ''
   };
 }
 function storable() {
@@ -121,6 +125,8 @@ function loadAll() {
     settings.lastBackup = Number(s.lastBackup) || 0; settings.snooze = Number(s.snooze) || 0;
     settings.view = s.view === 'grid' ? 'grid' : 'list';
     settings.openAll = s.openAll === true;
+    settings.sbnUrl = /^https:\/\//.test(L.str(s.sbnUrl)) ? L.str(s.sbnUrl) : '';
+    settings.loanSnooze = Number(s.loanSnooze) || 0;
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -267,17 +273,18 @@ async function doLookup(id) {
   var code = L.toIsbn13(b.i);
   if (!code) { delete s.st; refreshRow(id); return; }
   if (navigator.onLine === false) {
-    delete s.st;
+    s.st = 'wait'; s.err = 'Senza connessione: lo cerco da solo appena torna la rete.'; s.retry = 'lookup';
     refreshRow(id); updateSummary();
-    if (!offlineNoted) { offlineNoted = true; toast('Sei offline: i libri restano salvati con l\'ISBN e li completo appena torni online.'); }
+    if (!offlineNoted) { offlineNoted = true; toast('Sei offline: i libri restano salvati con l\'ISBN e li cerco da soli appena torna la rete.'); }
     return;
   }
   s.st = 'lookup';
   refreshRow(id);
   try {
-    var r = await L.lookupIsbn(code, { gbKey: settings.gbKey });
+    var r = await L.lookupIsbn(code, lookupOpts());
     b = get(id);
     if (!b) return;
+    clearTimeout(s.timer); delete s.tries;
     if (r) {
       applyResult(b, r, code);
       delete s.st;
@@ -291,14 +298,23 @@ async function doLookup(id) {
   } catch (e) {
     b = get(id);
     if (!b) return;
-    if (e && (e.code === 'network' || e.code === 'rate') && navigator.onLine !== false) {
-      s.st = 'error';
-      s.err = e.code === 'rate'
-        ? (settings.gbKey
-          ? 'Google Libri ha raggiunto il limite di richieste della tua chiave. Riprova più tardi.'
-          : 'Google Libri rifiuta le richieste senza chiave (limite raggiunto). Soluzione stabile: inserisci la tua chiave gratuita in Opzioni. Intanto puoi premere Riprova.')
-        : 'Ricerca non riuscita: ' + ((e.detail && e.detail.length) ? e.detail.join('; ') : 'le banche dati non rispondono') + '. Premi Riprova.';
+    if (e && (e.code === 'network' || e.code === 'rate')) {
+      // rete debole o limite di Google: riprovo da solo, sempre piu' di rado
+      s.tries = (s.tries || 0) + 1;
+      var rate = e.code === 'rate', waits = rate ? [90, 180, 300, 600] : [20, 60, 180, 600];
+      var sec = waits[Math.min(s.tries - 1, waits.length - 1)];
+      var when = sec < 60 ? sec + ' secondi' : (sec / 60) + (sec === 60 ? ' minuto' : ' minuti');
       s.retry = 'lookup';
+      if (rate && s.tries > waits.length) {
+        s.st = 'error';
+        s.err = settings.gbKey ? 'Google Libri ha raggiunto il limite di richieste della tua chiave. Riprova più tardi.'
+          : 'Google Libri rifiuta le richieste senza chiave (limite raggiunto). Soluzione stabile: inserisci la tua chiave gratuita in Opzioni. Intanto puoi premere Riprova.';
+      } else {
+        s.st = 'wait';
+        s.err = (rate ? 'Google Libri è al limite di richieste' + (settings.gbKey ? '' : ' (senza chiave)') : (navigator.onLine === false ? 'Senza connessione' : 'Connessione debole')) + ': riprovo da solo tra ' + when + '.';
+        clearTimeout(s.timer);
+        s.timer = setTimeout(function () { var x = S[id]; if (x && x.st === 'wait' && get(id)) { x.st = 'queued'; refreshRow(id); lookupPool(function () { return doLookup(id); }); } }, sec * 1000);
+      }
     }
     else { delete s.st; }
   }
@@ -677,8 +693,12 @@ function onScanned(code) {
 }
 /* ---------- «Ce l'ho già?»: controlla senza aggiungere ---------- */
 var checkCache = {}, resCode = '', resKind = '';
+function readLabel(b) {
+  if (b.rs === 'ok') return 'Letto' + (b.rt ? ' · ' + '★'.repeat(b.rt) : '');
+  return b.rs === 'in' ? 'In lettura' : b.rs === 'da' ? 'Da leggere' : '';
+}
 function shelfLine(b) {
-  return [b.a, b.sh ? 'Scaffale: ' + b.sh : ''].filter(Boolean).join(' · ');
+  return [b.a, b.sh ? 'Scaffale: ' + b.sh : '', readLabel(b)].filter(Boolean).join(' · ');
 }
 function showRes(code, kind, book, info) {
   resCode = code; resKind = kind;
@@ -711,7 +731,7 @@ function onCheck(code) {
     if (checkCache.hasOwnProperty(code)) { showRes(code, 'no', null, checkCache[code]); return; }
     showRes(code, 'no', null, undefined);
     if (navigator.onLine === false) { showRes(code, 'no', null, false); return; }
-    L.lookupIsbn(code, { gbKey: settings.gbKey }).then(function (r) {
+    L.lookupIsbn(code, lookupOpts()).then(function (r) {
       checkCache[code] = r || null;
       if (scanning && resCode === code && resKind === 'no') showRes(code, 'no', null, r || null);
     }, function () { if (scanning && resCode === code && resKind === 'no') showRes(code, 'no', null, false); });
@@ -746,6 +766,7 @@ function visible() {
   var nq = L.norm(q);
   if (nq) a = a.filter(function (b) { return L.norm([b.t, b.a, b.e, b.i, b.sh, b.gen, b.n, b.p].join(' ')).indexOf(nq) >= 0; });
   if (flt === 'guess') a = a.filter(function (b) { return b.g.length; });
+  if (readFlt && tab === 'lib') a = a.filter(function (b) { return readFlt === 'no' ? !b.rs : b.rs === readFlt; });
   if (flt === 'loan') {
     return a.filter(function (b) { return b.p; }).sort(function (x, y) { return (x.pd || '9') < (y.pd || '9') ? -1 : (x.pd || '9') > (y.pd || '9') ? 1 : cmpFor('titolo')(x, y); });
   }
@@ -758,6 +779,8 @@ function cmpFor(k) {
   if (k === 'autore') return function (x, y) { return byAuthor(x, y) || byTitle(x, y); };
   if (k === 'editore') return function (x, y) { return coll.compare(x.e || '~', y.e || '~') || byAuthor(x, y) || byTitle(x, y); };
   if (k === 'anno') return function (x, y) { return (Number(x.y) || 99999) - (Number(y.y) || 99999) || byTitle(x, y); };
+  if (k === 'voto') return function (x, y) { return (y.rt || 0) - (x.rt || 0) || byTitle(x, y); };
+  if (k === 'letti') return function (x, y) { return (y.rd || '') < (x.rd || '') ? -1 : (y.rd || '') > (x.rd || '') ? 1 : byTitle(x, y); };
   if (k === 'scaffale') return function (x, y) { return coll.compare(x.sh || '~', y.sh || '~') || byAuthor(x, y) || byTitle(x, y); };
   return function (x, y) { return y.ts - x.ts; };
 }
@@ -801,6 +824,7 @@ function summaryHTML(b, dups, status) {
   var s = S[b.id] || {}, tags = '';
   if (b.p) tags += '<span class="tag loan tap" data-act="loan" role="button" tabindex="0" title="Tocca per segnarlo come restituito">' + esc(loanText(b)) + '</span>';
   if (b.g.length) tags += '<span class="tag warn">Da verificare</span>';
+  if (!b.w && (b.rs === 'in' || b.rs === 'ok')) tags += '<span class="tag read' + (b.rs === 'in' ? ' now' : '') + '">' + esc(readLabel(b)) + '</span>';
   if (dups && dups[b.id]) tags += '<span class="tag">Doppione?</span>';
   if (b.i && !L.toIsbn13(b.i)) tags += '<span class="tag bad">ISBN non valido</span>';
   else if (!b.t && b.i && !s.st && b.nf) tags += '<span class="tag warn">Non trovato</span>';
@@ -823,6 +847,28 @@ function toggleRow(id) {
   refreshRow(id);
   var el = rowEl(id);
   if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
+}
+/* stato di lettura, voto e data (solo Libreria) */
+function readHTML(b, off) {
+  if (b.w) return '';
+  var d = off ? ' disabled' : '';
+  var seg = [['da', 'Da leggere'], ['in', 'In lettura'], ['ok', 'Letto']].map(function (x) {
+    return '<button type="button" data-act="rs" data-v="' + x[0] + '" aria-pressed="' + (b.rs === x[0]) + '"' + d + '>' + x[1] + '</button>';
+  }).join('');
+  var stars = [1, 2, 3, 4, 5].map(function (n) {
+    return '<button type="button" class="star' + (b.rt >= n ? ' on' : '') + '" data-act="rt" data-v="' + n + '" role="radio" aria-checked="' + (b.rt === n) + '" aria-label="' + n + (n === 1 ? ' stella' : ' stelle') + '"' + d + '>★</button>';
+  }).join('');
+  return '<div class="read"><span class="lbl">Lettura</span><div class="seg" role="group" aria-label="Stato di lettura">' + seg + '</div>' +
+    '<div class="stars" role="radiogroup" aria-label="Voto">' + stars + '</div>' +
+    (b.rs === 'ok' ? '<label class="f f-rd"><span class="lbl">Letto il</span><input type="date" data-k="rd" id="rd-' + b.id + '" value="' + esc(b.rd || '') + '"' + d + '></label>' : '') + '</div>';
+}
+/* «Tutti i libri di …» se dello stesso autore ce ne sono altri */
+function authorLinkHTML(b, ex) {
+  if (ex || !b.a) return '';
+  var first = b.a.split(/\s*[,;]\s*/)[0].trim(), key = L.norm(first);
+  if (key.length < 3) return '';
+  var n = state.books.filter(function (x) { return L.norm(x.a).indexOf(key) >= 0; }).length;
+  return n > 1 ? '<div class="links"><button type="button" class="link" data-act="author" data-q="' + esc(first) + '">Tutti i libri di ' + esc(first) + ' (' + n + ') ›</button></div>' : '';
 }
 function bar(txt) { return '<div class="status"><span class="bar"></span><span class="txt">' + esc(txt) + '</span></div>'; }
 function rowHTML(b, dups, ex) {
@@ -849,6 +895,7 @@ function rowHTML(b, dups, ex) {
   else if (st === 'lookup') status = bar('Cerco nelle banche dati…');
   else if (st === 'search') status = bar('Cerco il libro…');
   else if (st === 'choose') status = '<div class="status"><span class="txt">Trovate ' + ((s.cands || []).length) + ' possibili edizioni.</span><button class="btn primary" data-act="choose">Scegli</button></div>';
+  else if (st === 'wait') status = '<div class="status wait"><span class="txt">' + esc(s.err || 'In attesa della rete.') + '</span><button class="btn" data-act="retry">Riprova ora</button></div>';
   else if (st === 'error') status = '<div class="status err" role="alert"><span class="txt">' + esc(s.err || 'Operazione non riuscita.') + '</span>' + (s.retry ? '<button class="btn" data-act="retry">Riprova</button>' : '') + '</div>';
 
   var thumb = canShoot
@@ -868,6 +915,7 @@ function rowHTML(b, dups, ex) {
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80, 'shelfList') + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80, 'genreList') +
         inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' : '') +
+      readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
       '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
       (ex ? '<span class="tag">Esempio</span>' :
@@ -979,6 +1027,17 @@ function updateSummary() {
   $('#cntLib').textContent = nl; $('#cntWish').textContent = nw;
   $('#tabLib').setAttribute('aria-selected', tab === 'lib' ? 'true' : 'false');
   $('#tabWish').setAttribute('aria-selected', tab === 'wish' ? 'true' : 'false');
+  var lib = state.books.filter(function (b) { return !b.w && hasData(b); });
+  var cnt = { da: 0, in: 0, ok: 0, no: 0 };
+  lib.forEach(function (b) { cnt[b.rs || 'no']++; });
+  var fr = $('#fltRead');
+  fr.hidden = tab !== 'lib' || (!readFlt && cnt.no === lib.length);
+  [['', 'Lettura: tutti'], ['da', 'Da leggere'], ['in', 'In lettura'], ['ok', 'Letti'], ['no', 'Non indicato']].forEach(function (x, i) {
+    fr.options[i].textContent = x[1] + (x[0] ? ' (' + cnt[x[0]] + ')' : '');
+  });
+  fr.value = readFlt;
+  fr.classList.toggle('on', !!readFlt);
+  $('#btnShareWish').hidden = tab !== 'wish' || !n;
   var fg = $('#fltGuess');
   fg.textContent = 'Da verificare · ' + g;
   fg.hidden = g === 0 && flt !== 'guess';
@@ -1013,6 +1072,7 @@ function delBook(id) {
 function retryRow(id) {
   var s = S[id], b = get(id);
   if (!s || !b) return;
+  clearTimeout(s.timer);
   var what = s.retry;
   s.err = ''; s.retry = null;
   if (what === 'lookup') { s.st = 'queued'; refreshRow(id); lookupPool(function () { return doLookup(id); }); }
@@ -1403,6 +1463,108 @@ $('#btnCovers').addEventListener('click', improveCovers);
 $('#lightbox').addEventListener('click', function (e) { if (e.target === e.currentTarget || e.target.id === 'lbCap' || e.target.id === 'lbNote') closeCover(false); });
 window.addEventListener('popstate', function () { if (!$('#lightbox').hidden) { lbPushed = false; closeCover(true); } });
 
+function setRead(id, what, v) {
+  var b = get(id);
+  if (!b) return;
+  if (what === 'rs') {
+    b.rs = b.rs === v ? '' : v;
+    if (b.rs === 'ok' && !b.rd) b.rd = today();
+  } else {
+    var n = parseInt(v, 10) || 0;
+    b.rt = b.rt === n ? 0 : n;
+  }
+  touch(); refreshRow(id); updateSummary();
+  var el = rowEl(id), f = el && el.querySelector('[data-act="' + what + '"][data-v="' + v + '"]');
+  if (f) f.focus({ preventScroll: true });
+}
+
+/* ---------- condividi la lista dei Desideri ---------- */
+function wishText() {
+  var books = state.books.filter(function (b) { return b.w && hasData(b); }).sort(cmpFor('titolo'));
+  var total = books.reduce(function (s, b) { return s + (b.c || 0); }, 0);
+  var lines = books.map(function (b) {
+    var ed = [b.e, b.y].filter(Boolean).join(', ');
+    return '• ' + (b.t || 'ISBN ' + b.i) + (b.a ? ' — ' + b.a : '') + (ed ? ' (' + ed + ')' : '') + (b.c != null ? ' · ' + eur(b.c) : '') + (L.toIsbn13(b.i) ? '\n   ISBN ' + L.toIsbn13(b.i) : '');
+  });
+  return { n: books.length, text: 'Libri che vorrei (' + books.length + '):\n\n' + lines.join('\n') + (total ? '\n\nTotale: ' + eur(total) : '') };
+}
+async function shareWish() {
+  var w = wishText();
+  if (!w.n) { toast('La lista dei Desideri è vuota.'); return; }
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Libri che vorrei', text: w.text }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(w.text); toast('Lista copiata: incollala in WhatsApp, in un SMS o in una mail.'); }
+  catch (e) { $('#copyBox').value = w.text; $('#copySheet').hidden = false; $('#copyBox').focus(); $('#copyBox').select(); }
+}
+
+/* ---------- 7) unisci i doppioni ---------- */
+function mergeDups() {
+  var groups = L.dupGroups(state.books);
+  if (!groups.length) { toast('Non ci sono doppioni.'); return; }
+  var snapshot = JSON.stringify(state.books), removed = 0;
+  groups.forEach(function (g) {
+    var m = L.mergeBooks(g), keep = cleanBook(m.keep);
+    var i = state.books.findIndex(function (b) { return b.id === keep.id; });
+    if (i >= 0) state.books[i] = keep;
+    m.removed.forEach(function (rid) {
+      if (!coverURL[keep.id] && coverURL[rid]) fetch(coverURL[rid]).then(function (r) { return r.blob(); }).then(function (bl) { return saveCover(keep.id, bl); }).catch(function () {});
+    });
+    state.books = state.books.filter(function (b) { return m.removed.indexOf(b.id) < 0; });
+    removed += m.removed.length;
+  });
+  renderList(); touch(); updateSummary();
+  toast('Uniti ' + removed + (removed === 1 ? ' doppione' : ' doppioni') + ' in ' + groups.length + (groups.length === 1 ? ' libro.' : ' libri.'), { label: 'Annulla', fn: function () { state.books = JSON.parse(snapshot).map(cleanBook).filter(Boolean); renderList(); touch(); updateSummary(); } });
+}
+
+/* ---------- 7) promemoria dei prestiti lunghi ---------- */
+function checkLoanNag() {
+  var DAY = 86400000, now = Date.now();
+  if (now - settings.loanSnooze < 7 * DAY || !$('#notice').hidden) return;
+  var old = state.books.filter(function (b) { return !b.w && b.p && b.pd && now - Date.parse(b.pd) > 30 * DAY; })
+    .sort(function (x, y) { return x.pd < y.pd ? -1 : 1; });
+  if (!old.length) return;
+  var b = old[0], ago = L.agoText(Date.parse(b.pd)).replace(/ fa$/, '');
+  var msg = b.p + ' ha «' + (b.t || b.i) + '» da ' + ago + '.' + (old.length > 1 ? ' Altri ' + (old.length - 1) + (old.length === 2 ? ' libro è' : ' libri sono') + ' in prestito da più di un mese.' : '');
+  function later() { settings.loanSnooze = Date.now(); saveSettings(); }
+  notice(msg, 'Vedi i prestiti', function () { later(); if (tab !== 'lib') setTab('lib'); flt = 'loan'; renderList(); updateSummary(); window.scrollTo({ top: 0 }); }, later, 'loan');
+}
+
+/* ---------- 7) catalogo stampabile / PDF ---------- */
+async function printCatalog() {
+  var books = visible().filter(hasData);
+  if (!books.length) { toast('Non ci sono libri da stampare con la ricerca e i filtri attuali.'); return; }
+  var covers = $('#printCovers').checked && books.some(function (b) { return !!smallImg(b); });
+  var has = function (k) { return books.some(function (b) { return b[k]; }); };
+  var cols = [['t', 'Titolo'], ['a', 'Autore'], ['e', 'Casa editrice'], ['y', 'Anno'], ['c', 'Prezzo']];
+  if (has('sh')) cols.push(['sh', 'Scaffale']);
+  if (has('rs')) cols.push(['rs', 'Lettura']);
+  if (has('p')) cols.push(['p', 'Prestato a']);
+  var total = books.reduce(function (s, b) { return s + (b.c || 0); }, 0);
+  var filt = [q ? 'ricerca «' + q + '»' : '', flt === 'loan' ? 'solo libri in prestito' : '', flt === 'guess' ? 'solo da verificare' : '', readFlt ? 'lettura: ' + ($('#fltRead').selectedOptions[0] || {}).textContent : ''].filter(Boolean).join(', ');
+  function cell(b, k) {
+    if (k === 'c') return b.c == null ? '' : eur(b.c);
+    if (k === 'rs') return readLabel(b);
+    return esc(b[k] || '');
+  }
+  $('#printView').innerHTML = '<h1>Catalogo libri · ' + (tab === 'wish' ? 'Desideri' : 'Libreria') + '</h1>' +
+    '<p class="pv-sub">' + esc(L.itDate(today())) + ' · ' + books.length + (books.length === 1 ? ' libro' : ' libri') + (total ? ' · valore di copertina ' + esc(eur(total)) : '') + (filt ? ' · ' + esc(filt) : '') + '</p>' +
+    '<table><thead><tr>' + (covers ? '<th></th>' : '') + cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    books.map(function (b) {
+      var img = covers ? smallImg(b) : '';
+      return '<tr>' + (covers ? '<td class="pv-img">' + (img ? '<img src="' + esc(img) + '" alt="" referrerpolicy="no-referrer">' : '') + '</td>' : '') +
+        cols.map(function (c) { return '<td class="pv-' + c[0] + '">' + cell(b, c[0]) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody></table>';
+  $('#exportSheet').hidden = true;
+  if (covers) {
+    var imgs = Array.prototype.slice.call(document.querySelectorAll('#printView img'));
+    await Promise.race([Promise.all(imgs.map(function (i) { return i.complete ? 1 : new Promise(function (r) { i.onload = i.onerror = r; }); })), new Promise(function (r) { setTimeout(r, 5000); })]);
+  }
+  window.print();
+}
+window.addEventListener('afterprint', function () { $('#printView').innerHTML = ''; });
+
 /* ---------- prestiti ---------- */
 var loanId = null;
 function openLoan(id) {
@@ -1492,6 +1654,9 @@ function openStats() {
     (st.priced ? tile(eur(st.avg), 'prezzo medio') : '') +
     (st.paged ? tile(nf.format(st.pages), 'pagine', st.paged < st.n ? 'su ' + st.paged + ' libri' : '') : '') +
     (tab === 'lib' ? tile(String(st.loans.length), 'in prestito') : '') +
+    (tab === 'lib' && (st.read || st.reading || st.toRead) ? tile(String(st.read), 'letti', [st.reading ? st.reading + ' in lettura' : '', st.toRead ? st.toRead + ' da leggere' : ''].filter(Boolean).join(' · ')) : '') +
+    (st.pagesRead ? tile(nf.format(st.pagesRead), 'pagine lette') : '') +
+    (st.rated ? tile('★ ' + st.avgRating.toFixed(1).replace('.', ','), 'voto medio', 'su ' + st.rated + (st.rated === 1 ? ' libro' : ' libri')) : '') +
     (st.guess ? tile(String(st.guess), 'da verificare') : '');
   var loans = st.loans.length ? '<section class="st-sec"><h3>In prestito</h3><ul class="loans">' + st.loans.map(function (x) {
     return '<li><b>' + esc(x.p) + '</b> · ' + esc(x.t) + (x.pd ? ' <small>dal ' + esc(L.itDate(x.pd)) + ', ' + esc(L.agoText(Date.parse(x.pd))) + '</small>' : '') + '</li>';
@@ -1500,6 +1665,7 @@ function openStats() {
   $('#statsBody').innerHTML = '<div class="tiles">' + tiles + '</div>' + loans +
     barsHTML('Autori più presenti', st.topAuthors, true) + barsHTML('Case editrici', st.topPublishers, true) +
     barsHTML('Generi', st.topGenres, true) + barsHTML('Scaffali', st.topShelves, true) + barsHTML('Anno di pubblicazione, per decennio', st.byDecade, false) +
+    barsHTML('Libri letti, per anno', st.byReadYear, false) +
     '<p class="msg">Tocca un nome per vedere quei libri.</p>';
   $('#statsSheet').hidden = false;
 }
@@ -1549,7 +1715,7 @@ async function fillMissing() {
   await Promise.all(todo.map(function (b0) {
     return lookupPool(async function () {
       try {
-        var r = await L.lookupIsbn(L.toIsbn13(b0.i), { gbKey: settings.gbKey });
+        var r = await L.lookupIsbn(L.toIsbn13(b0.i), lookupOpts());
         var b = get(b0.id);
         if (r && b) {
           var before = JSON.stringify(b);
@@ -1625,6 +1791,8 @@ list.addEventListener('click', function (e) {
   else if (act === 'choose') openPick(id);
   else if (act === 'loan') openLoan(id);
   else if (act === 'toggle') toggleRow(id);
+  else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
+  else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; $('#fltRead').value = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
   else if (act === 'zoom') openCover(id);
   else if (act === 'coverphoto') { coverPhotoId = id; $('#fileCover').click(); }
   else if (act === 'bought') moveToLib(id);
@@ -1762,6 +1930,10 @@ $('#pubList').addEventListener('change', function (e) {
   document.querySelectorAll('#pubList input[data-g="' + gi + '"]').forEach(function (cb) { var me = cb.dataset.n === e.target.value; cb.disabled = me; if (me) cb.checked = true; });
 });
 $('#btnFill').addEventListener('click', fillMissing);
+$('#btnMergeDups').addEventListener('click', mergeDups);
+$('#btnShareWish').addEventListener('click', shareWish);
+$('#btnPrint').addEventListener('click', printCatalog);
+$('#fltRead').addEventListener('change', function (e) { readFlt = e.target.value; renderList(); updateSummary(); });
 $('#btnVerifyAll').addEventListener('click', function () {
   var snapshot = JSON.stringify(state.books), n = 0;
   state.books.forEach(function (b) { if (b.g.length) { b.g = []; n++; } });
@@ -1780,7 +1952,7 @@ $('#btnDiag').addEventListener('click', async function () {
   var out = $('#diagOut'), btn = $('#btnDiag');
   btn.disabled = true; out.hidden = false; out.textContent = 'Provo le banche dati…';
   try {
-    var res = await L.diagnose({ gbKey: settings.gbKey });
+    var res = await L.diagnose(lookupOpts());
     out.innerHTML = res.map(function (r) { return '<div class="' + (r.ok ? 'diag-ok' : 'diag-bad') + '"><b>' + (r.ok ? '✓ ' : '✗ ') + r.name + '</b>: ' + esc(r.msg) + '</div>'; }).join('');
   } catch (e) { out.textContent = 'Prova non riuscita.'; }
   btn.disabled = false;
@@ -1871,6 +2043,12 @@ $('#btnInstDiag').addEventListener('click', async function () {
 });
 $('#gbKey').value = '';
 $('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: resta il tasto fotocamera sulla scheda del libro.'); });
+$('#sbnUrl').addEventListener('change', function (e) {
+  var v = e.target.value.trim().replace(/\/+$/, '');
+  if (v && !/^https:\/\/[^\s/]+\.[^\s]+$/.test(v)) { toast('L\'indirizzo deve iniziare con https:// (es. https://sbn-libri.tuonome.workers.dev).'); return; }
+  settings.sbnUrl = v; e.target.value = v; saveSettings();
+  toast(v ? 'Catalogo SBN attivato. Premi «Prova la ricerca ISBN» per controllare.' : 'Catalogo SBN disattivato.');
+});
 $('#gbKey').addEventListener('change', function (e) { settings.gbKey = e.target.value.trim(); saveSettings(); toast(settings.gbKey ? 'Chiave salvata.' : 'Chiave rimossa.'); });
 $('#btnClearGuess').addEventListener('click', function () {
   var snapshot = JSON.stringify(state.books), n = 0;
@@ -1895,7 +2073,15 @@ window.addEventListener('beforeinstallprompt', function (e) {
 });
 window.addEventListener('appinstalled', function () { deferred = null; $('#btnInstall').hidden = true; toast('App installata.'); });
 $('#btnInstall').addEventListener('click', doInstall);
-window.addEventListener('online', function () { persist(); offlineNoted = false; if (todoRows().length) { toast('Di nuovo online: completo i libri con l\'ISBN.'); runTodo(); } });
+function resumeLookups(silent) {
+  var waiting = state.books.filter(function (b) { var s = S[b.id]; return s && s.st === 'wait'; });
+  waiting.forEach(function (b) { var s = S[b.id]; clearTimeout(s.timer); s.st = 'queued'; refreshRow(b.id); lookupPool(function () { return doLookup(b.id); }); });
+  var n = waiting.length + todoRows().length;
+  if (todoRows().length) runTodo();
+  if (n && !silent) toast('Di nuovo online: cerco ' + n + (n === 1 ? ' libro rimasto in attesa.' : ' libri rimasti in attesa.'));
+  return n;
+}
+window.addEventListener('online', function () { persist(); offlineNoted = false; resumeLookups(false); });
 window.addEventListener('offline', persist);
 document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { clearTimeout(tSave); persist(); } });
 var rz = null;
@@ -1904,6 +2090,7 @@ window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeou
 /* ---------- avvio ---------- */
 loadAll();
 $('#gbKey').value = settings.gbKey;
+$('#sbnUrl').value = settings.sbnUrl;
 $('#optPrice').checked = settings.price;
 $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;
@@ -1911,6 +2098,8 @@ setView(settings.view);
 setTab('lib');
 updateBackupInfo();
 loadCovers();
+setTimeout(function () { if (navigator.onLine !== false) { var n = resumeLookups(true); if (n) toast('Cerco ' + n + (n === 1 ? ' libro rimasto in attesa.' : ' libri rimasti in attesa.')); } }, 1200);
+setTimeout(checkLoanNag, 2500);
 try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(function (p) { if (!p && state.books.length >= 5) askPersist(); }); } catch (e) {}
 updateSummary();
 persist();
@@ -1918,7 +2107,6 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-if (navigator.onLine !== false && todoRows().length) setTimeout(runTodo, 800);
 window.__app = { state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; } };
 })();

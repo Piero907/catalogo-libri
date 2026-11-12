@@ -42,6 +42,8 @@
       <option value="editore">Casa editrice</option>
       <option value="anno">Anno</option>
       <option value="scaffale">Scaffale</option>
+      <option value="voto">Voto</option>
+      <option value="letti">Letti di recente</option>
     </select>
     <div class="acts">
       <button class="btn sm" id="btnView"></button>
@@ -53,6 +55,10 @@
   <div class="chips">
     <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
     <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
+    <select class="chip chip-select" id="fltRead" aria-label="Filtra per lettura" hidden>
+      <option value="">Lettura: tutti</option><option value="da">Da leggere</option><option value="in">In lettura</option><option value="ok">Letti</option><option value="no">Non indicato</option>
+    </select>
+    <button class="chip share" id="btnShareWish" hidden>Condividi la lista</button>
   </div>
 
   <details class="opts">
@@ -62,6 +68,11 @@
         <button class="btn" id="btnGallery">Scegli foto dalla galleria</button>
         <button class="btn" id="btnInstall" hidden>Installa l'app</button>
       </div>
+      <label class="field">
+        <span>Catalogo SBN (facoltativo)</span>
+        <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://sbn-libri.tuonome.workers.dev">
+        <p class="hint">Il catalogo delle biblioteche italiane ha i dati più precisi su editore, anno e pagine. Serve un piccolo intermediario gratuito su Cloudflare: le istruzioni sono nel LEGGIMI, sezione «Catalogo SBN».</p>
+      </label>
       <label class="field">
         <span>Chiave Google Libri (facoltativa)</span>
         <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla qui la chiave, se Google limita le ricerche">
@@ -98,6 +109,7 @@
         <button class="btn" id="btnGuessPub">Deduci le case editrici mancanti</button>
         <button class="btn" id="btnFill">Completa genere, pagine e copertine</button>
         <button class="btn" id="btnCovers">Cerca copertine più grandi</button>
+        <button class="btn" id="btnMergeDups">Unisci i doppioni</button>
         <button class="btn" id="btnClearGuess">Svuota le ipotesi</button>
       </div>
       <p class="opts-h">Backup</p>
@@ -231,7 +243,10 @@
       <button class="btn" id="btnXlsx">Scarica Excel (.xlsx)</button>
       <button class="btn" id="btnCopy">Copia per Excel o Fogli Google</button>
       <button class="btn" id="btnCsv">Scarica CSV</button>
+      <button class="btn" id="btnPrint">Stampa o salva in PDF</button>
+      <label class="check small"><input type="checkbox" id="printCovers"><span>Nel PDF metti anche le copertine</span></label>
     </div>
+    <p class="msg">La stampa comprende i libri che vedi ora nell'elenco: per stampare un solo scaffale, cercalo prima.</p>
     <h3>Backup</h3>
     <p class="msg" id="backupInfo"></p>
     <p class="msg" id="backupNote"></p>
@@ -261,5 +276,6 @@
 <script src="vendor/tesseract.min.js"></script>
 <script src="lib.js"></script>
 <script src="app.js"></script>
+<div id="printView" aria-hidden="true"></div>
 </body>
 </html>

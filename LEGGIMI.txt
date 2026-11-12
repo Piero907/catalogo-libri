@@ -184,6 +184,56 @@ la scheda. "Statistiche" mostra numero di libri, valore di copertina,
 prezzo medio, pagine, prestiti, e le classifiche di autori, case editrici,
 generi, scaffali e decenni: tocca un nome per vedere quei libri.
 
+LETTURA, VOTO E DATA
+--------------------
+Nella scheda aperta di ogni libro (Libreria) c'e' "Lettura": Da leggere,
+In lettura, Letto (toccalo di nuovo per togliere), le stelle da 1 a 5 e,
+per i libri letti, la data (si mette da sola: oggi). Nella riga chiusa
+compaiono "In lettura" o "Letto · ★★★★". Accanto ai filtri c'e' il menu
+"Lettura: tutti / Da leggere / In lettura / Letti / Non indicato"; si puo'
+ordinare per Voto o Letti di recente. Statistiche: letti, pagine lette,
+voto medio, libri letti per anno. Lettura, voto e data finiscono in Excel.
+
+SENZA RETE O CON SEGNALE DEBOLE
+-------------------------------
+Puoi scansionare anche senza connessione: i libri restano "in attesa" con
+l'ISBN e vengono cercati da soli appena torna la rete. Se il segnale e'
+debole, o Google e' al limite di richieste, l'app riprova da sola sempre
+piu' di rado (20 secondi, 1 minuto, 3 minuti, 10 minuti); "Riprova ora"
+forza subito. Anche alla riapertura dell'app i libri rimasti in sospeso
+vengono cercati in automatico.
+
+CATALOGO SBN (biblioteche italiane) - FACOLTATIVO
+-------------------------------------------------
+Per i libri italiani il catalogo SBN ha i dati piu' precisi su editore,
+anno di quell'edizione, pagine e genere (classificazione Dewey). Il
+browser non puo' interrogarlo direttamente, quindi serve un piccolo
+"intermediario" gratuito su Cloudflare (piano Free: 100.000 richieste al
+giorno, ne usi due per libro). Si fa una volta sola, da computer o tablet:
+1. Vai su dash.cloudflare.com e crea un account gratuito.
+2. Menu a sinistra "Workers & Pages" (o "Compute (Workers)") > "Create" >
+   "Create Worker" (o "Start with Hello World!"). Nome: sbn-libri.
+   Premi "Deploy".
+3. Premi "Edit code". Cancella tutto il codice di esempio e incolla il
+   contenuto del file cloudflare-sbn-worker.js (e' nella cartella
+   dell'app e nel repository GitHub). Premi "Deploy".
+4. Copia l'indirizzo del worker, tipo https://sbn-libri.TUONOME.workers.dev
+5. Nell'app: Opzioni > "Catalogo SBN" > incolla l'indirizzo. Poi
+   "Prova la ricerca ISBN": deve comparire "✓ Catalogo SBN".
+Prova anche a mano: apri nel browser l'indirizzo con ?isbn=9788806219352
+alla fine; deve comparire un testo con "briefRecords".
+L'intermediario risponde solo alla tua app (https://piero907.github.io):
+se pubblichi l'app altrove, aggiungi l'indirizzo in ORIGINI_AMMESSE nel
+codice. Nota: il servizio JSON di SBN non e' un'API ufficiale documentata
+e potrebbe cambiare; se smette di rispondere, l'app continua con Google e
+Open Library.
+
+DESIDERI DA CONDIVIDERE
+-----------------------
+Nella scheda Desideri, "Condividi la lista" manda a WhatsApp, SMS o email
+l'elenco con titolo, autore, editore, prezzo, ISBN e totale (utile per i
+regali). Se il telefono non condivide, la lista viene copiata.
+
 SISTEMARE L'ELENCO (Opzioni)
 ----------------------------
 - "Segna tutto come verificato": toglie in un colpo l'etichetta "Da
@@ -194,6 +244,16 @@ SISTEMARE L'ELENCO (Opzioni)
   scegliere il nome da usare. Sono solo proposte: togli la spunta "cambia"
   ai nomi da lasciare come sono (per esempio un marchio diverso dello stesso
   gruppo). C'e' "Annulla".
+- "Unisci i doppioni": i libri con lo stesso ISBN, o stesso titolo e
+  autore, nella stessa lista, diventano uno solo con tutti i dati (le note
+  si sommano). C'e' "Annulla".
+- Nella scheda aperta, "Tutti i libri di …" mostra gli altri libri dello
+  stesso autore.
+- Se un libro e' in prestito da piu' di un mese, all'apertura compare un
+  promemoria (la X lo rimanda di una settimana).
+- Esporta > "Stampa o salva in PDF": stampa i libri che vedi ora (con
+  ricerca e filtri: per un solo scaffale, cercalo prima), volendo con le
+  copertine. Sul telefono scegli "Salva come PDF" come stampante.
 
 
 SE LA RICERCA ISBN NON FUNZIONA: LA CHIAVE GOOGLE (consigliata)
