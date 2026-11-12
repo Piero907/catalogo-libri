@@ -473,6 +473,19 @@
     return n && n > 0 && n < 500 ? n : null;
   }
 
+  /* Versioni piu' grandi di una copertina: Open Library grande, immagine dell'editore su Google, Open Library per ISBN.
+     Nessuna e' garantita: l'app le prova e tiene solo quelle che arrivano davvero e hanno le proporzioni di una copertina. */
+  function coverCandidates(img, isbn) {
+    var out = [], u = str(img);
+    var ol = u.match(/^(https:\/\/covers\.openlibrary\.org\/b\/(?:id|isbn|olid)\/[^\/?]+?)-[SM]\.jpg/i);
+    if (ol) out.push(ol[1] + '-L.jpg');
+    var g = /books\.google(?:usercontent)?\.[a-z.]+\//i.test(u) && u.match(/[?&]id=([\w-]+)/);
+    if (g) out.push('https://books.google.com/books/publisher/content/images/frontcover/' + g[1] + '?fife=w800-h1200&source=gbs_api');
+    var c = toIsbn13(isbn);
+    if (c) out.push('https://covers.openlibrary.org/b/isbn/' + c + '-L.jpg?default=false');
+    return out.filter(function (x, i) { return x !== u && out.indexOf(x) === i; });
+  }
+
   /* ---------- export ---------- */
   /* Colonne: le prime 6 sempre; le altre solo se almeno un libro ha quel dato. type: s testo, n numero, c euro, x testo forzato (ISBN). */
   var COLS = [
@@ -676,6 +689,6 @@
     scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice,
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
-    computeStats: computeStats, agoText: agoText
+    computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates
   };
 });

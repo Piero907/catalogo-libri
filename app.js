@@ -436,6 +436,7 @@ async function processPhoto(id, file) {
     var canvas = await loadCanvas(file, 2000);
     if (!get(id)) return;
     s.thumb = thumbOf(canvas);
+    try { s.big = scaled(canvas, 1200).toDataURL('image/jpeg', 0.85); } catch (e) { s.big = ''; }
     s.file = null;
     syncThumbs(); refreshRow(id);
     var code = await decodeCanvasBarcode(canvas);
@@ -798,7 +799,7 @@ function summaryHTML(b, dups, status) {
   else if (!b.t && b.i && !s.st && b.nf) tags += '<span class="tag warn">Non trovato</span>';
   var title = b.t || (b.i ? 'ISBN ' + b.i : 'Senza titolo');
   var img = b.img || s.thumb || '';
-  var cover = img ? '<span class="sum-img"><img src="' + esc(img) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></span>'
+  var cover = img ? '<span class="sum-img zoom" data-act="zoom" title="Ingrandisci la copertina"><img src="' + esc(img) + '" alt="Copertina: tocca per ingrandire" loading="lazy" referrerpolicy="no-referrer"></span>'
     : '<span class="sum-img ph" style="--h:' + hue(b.t + b.a + b.i) + '" aria-hidden="true">' + esc((b.t || '?').replace(/^(il|lo|la|i|gli|le|un|uno|una|l')\s*/i, '').charAt(0).toUpperCase() || '?') + '</span>';
   return '<article class="row closed' + (status.indexOf('status err') >= 0 ? ' bad' : '') + '" data-id="' + b.id + '">' +
     '<div class="sum" data-act="toggle" role="button" tabindex="0" aria-expanded="false" aria-label="' + esc(title + (b.a ? ', ' + b.a : '') + '. Apri la scheda') + '">' + cover +
@@ -842,7 +843,7 @@ function rowHTML(b, dups, ex) {
   else if (st === 'choose') status = '<div class="status"><span class="txt">Trovate ' + ((s.cands || []).length) + ' possibili edizioni.</span><button class="btn primary" data-act="choose">Scegli</button></div>';
   else if (st === 'error') status = '<div class="status err" role="alert"><span class="txt">' + esc(s.err || 'Operazione non riuscita.') + '</span>' + (s.retry ? '<button class="btn" data-act="retry">Riprova</button>' : '') + '</div>';
 
-  var thumb = '<div class="thumb' + (hasThumb ? '' : ' empty') + '">' + (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="" referrerpolicy="no-referrer">' : '') + '</div>';
+  var thumb = '<div class="thumb' + (hasThumb ? '' : ' empty') + (imgSrc && !ex ? ' zoom" data-act="zoom" role="button" tabindex="0" title="Ingrandisci la copertina' : '') + '">' + (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="" referrerpolicy="no-referrer">' : '') + '</div>';
   var body;
   if (fresh) {
     cls += ' fresh';
@@ -1167,6 +1168,50 @@ function restore(file) {
   rd.readAsText(file);
 }
 
+/* ---------- copertina in grande ---------- */
+var lbToken = 0, lbPushed = false, lbTimer = null;
+function openCover(id) {
+  var b = get(id), s = S[id] || {};
+  if (!b) return;
+  var small = b.img || s.thumb;
+  if (!small) return;
+  // stessa immagine della miniatura, ma piu' grande: copertina della banca dati, oppure la tua foto
+  var cands = b.img ? L.coverCandidates(b.img, b.i).map(function (u) { return { u: u, photo: false }; }) : (s.big ? [{ u: s.big, photo: true }] : []);
+  var tok = ++lbToken, best = 150, pending = cands.length, img = $('#lbImg');
+  img.src = small;
+  $('#lbCap').textContent = [b.t || 'Senza titolo', b.a].filter(Boolean).join(' — ');
+  $('#lbNote').textContent = pending ? 'Cerco un\'immagine più grande…' : '';
+  $('#lightbox').hidden = false;
+  if (!lbPushed) { try { history.pushState({ lb: 1 }, ''); lbPushed = true; } catch (e) {} }
+  $('#lbClose').focus({ preventScroll: true });
+  clearTimeout(lbTimer);
+  function done() { if (tok !== lbToken) return; if (--pending <= 0) $('#lbNote').textContent = ''; }
+  lbTimer = setTimeout(function () { if (tok === lbToken) $('#lbNote').textContent = ''; }, 9000);
+  cands.forEach(function (c) {
+    var im = new Image();
+    im.referrerPolicy = 'no-referrer';
+    im.onload = function () {
+      if (tok !== lbToken) return;
+      var w = im.naturalWidth, h = im.naturalHeight, r = h / Math.max(1, w);
+      if (w > best * 1.2 && w >= 200 && (c.photo || (r > 1.05 && r < 2.1))) { best = w; img.src = c.u; }
+      done();
+    };
+    im.onerror = done;
+    im.src = c.u;
+  });
+}
+function closeCover(fromPop) {
+  if ($('#lightbox').hidden) return;
+  lbToken++;
+  $('#lightbox').hidden = true;
+  $('#lbImg').removeAttribute('src');
+  if (lbPushed && !fromPop) { lbPushed = false; try { history.back(); } catch (e) {} }
+  lbPushed = false;
+}
+$('#lbClose').addEventListener('click', function () { closeCover(false); });
+$('#lightbox').addEventListener('click', function (e) { if (e.target.id !== 'lbImg') closeCover(false); });
+window.addEventListener('popstate', function () { if (!$('#lightbox').hidden) { lbPushed = false; closeCover(true); } });
+
 /* ---------- prestiti ---------- */
 var loanId = null;
 function openLoan(id) {
@@ -1373,7 +1418,7 @@ list.addEventListener('change', function (e) {
   }
 });
 list.addEventListener('keydown', function (e) {
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && (((e.target.dataset.act === 'verify' || e.target.dataset.act === 'loan') && e.target.classList.contains('tag')) || (e.target.dataset.act === 'toggle' && e.target.classList.contains('sum')))) { e.preventDefault(); e.target.click(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && (((e.target.dataset.act === 'verify' || e.target.dataset.act === 'loan') && e.target.classList.contains('tag')) || (e.target.dataset.act === 'toggle' && e.target.classList.contains('sum')) || (e.target.dataset.act === 'zoom' && e.target.classList.contains('thumb')))) { e.preventDefault(); e.target.click(); return; }
   if (e.key === 'Enter' && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) { e.preventDefault(); e.target.blur(); }
 });
 list.addEventListener('click', function (e) {
@@ -1389,6 +1434,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'choose') openPick(id);
   else if (act === 'loan') openLoan(id);
   else if (act === 'toggle') toggleRow(id);
+  else if (act === 'zoom') openCover(id);
   else if (act === 'bought') moveToLib(id);
   else if (act === 'pricephoto') { priceId = id; $('#filePrice').click(); }
   else if (act === 'priceweb') {
@@ -1465,6 +1511,7 @@ $('#pickList').addEventListener('click', function (e) {
 $('#copyClose').addEventListener('click', function () { $('#copySheet').hidden = true; });
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
+  if (!$('#lightbox').hidden) { closeCover(false); return; }
   ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });

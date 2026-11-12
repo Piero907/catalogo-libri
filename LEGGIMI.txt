@@ -118,6 +118,12 @@ titolo e autore (piu' le etichette importanti, come
 la freccetta per aprire la scheda con tutti i dati e modificarli; la
 freccetta in alto a destra la richiude. I libri senza titolo (per esempio
 non trovati) si aprono da soli perche' vanno completati a mano.
+Tocca la copertina per vederla in grande (si chiude con la X, toccando
+fuori o con il tasto "indietro"). Le copertine salvate sono piccole: l'app
+cerca da sola una versione grande su Google Libri e Open Library e la
+mostra se esiste; altrimenti resta quella piccola ingrandita. Per i libri
+riconosciuti da una tua foto ingrandisce la foto (solo finche' l'app resta
+aperta: la foto non viene salvata).
 Preferisci vedere sempre tutto? Opzioni > "Mostra le schede sempre aperte"
 (sullo schermo largo torna la vista a tabella).
 
