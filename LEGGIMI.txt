@@ -2,7 +2,9 @@ NEXT LIBRIS - la tua libreria, e il prossimo libro
 ==================================================
 (prima si chiamava "Catalogo libri": l'indirizzo del sito e i dati sul
 telefono restano gli stessi)
-Se il telefono mostra ancora il vecchio nome, togli l'app
+L'icona: libri di altezze diverse su uno scaffale, nei colori della
+palette Bosco (verde, ottone, crema). Se il telefono mostra ancora il
+vecchio nome o la vecchia icona, togli l'app
 dalla schermata Home e installala di nuovo da Chrome: i libri restano.
 
 Questa cartella contiene un sito-app (PWA). Non serve installare nulla sul

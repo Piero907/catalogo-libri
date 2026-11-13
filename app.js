@@ -76,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 35, date: '2026-11-13', note: 'il verde (Bosco) torna la palette principale, con l\'icona verde di prima; Inchiostro e Bordeaux restano a scelta.' };
+var APP_VERSION = { v: 36, date: '2026-11-13', note: 'icona verde con i colori della palette Bosco, con un nome di file nuovo per obbligare il telefono ad aggiornarla.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -2933,7 +2933,7 @@ $('#btnInstDiag').addEventListener('click', async function () {
     add(!bad.length && icons.length > 0, 'Icone dell\'app', !icons.length ? 'nessuna icona nella scheda dell\'app.' : bad.length ? 'non si caricano: ' + bad.join(', ') + '. Ricarica la cartella intera su Netlify, cartella «icons» compresa.' : 'ok (' + icons.length + ')');
   } catch (e) { siteOk = false; add(false, 'Scheda dell\'app (manifest)', 'non riesco a leggerla.'); }
   try {
-    var probes = ['manifest.json', 'style.css', 'sw.js', 'icons/icon-192.png'], res = [], odd = false;
+    var probes = ['manifest.json', 'style.css', 'sw.js', 'icons/next-libris-192.png'], res = [], odd = false;
     for (var pk = 0; pk < probes.length; pk++) {
       var st;
       try { st = (await fetch(probes[pk] + '?t=' + Date.now(), { cache: 'no-store' })).status; } catch (e7) { st = 'rete'; }
