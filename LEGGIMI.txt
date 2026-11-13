@@ -156,14 +156,37 @@ l'app dice subito se il libro e' gia' tuo, con lo scaffale e l'eventuale
 prestito, oppure se e' nei Desideri. Se non ce l'hai cerca il titolo e ti
 propone "Aggiungi alla Libreria" o "Aggiungi ai Desideri".
 
-PRESTITI
---------
-Sulla scheda del libro il pulsante con la freccia serve a prestarlo: scrivi
-a chi e da quando. Compare l'etichetta "Prestato a ..."; toccala quando te
-lo restituiscono. Il pulsante "Prestati", accanto a Libreria e Desideri, mostra
-subito tutti i libri fuori casa, dai prestiti piu' vecchi (toccalo di nuovo
-per vedere tutto);
-anche "Ce l'ho gia'?" e le Statistiche ti ricordano a chi li hai dati.
+PRESTATO, VENDUTO, REGALATO, SMARRITO
+-------------------------------------
+Sulla scheda del libro il pulsante con la freccia apre "Dov'e' il libro?":
+scegli Prestato, Venduto, Regalato o Smarrito.
+- Prestato: a chi e da quando. Compare l'etichetta "Prestato a ...";
+  toccala quando te lo restituiscono. Il pulsante "Prestati", accanto a
+  Libreria e Desideri, mostra tutti i libri fuori casa, dai prestiti piu'
+  vecchi (toccalo di nuovo per vedere tutto).
+- Venduto: la data (e, se vuoi, a chi). Regalato: a chi e la data.
+  Smarrito: da quando.
+Venduti, regalati e smarriti restano nell'elenco in grigio, con
+l'etichetta (es. "Venduto il 13/11/2026"), ma non contano piu' nel numero
+dei libri ne' nel valore della libreria. La scelta rapida "Venduti,
+regalati, smarriti" li mostra da soli; le Statistiche li contano a parte;
+Excel e stampa hanno le colonne in piu'. "Ce l'ho gia'?" risponde "Non ce
+l'hai piu'". Se torna a casa: tocca l'etichetta > "E' tornato in libreria"
+(o "Ritrovato").
+
+COPIE DELLO STESSO LIBRO
+------------------------
+Due libri con lo stesso ISBN, o stesso titolo e autore, hanno l'etichetta
+"Doppione?". Toccala e scegli:
+- "Sono copie diverse: tienile tutte": restano separate (ognuna con il suo
+  scaffale, le sue note, il suo prestito) e l'etichetta diventa "2 copie";
+- "E' lo stesso libro: uniscili in uno".
+Per aggiungere un'altra copia: nella scheda aperta "+ Aggiungi un'altra
+copia"; con Scansiona, se il libro c'e' gia', compare il pulsante
+"Aggiungi un'altra copia"; con Digita, il messaggio "gia' in elenco" ha lo
+stesso pulsante. La copia nuova prende titolo, autore, editore, prezzo e
+copertina; scaffale, note e prestito sono vuoti. "Unisci i doppioni" non
+tocca mai i libri segnati come copie.
 
 SCAFFALE, GENERE, PAGINE, NOTE
 ------------------------------
@@ -187,7 +210,8 @@ generi, scaffali e decenni: tocca un nome per vedere quei libri.
 LETTURA, VOTO E DATA
 --------------------
 Nella scheda aperta di ogni libro (Libreria) c'e' "Lettura": Da leggere,
-In lettura, Letto (toccalo di nuovo per togliere), le stelle da 1 a 5 e,
+In lettura, Letto (toccalo di nuovo per togliere). I libri nuovi entrano
+in Libreria gia' come "Da leggere" (anche quelli spostati dai Desideri); le stelle da 1 a 5 e,
 per i libri letti, la data (si mette da sola: oggi). Nella riga chiusa
 compaiono "In lettura" o "Letto · ★★★★". Accanto ai filtri c'e' il menu
 "Lettura: tutti / Da leggere / In lettura / Letti / Non indicato"; si puo'
@@ -246,7 +270,7 @@ SISTEMARE L'ELENCO (Opzioni)
   gruppo). C'e' "Annulla".
 - "Unisci i doppioni": i libri con lo stesso ISBN, o stesso titolo e
   autore, nella stessa lista, diventano uno solo con tutti i dati (le note
-  si sommano). C'e' "Annulla".
+  si sommano). Non tocca i libri segnati come copie. C'e' "Annulla".
 - Nella scheda aperta, "Tutti i libri di …" mostra gli altri libri dello
   stesso autore.
 - Se un libro e' in prestito da piu' di un mese, all'apertura compare un
@@ -272,20 +296,37 @@ limite diventa tuo e il problema sparisce. Si crea una volta sola:
 4. Nell'app: Opzioni > "Chiave Google Libri" e incollala.
 Poi premi "Riprova" sui libri in errore (o il pulsante "Completa n libri").
 
-DOVE CERCA L'APP I LIBRI E COME SOMMA I DATI
---------------------------------------------
-1. Google Libri e Open Library partono INSIEME (Google e' la fonte che
-   ha la precedenza: di solito e' la piu' completa e la piu' veloce).
-   I dati si SOMMANO: se Google non conosce la casa editrice (o l'anno, o
-   l'autore) e Open Library si', il campo vuoto viene riempito dall'altra
-   fonte. Con titolo, autore, editore e anno gia' completi non serve altro.
-2. Crossref (gratuita, senza chiave): si interroga solo se dopo il passo 1
-   manca ancora qualcosa. Utile soprattutto per l'editoria universitaria.
-3. Se Google risponde "limite raggiunto" ma Open Library conosce il libro,
-   l'app va avanti con Open Library; se nessuna fonte risponde, la scheda
-   mostra "Riprova" (non scrive "non trovato" quando il problema e' la rete).
-Il catalogo SBN delle biblioteche italiane e' stato tolto: dal browser non
-e' raggiungibile.
+DOVE CERCA L'APP I LIBRI E IN CHE ORDINE
+---------------------------------------
+1. Google Libri, Open Library e (se l'hai attivato) il catalogo SBN
+   partono INSIEME. Google parte per primo e ha la precedenza su titolo,
+   autore e copertina.
+2. Per i libri italiani (ISBN 978-88 e 979-12) il catalogo SBN ha la
+   precedenza su casa editrice, anno e pagine: sono i dati delle biblioteche
+   nazionali, i piu' precisi per l'editoria italiana.
+3. Open Library e Crossref riempiono solo i campi ancora vuoti.
+4. Se Google ha gia' tutto, l'app aspetta le altre fonti al massimo 1,5
+   secondi (3 secondi per SBN sui libri italiani), cosi' la scansione resta
+   veloce.
+5. Se Google risponde "limite raggiunto" ma un'altra fonte conosce il libro,
+   l'app va avanti con quella; se nessuna risponde, la scheda mostra
+   "Riprova" (non scrive "non trovato" quando il problema e' la rete).
+
+LIMITI GIORNALIERI (Google Libri e Cloudflare)
+---------------------------------------------
+- Google Libri con la tua chiave: 1.000 ricerche al giorno, che si azzerano
+  verso le 9 del mattino (mezzanotte in California). Ogni libro nuovo usa
+  di solito 1 ricerca (fino a 3 se nessuna banca dati lo conosce), piu' 1
+  se cerchi la copertina grande: per 200 libri circa 400 ricerche in tutto.
+- Cloudflare (catalogo SBN), piano gratuito: 100.000 richieste al giorno;
+  1 per libro, e le risposte restano in memoria un giorno.
+- Opzioni mostra quante ricerche hai fatto oggi. Arrivata a 950, l'app
+  smette di chiamare Google fino al giorno dopo (i libri restano "in
+  attesa" e usano le altre banche dati); le copertine grandi si fermano gia'
+  a 700, per lasciare posto ai libri nuovi.
+- Per non sprecare ricerche: "Completa genere, pagine e copertine" salta i
+  libri gia' cercati negli ultimi 30 giorni; "Cerca copertine piu' grandi"
+  non riprova i libri per cui ha gia' verificato che non ne esiste una.
 
 CASA EDITRICE MANCANTE: LA DEDUCE DALL'ISBN
 -------------------------------------------

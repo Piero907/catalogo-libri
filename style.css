@@ -407,3 +407,14 @@ button.bar-row:hover,button.bar-row:focus-visible{background:var(--surface2)}
   #printView .pv-img{width:26pt}
   #printView .pv-img img{width:24pt;height:36pt;object-fit:cover;display:block}
 }
+
+/* ---- copie ---- */
+.tag.copies{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.links{flex-wrap:wrap;gap:4px 18px}
+.hint.quota{font-size:13px;color:var(--muted)}
+
+/* ---- venduti, regalati, smarriti ---- */
+.tag.gone{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.row.gone .sum-t,.row.gone .sum-a,.row.gone .sum-img,.row.gone .thumb{opacity:.55}
+.seg.kinds{display:flex;width:100%;margin:2px 0 12px}
+.seg.kinds button{flex:1 1 0;padding:6px 4px;font-size:13.5px}

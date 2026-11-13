@@ -55,6 +55,7 @@
   <div class="chips">
     <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
     <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
+    <button class="chip" id="fltGone" aria-pressed="false" hidden>Venduti, regalati, smarriti</button>
     <select class="chip chip-select" id="fltRead" aria-label="Filtra per lettura" hidden>
       <option value="">Lettura: tutti</option><option value="da">Da leggere</option><option value="in">In lettura</option><option value="ok">Letti</option><option value="no">Non indicato</option>
     </select>
@@ -68,6 +69,7 @@
         <button class="btn" id="btnGallery">Scegli foto dalla galleria</button>
         <button class="btn" id="btnInstall" hidden>Installa l'app</button>
       </div>
+      <p class="hint quota" id="quotaInfo"></p>
       <label class="field">
         <span>Catalogo SBN (facoltativo)</span>
         <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://sbn-libri.tuonome.workers.dev">
@@ -200,12 +202,28 @@
   </div>
 </div>
 
+<div class="sheet" id="dupSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="dupH">
+    <h2 id="dupH">Stesso libro più volte</h2>
+    <p class="msg" id="dupMsg"></p>
+    <div class="menu">
+      <button class="btn primary" id="dupCopies">Sono copie diverse: tienile tutte</button>
+      <button class="btn" id="dupMerge">È lo stesso libro: uniscili in uno</button>
+      <button class="btn" id="dupUnmark" hidden>Non sono copie: è lo stesso libro inserito due volte</button>
+      <button class="btn" id="dupClose">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="loanSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="loanH">
     <h2 id="loanH">Presta il libro</h2>
     <p class="msg" id="loanBook"></p>
-    <label class="field"><span>A chi</span><input id="loanWho" type="text" list="loanNames" autocomplete="off" placeholder="Nome"></label>
-    <label class="field"><span>Dal giorno</span><input id="loanDate" type="date"></label>
+    <div class="seg kinds" id="loanKind" role="group" aria-label="Dov'è il libro">
+      <button type="button" data-k="p" aria-pressed="true">Prestato</button><button type="button" data-k="v" aria-pressed="false">Venduto</button><button type="button" data-k="r" aria-pressed="false">Regalato</button><button type="button" data-k="s" aria-pressed="false">Smarrito</button>
+    </div>
+    <label class="field" id="loanWhoF"><span id="loanWhoL">A chi</span><input id="loanWho" type="text" list="loanNames" autocomplete="off" placeholder="Nome"></label>
+    <label class="field"><span id="loanDateL">Dal giorno</span><input id="loanDate" type="date"></label>
     <p class="msg bad" id="loanErr" hidden></p>
     <div class="row-btns">
       <button class="btn" id="loanCancel">Annulla</button>

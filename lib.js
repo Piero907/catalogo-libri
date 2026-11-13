@@ -175,6 +175,7 @@
       var timer = ctl ? setTimeout(function () { ctl.abort(); }, timeout) : null;
       try { r = await f(url, ctl ? { signal: ctl.signal } : undefined); }
       catch (e) { clearTimeout(timer); if (n < waits.length) { await sleep(waits[n]); continue; } throw { net: true }; }
+      if (r && r.local) { clearTimeout(timer); throw { status: r.status, local: true }; }   // bloccata dall'app (limite giornaliero)
       if (r.ok) {
         try { var j = await r.json(); clearTimeout(timer); return j; }
         catch (e2) { clearTimeout(timer); throw { status: 0, bad: true }; }
@@ -260,9 +261,12 @@
     var errors = [], rate = false;
     function note(src, e) {
       if (e && e.status === 429) rate = true;
-      errors.push(src + ': ' + (e && e.status ? 'errore ' + e.status : (e && e.bad ? 'risposta non valida' : 'nessuna risposta')));
+      errors.push(src + ': ' + (e && e.local ? 'limite giornaliero raggiunto (richieste sospese fino a domani)' : e && e.status ? 'errore ' + e.status : (e && e.bad ? 'risposta non valida' : 'nessuna risposta')));
     }
     var got = { g: null, o: null, s: null, c: null };
+    // fonti di contorno: meno tentativi e tempi piu' brevi di Google
+    var side = { waits: opts.waits ? opts.waits.slice(0, 1) : [800], timeout: 8000 };
+    var italian = isbn.indexOf('97888') === 0 || isbn.indexOf('97912') === 0;
     var gFailed = false, oFailed = false;
     function best() {
       var base = null;
@@ -273,19 +277,19 @@
 
     async function tryOl() {
       try {
-        var j1 = await getJson(f, 'https://openlibrary.org/api/books?bibkeys=ISBN:' + isbn + '&format=json&jscmd=data', opts);
+        var j1 = await getJson(f, 'https://openlibrary.org/api/books?bibkeys=ISBN:' + isbn + '&format=json&jscmd=data', side);
         var r1 = parseOpenLibrary(j1, isbn)[0] || null;
         if (r1) return r1;
       } catch (e) { /* si prova la ricerca */ }
       try {
-        var j2 = await getJson(f, 'https://openlibrary.org/search.json?q=isbn:' + isbn + '&fields=key,title,author_name&limit=3', opts);
+        var j2 = await getJson(f, 'https://openlibrary.org/search.json?q=isbn:' + isbn + '&fields=key,title,author_name&limit=3', side);
         return openLibrarySearch(j2, isbn)[0] || null;
       } catch (e2) { note('Open Library', e2); oFailed = true; return null; }
     }
     async function trySbn() {
       var u = opts.sbnUrl ? sbnUrl(opts.sbnUrl, isbn) : '';
       if (!u) return null;
-      try { return parseSbn(await getJson(f, u, { waits: [], timeout: 9000 }), isbn); }
+      try { return parseSbn(await getJson(f, u, { waits: [], timeout: 8000 }), isbn); }
       catch (e) { return null; }            // fonte accessoria: se non risponde si va avanti
     }
     async function tryCrossref() {
@@ -301,16 +305,18 @@
     }
 
     // 1) Google Libri e Open Library, insieme
-    var first = await Promise.all([
-      google('isbn:' + isbn, false).catch(function (e) { note('Google Libri', e); gFailed = true; return null; }),
-      tryOl(),
-      trySbn()
-    ]);
-    got.g = first[0]; got.o = first[1]; got.s = first[2];
+    // Le tre fonti partono insieme. Se Google da' gia' titolo, autore, editore e anno, le altre hanno ancora
+    // un margine breve (piu' lungo per SBN sui libri italiani, che ha l'ultima parola su editore e anno), poi si va avanti.
+    var pG = google('isbn:' + isbn, false).catch(function (e) { note('Google Libri', e); gFailed = true; return null; });
+    var pO = tryOl().then(function (v) { got.o = v; }), pS = trySbn().then(function (v) { got.s = v; });
+    got.g = await pG;
+    var grace = complete() ? ((italian && opts.sbnUrl) ? (opts.graceSbn != null ? opts.graceSbn : 3000) : (opts.grace != null ? opts.grace : 1500)) : 0;
+    if (grace) await Promise.race([Promise.all([pO, pS]), new Promise(function (r) { setTimeout(r, grace); })]);
+    else await Promise.all([pO, pS]);
     // 2) Crossref solo se ancora manca qualcosa
     if (!complete()) got.c = await tryCrossref();
     // 3) ultima spiaggia per Google: codice semplice e ISBN-10 (solo se l'ISBN coincide)
-    if (!got.g && !gFailed && !got.o && !got.c) {
+    if (!got.g && !gFailed && !got.o && !got.s && !got.c && !opts.lean) {
       var alt = isbn13to10(isbn), more = [isbn].concat(alt ? ['isbn:' + alt] : []);
       for (var qi = 0; qi < more.length && !got.g; qi++) {
         try { got.g = await google(more[qi], true); } catch (e2) { note('Google Libri', e2); gFailed = true; break; }
@@ -323,7 +329,8 @@
     }
     book.i = isbn;
     // per i libri italiani il catalogo delle biblioteche e' il piu' affidabile su editore e anno di quella edizione
-    if (got.s && isbn.indexOf('97888') === 0) { if (got.s.e) book.e = got.s.e; if (got.s.y) book.y = got.s.y; }
+    // libri italiani: editore, anno e pagine dal catalogo delle biblioteche (scheda di quella precisa edizione)
+    if (got.s && italian) { if (got.s.e) book.e = got.s.e; if (got.s.y) book.y = got.s.y; if (got.s.pg) book.pg = got.s.pg; }
     book.src = [got.g && 'Google Libri', got.o && 'Open Library', got.s && 'SBN', got.c && 'Crossref'].filter(Boolean).join(' + ');
     return book;
   }
@@ -554,9 +561,11 @@
     { k: 'y', h: 'Anno', w: 7, type: 'n' }, { k: 'c', h: 'Costo', w: 11, type: 'c' }, { k: 'i', h: 'ISBN', w: 16, type: 'x' },
     { k: 'sh', h: 'Scaffale', w: 16, opt: true }, { k: 'gen', h: 'Genere', w: 16, opt: true }, { k: 'pg', h: 'Pagine', w: 8, type: 'n', opt: true },
     { k: 'n', h: 'Note', w: 36, opt: true }, { k: 'p', h: 'Prestato a', w: 16, opt: true }, { k: 'pd', h: 'Data prestito', w: 13, opt: true },
-    { k: 'rs', h: 'Lettura', w: 12, opt: true }, { k: 'rt', h: 'Voto', w: 7, type: 'n', opt: true }, { k: 'rd', h: 'Data lettura', w: 13, opt: true }
+    { k: 'rs', h: 'Lettura', w: 12, opt: true }, { k: 'rt', h: 'Voto', w: 7, type: 'n', opt: true }, { k: 'rd', h: 'Data lettura', w: 13, opt: true },
+    { k: 'xs', h: 'Non più in libreria', w: 18, opt: true }, { k: 'xa', h: 'Dato a', w: 16, opt: true }, { k: 'xd', h: 'In data', w: 13, opt: true }
   ];
   var READ_LABEL = { da: 'Da leggere', in: 'In lettura', ok: 'Letto' };
+  var GONE_LABEL = { v: 'Venduto', r: 'Regalato', s: 'Smarrito' };
   function colsFor(books) {
     return COLS.filter(function (c) { return !c.opt || books.some(function (b) { return b[c.k] != null && String(b[c.k]) !== '' && b[c.k] !== 0; }); });
   }
@@ -564,8 +573,9 @@
   function cellText(b, c) {
     var v = b[c.k];
     if (c.k === 'c') return v == null ? '' : fmtNum(v);
-    if (c.k === 'pd' || c.k === 'rd') return itDate(v);
+    if (c.k === 'pd' || c.k === 'rd' || c.k === 'xd') return itDate(v);
     if (c.k === 'rs') return READ_LABEL[v] || '';
+    if (c.k === 'xs') return GONE_LABEL[v] || '';
     if (c.k === 'rt') return v ? String(v) : '';
     return v == null ? '' : String(v);
   }
@@ -724,6 +734,19 @@
     list.forEach(function (b) { var r = find(b.id); (g[r] = g[r] || []).push(b); });
     return Object.keys(g).map(function (k) { return g[k]; }).filter(function (x) { return x.length > 1; });
   }
+  /* Per ogni libro: 'dup' se ha un doppione non voluto, oppure il numero di copie se e' una copia segnata (cp).
+     Un gruppo di sole copie segnate non e' un doppione; un libro non segnato accanto a copie segnate si'. */
+  function analyzeDups(books) {
+    var out = {};
+    dupGroups(books).forEach(function (g) {
+      var cps = g.filter(function (b) { return b.cp; });
+      g.forEach(function (b) {
+        if (!b.cp) out[b.id] = 'dup';
+        else if (cps.length > 1) out[b.id] = cps.length;
+      });
+    });
+    return out;
+  }
   var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd'];
   /* Tiene il libro piu' completo (a parita', il piu' vecchio) e lo riempie con i dati degli altri; le note si sommano. */
   function mergeBooks(group) {
@@ -735,6 +758,7 @@
       if (o.n && (keep.n || '').indexOf(o.n) < 0) keep.n = keep.n ? keep.n + ' · ' + o.n : o.n;
     });
     keep.g = (keep.g || []).filter(function (k) { return keep[k]; });
+    keep.cp = group.some(function (b) { return b.cp; });
     return { keep: keep, removed: sorted.slice(1).map(function (b) { return b.id; }) };
   }
 
@@ -745,8 +769,13 @@
   }
   function computeStats(books) {
     var st = { n: 0, total: 0, priced: 0, pages: 0, paged: 0, guess: 0, noPrice: 0, loans: [], authors: {}, publishers: {}, genres: {}, shelves: {}, decades: {},
-      read: 0, reading: 0, toRead: 0, rated: 0, ratingSum: 0, readYears: {}, pagesRead: 0 };
+      read: 0, reading: 0, toRead: 0, rated: 0, ratingSum: 0, readYears: {}, pagesRead: 0, gone: 0, goneBy: { v: 0, r: 0, s: 0 } };
     (books || []).forEach(function (b) {
+      var pg0 = parseInt(b.pg, 10);
+      if (b.rs === 'ok') { st.read++; if (pg0 > 0) st.pagesRead += pg0; var ry = str(b.rd).slice(0, 4); if (/^\d{4}$/.test(ry)) st.readYears[ry] = (st.readYears[ry] || 0) + 1; }
+      if (b.rt > 0) { st.rated++; st.ratingSum += b.rt; }
+      // venduti, regalati, smarriti: contano per le letture, non per la libreria di oggi
+      if (b.xs && GONE_LABEL[b.xs]) { st.gone++; st.goneBy[b.xs]++; return; }
       st.n++;
       if (typeof b.c === 'number' && isFinite(b.c)) { st.total += b.c; st.priced++; } else st.noPrice++;
       var pg = parseInt(b.pg, 10); if (pg > 0) { st.pages += pg; st.paged++; }
@@ -757,10 +786,8 @@
       if (b.gen) st.genres[b.gen] = (st.genres[b.gen] || 0) + 1;
       if (b.sh) st.shelves[b.sh] = (st.shelves[b.sh] || 0) + 1;
       var y = parseInt(b.y, 10); if (y > 1000) { var d = Math.floor(y / 10) * 10; st.decades[d] = (st.decades[d] || 0) + 1; }
-      if (b.rs === 'ok') { st.read++; if (pg > 0) st.pagesRead += pg; var ry = str(b.rd).slice(0, 4); if (/^\d{4}$/.test(ry)) st.readYears[ry] = (st.readYears[ry] || 0) + 1; }
-      else if (b.rs === 'in') st.reading++;
+      if (b.rs === 'in') st.reading++;
       else if (b.rs === 'da') st.toRead++;
-      if (b.rt > 0) { st.rated++; st.ratingSum += b.rt; }
     });
     st.avg = st.priced ? st.total / st.priced : 0;
     st.avgRating = st.rated ? st.ratingSum / st.rated : 0;
@@ -793,6 +820,6 @@
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
     computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,
-    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, mergeBooks: mergeBooks, READ_LABEL: READ_LABEL
+    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, analyzeDups: analyzeDups, mergeBooks: mergeBooks, READ_LABEL: READ_LABEL, GONE_LABEL: GONE_LABEL
   };
 });
