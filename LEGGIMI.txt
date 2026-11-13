@@ -99,10 +99,15 @@ COME SI USA
   simbolo dell'euro te lo dice: controllalo. Per scriverlo, tocca il campo
   "Scrivi" nella stessa barra: si apre subito la tastiera, la scansione si
   ferma finche' non premi OK o la x.
-- Libro senza copertina: il riquadro "Copertina" accanto al titolo prima
-  la cerca online (stesso ISBN su Open Library e Google Libri; altrimenti
-  una copertina di un'altra edizione, da controllare: "Non e' questa" la
-  toglie). Se non la trova apre la fotocamera per fotografarla.
+- Libro senza copertina: il riquadro "Copertina" accanto al titolo la
+  cerca online a ogni tocco (stesso ISBN su Open Library e Google Libri;
+  altrimenti una copertina di un'altra edizione, da controllare: "Non e'
+  questa" la toglie). Se non la trova, propone "Scatta una foto".
+- Filtri: quando applichi o togli un filtro, o cerchi, le schede aperte si
+  richiudono e l'elenco torna compatto.
+- Fotocamera: si esce con "x Chiudi" in alto o con il pulsante in basso,
+  che dopo la prima scansione diventa bianco: "Ho finito - vedi i libri
+  aggiunti".
 - Scansiona: inquadra il codice a barre sul retro del libro. Ogni libro
   riconosciuto viene aggiunto e il telefono fa un "bip"; poi passi al
   successivo senza toccare nulla. Titolo, autore, editore e anno arrivano

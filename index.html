@@ -97,7 +97,7 @@
 <div class="scan" id="scan" hidden>
   <video id="scanVideo" playsinline muted></video>
   <div class="scan-top">
-    <button class="btn" id="scanClose">Fine</button>
+    <button class="btn" id="scanClose" aria-label="Chiudi la fotocamera">× Chiudi</button>
     <span class="scan-count" id="scanCount">0 aggiunti</span>
     <button class="btn" id="scanTorch" hidden>Torcia</button>
   </div>
@@ -117,6 +117,7 @@
   <div class="scan-kinds" id="scanKinds" role="radiogroup" aria-label="Cosa inquadri">
     <button type="button" role="radio" data-k="bar" aria-checked="true">Codice a barre</button><button type="button" role="radio" data-k="text" aria-checked="false">ISBN scritto</button><button type="button" role="radio" data-k="cover" aria-checked="false">Copertina</button>
   </div>
+  <button class="btn scan-done" id="scanDone" type="button">Chiudi la fotocamera</button>
   <p class="scan-msg" id="scanMsg" role="status">Inquadra il codice a barre, di solito sul retro. Ogni libro viene aggiunto da solo.</p>
 </div>
 
@@ -194,6 +195,17 @@
       <button class="btn" type="button" id="importClose">Non ora</button>
     </div>
     <p class="hint" id="importHint"></p>
+  </div>
+</div>
+
+<div class="sheet" id="covSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="covH">
+    <h2 id="covH">Copertina non trovata</h2>
+    <p class="msg" id="covMsg"></p>
+    <div class="row-btns">
+      <button class="btn primary" type="button" id="covShot">Scatta una foto</button>
+      <button class="btn" type="button" id="covLater">Non ora</button>
+    </div>
   </div>
 </div>
 

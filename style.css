@@ -1018,3 +1018,9 @@ body.welcome-on .tip{display:none}
 .welcome .who>span{font-weight:600}
 .welcome .who small{font-weight:400;color:var(--muted)}
 .welcome .who input{min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font:inherit;font-size:16px}
+
+/* ---- fotocamera: uscita ben visibile ---- */
+.scan-top #scanClose{background:#000b;border-color:#fffc;color:#fff;font-weight:700;padding:10px 16px}
+.scan-done{position:relative;z-index:3;align-self:stretch;margin:8px 12px 0;min-height:48px;background:#000b;border-color:#fff9;color:#fff;font-weight:700}
+.scan-done.has{background:#fff;border-color:#fff;color:#16262A}
+.scan-price.typing~.scan-done{display:none}
