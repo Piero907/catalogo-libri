@@ -229,6 +229,7 @@
         <button class="btn" id="btnInstDiag">Perché non si installa?</button>
       </div>
       <div class="diag" id="instOut" hidden aria-live="polite"></div>
+      <p class="hint" id="verApp"></p>
       <p class="hint">I libri sono salvati solo su questo telefono: fai ogni tanto un backup (Menu › Opzioni › Backup ed esportazione) e tienilo su Drive o nella mail.</p>
     </section>
   </div>
@@ -287,6 +288,12 @@
         <button type="button" class="dopt" data-sec="app"><span><b>App</b><small>Installazione</small></span><span class="n" aria-hidden="true">›</span></button>
       </div>
       <p class="dhint" id="optBackupHint"></p>
+      <div class="ver" id="verBox">
+        <p class="ver-h"><b id="verNum"></b> <span id="verDate"></span></p>
+        <p class="ver-note" id="verNote"></p>
+        <p class="ver-state" id="verState" aria-live="polite"></p>
+        <button class="btn primary" id="verUpdate" type="button" hidden>Aggiorna adesso</button>
+      </div>
     </div>
     <div id="drawerFilters" role="tabpanel" aria-labelledby="dtFlt">
     <p class="dq" id="drawerQ" hidden><span id="drawerQTxt"></span><button type="button" class="ico" id="drawerQX" aria-label="Cancella la ricerca">×</button></p>

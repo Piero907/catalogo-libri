@@ -506,9 +506,17 @@ SE L'APP NON SI INSTALLA DA CHROME
 
 COME AGGIORNARE L'APP DOPO UNA MODIFICA
 --------------------------------------
-Su Netlify: apri il sito > Deploys > trascina di nuovo la cartella nel
-riquadro. Sul telefono chiudi l'app del tutto e riaprila (a volte due volte).
-I libri gia' inseriti restano.
+Che versione sto usando? Tocca l'ingranaggio in alto a destra: in fondo
+alla scheda Opzioni c'e' "Versione N del ..." con le ultime novita' e la
+scritta "E' l'ultima versione" oppure "E' disponibile la versione N+1" con
+il pulsante "Aggiorna adesso" (lo stesso avviso compare anche in alto
+all'apertura dell'app). La versione si vede anche in Opzioni > App.
+Ogni modifica pubblicata aumenta il numero (file version.json, app.js e
+sw.js insieme).
+Le modifiche si pubblicano su GitHub (Piero907/catalogo-libri, ramo main) e
+GitHub Pages le mette online in un paio di minuti. Sul telefono chiudi
+l'app del tutto e riaprila, oppure usa "Aggiorna adesso". I libri gia'
+inseriti restano.
 
 ATTENZIONE: I DATI STANNO SOLO SUL TELEFONO - IL BACKUP
 -------------------------------------------------------

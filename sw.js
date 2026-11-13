@@ -1,5 +1,5 @@
 /* Catalogo libri: funziona anche senza rete. Le ricerche (Google Libri, Open Library) passano sempre dalla rete. */
-const CACHE = 'catalogo-libri-v29';
+const CACHE = 'catalogo-libri-v30';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'lib.js', 'manifest.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'vendor/zxing.min.js', 'vendor/fonts/literata-latin.woff2', 'vendor/tesseract.min.js', 'vendor/worker.min.js'];
 
@@ -15,6 +15,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.endsWith('/version.json')) return;            // il controllo della versione va sempre in rete, senza copie
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(req);

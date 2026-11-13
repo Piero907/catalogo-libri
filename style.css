@@ -813,3 +813,14 @@ html[data-look="nuovo"][data-pal="bosco"] .res-b .btn.primary{background:#24563F
 /* ---- sposta tra Libreria e Desideri ---- */
 .link.move{display:inline-flex;align-items:center;gap:6px}
 .link.move svg{width:16px;height:16px;flex:none}
+
+/* ---- versione dell'app (menu › Opzioni) ---- */
+.ver{display:grid;gap:4px;margin:16px 0 4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.ver p{margin:0}
+.ver-h{font-size:14px}
+.ver-h span{color:var(--muted);font-size:13px}
+.ver-note{font-size:12.5px;line-height:1.35;color:var(--muted)}
+.ver-state{font-size:13px;font-weight:600;color:var(--muted)}
+.ver-state.ok{color:var(--accent)}
+.ver-state.new{color:var(--warn)}
+.ver .btn{margin-top:6px;min-height:40px;font-size:14px}

@@ -73,6 +73,8 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
+/* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
+var APP_VERSION = { v: 30, date: '2026-11-13', note: 'numero di versione e «Aggiorna adesso» nel menu; la scheda si chiude dopo Sposta nei Desideri / in Libreria.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
@@ -1943,7 +1945,7 @@ function setDrawerTab(t) {
   $('#drawerFilters').hidden = drawerTab !== 'flt';
   $('#drawerOpts').hidden = drawerTab !== 'opt';
   $('#drawerFoot').hidden = drawerTab !== 'flt';
-  if (drawerTab === 'opt') $('#optBackupHint').textContent = backupHint();
+  if (drawerTab === 'opt') { $('#optBackupHint').textContent = backupHint(); renderVersion(); checkVersion(); }
   $('#drawerBody').scrollTop = 0;
 }
 function backupHint() {
@@ -2026,6 +2028,44 @@ $('#lookReset').addEventListener('click', function () {
   toast('Colori e caratteri predefiniti.', { label: 'Annulla', fn: function () { Object.assign(settings, before); saveSettings(); applyLook(false); } });
 });
 
+/* ---------- versione: quale stai usando e se ce n'e' una piu' nuova ---------- */
+var latestVer = null, verChecking = null;
+function itLongDate(d) { try { return new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return d; } }
+function renderVersion() {
+  $('#verNum').textContent = 'Versione ' + APP_VERSION.v;
+  $('#verDate').textContent = 'del ' + itLongDate(APP_VERSION.date);
+  $('#verNote').textContent = 'Ultime novità: ' + APP_VERSION.note;
+  var st = $('#verState'), up = $('#verUpdate');
+  if (latestVer && latestVer.v > APP_VERSION.v) {
+    st.textContent = 'È disponibile la versione ' + latestVer.v + ' del ' + itLongDate(latestVer.date) + '.';
+    st.className = 'ver-state new'; up.hidden = false;
+  } else if (latestVer) { st.textContent = '✓ È l\'ultima versione.'; st.className = 'ver-state ok'; up.hidden = true; }
+  else if (navigator.onLine === false) { st.textContent = 'Senza rete: non posso controllare se ce n\'è una più nuova.'; st.className = 'ver-state'; up.hidden = true; }
+  else { st.textContent = 'Controllo se ce n\'è una più nuova…'; st.className = 'ver-state'; up.hidden = true; }
+  $('#verApp').textContent = 'Versione ' + APP_VERSION.v + ' del ' + itLongDate(APP_VERSION.date) + (latestVer && latestVer.v > APP_VERSION.v ? ' (c\'è la ' + latestVer.v + ': aggiorna dal menu)' : '') + '.';
+}
+function checkVersion() {
+  if (navigator.onLine === false) { renderVersion(); return Promise.resolve(null); }
+  if (verChecking) return verChecking;
+  verChecking = fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    if (j && j.v) latestVer = { v: +j.v, date: String(j.date || ''), note: String(j.note || '') };
+    return latestVer;
+  }).catch(function () { return null; }).then(function (x) { verChecking = null; renderVersion(); return x; });
+  return verChecking;
+}
+/* Aggiorna: chiede di nuovo i file al sito saltando la memoria del telefono, poi ricarica */
+async function updateNow() {
+  var b = $('#verUpdate');
+  b.disabled = true; b.textContent = 'Aggiorno…';
+  try {
+    var reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg) await reg.update().catch(function () {});
+    await Promise.all(['./', 'index.html', 'app.js', 'lib.js', 'style.css', 'sw.js', 'manifest.json'].map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}); }));
+  } catch (e) {}
+  location.reload();
+}
+$('#verUpdate').addEventListener('click', updateNow);
+
 /* Pagina delle opzioni: una sezione alla volta, con «‹» per tornare al menu e il tasto Indietro del telefono per chiudere */
 var optOpen = false, optPushed = false;
 function openOptions(sec, reuse) {
@@ -2040,6 +2080,7 @@ function openOptions(sec, reuse) {
   if (reuse) { try { history.replaceState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
   else if (!optPushed) { try { history.pushState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
   if (sec === 'search') updateQuotaInfo();
+  if (sec === 'app') { renderVersion(); checkVersion(); }
 }
 function closeOptions(fromPop) {
   if (!optOpen) return;
@@ -2947,6 +2988,11 @@ $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 loadQuota();
 applyLook(false);
+setTimeout(function () {
+  checkVersion().then(function (j) {
+    if (j && j.v > APP_VERSION.v) notice('È disponibile la versione ' + j.v + ' dell\'app (stai usando la ' + APP_VERSION.v + ').', 'Aggiorna adesso', updateNow);
+  });
+}, 2500);
 confirmLearnedPublishers();
 if (!settings.swiped) setTimeout(function () { var t = $('#edgeTab'); t.classList.add('nudge'); setTimeout(function () { t.classList.remove('nudge'); }, 3000); }, 1500);
 setTab('lib');
