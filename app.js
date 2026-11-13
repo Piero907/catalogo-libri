@@ -27,6 +27,7 @@ var ICON = {
   bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
   chev: '<path d="M6 9l6 6 6-6"/>',
   right: '<path d="M9 5l7 7-7 7"/>',
+  swap: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   pub: '<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M4 20h16"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
@@ -1142,6 +1143,9 @@ function authorLinkHTML(b, ex) {
   if (ex || !hasData(b)) return '';
   var out = '';
   if (!b.w && (b.t || L.toIsbn13(b.i))) out += '<button type="button" class="link" data-act="addcopy">+ Aggiungi un\'altra copia</button>';
+  out += b.w
+    ? '<button type="button" class="link move" data-act="tolib">' + icon('swap') + 'Sposta in Libreria</button>'
+    : '<button type="button" class="link move" data-act="towish">' + icon('swap') + 'Sposta nei Desideri</button>';
   return out ? '<div class="links">' + out + '</div>' : '';
 }
 var FACET_ICON = { a: 'user', e: 'pub', gen: 'tag', sh: 'shelf' };
@@ -2414,6 +2418,18 @@ function moveToLib(id, quiet) {
   if (!scanning) { renderList(); updateSummary(); }
   if (!quiet) toast('Spostato in Libreria: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.w = true; x.ts = oldTs; x.rs = oldRs; touch(); renderList(); updateSummary(); } } });
 }
+/* Dalla Libreria ai Desideri: il libro torna «da comprare»; prestito, stato e lettura non hanno piu' senso e si tolgono
+   (con «Annulla» torna tutto com'era). */
+function moveToWish(id) {
+  var b = get(id);
+  if (!b || b.w) return;
+  var keep = ['w', 'ts', 'p', 'pd', 'xs', 'xd', 'xa', 'rs', 'rt', 'rd', 'cp'], before = {};
+  keep.forEach(function (k) { before[k] = b[k]; });
+  b.w = true; b.ts = Date.now();
+  b.p = ''; b.pd = ''; b.xs = ''; b.xd = ''; b.xa = ''; b.rs = ''; b.rt = 0; b.rd = ''; b.cp = false;
+  touch(); renderList(); updateSummary();
+  toast('Spostato nei Desideri: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { Object.assign(x, before); touch(); renderList(); updateSummary(); } } });
+}
 function setTab(t) {
   tab = t === 'wish' ? 'wish' : 'lib';
   flt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = '';
@@ -2605,6 +2621,8 @@ list.addEventListener('click', function (e) {
   else if (act === 'toggle') toggleRow(id);
   else if (act === 'dup') openDup(id);
   else if (act === 'facet') applyFacet(btn.dataset.f, btn.dataset.v, btn.dataset.name);
+  else if (act === 'towish') moveToWish(id);
+  else if (act === 'tolib') moveToLib(id);
   else if (act === 'addcopy') addCopy(id);
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }

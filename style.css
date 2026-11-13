@@ -809,3 +809,7 @@ html[data-look="nuovo"][data-pal="bosco"] .res-b .btn.primary{background:#24563F
 .fopt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 #lookNew{display:grid;gap:14px}
 #lookNew[hidden]{display:none}
+
+/* ---- sposta tra Libreria e Desideri ---- */
+.link.move{display:inline-flex;align-items:center;gap:6px}
+.link.move svg{width:16px;height:16px;flex:none}
