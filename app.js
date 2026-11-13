@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 49, date: '2026-11-13', note: 'Condividi chiave Google e worker con un link (con avviso e conferma di chi riceve)' };
+var APP_VERSION = { v: 50, date: '2026-11-13', note: 'Nuovo indirizzo: piero907.github.io/next-libris' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -251,7 +251,8 @@ function loadAll() {
     settings.palV2 = true;
     settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
     settings.fb = FONTS_B.indexOf(s.fb) >= 0 ? s.fb : 'plex';
-    settings.installed = s.installed === true;
+    settings.installed = s.installed === true && s.instScope === location.pathname.replace(/[^/]*$/, '');   // installata a questo indirizzo (non a uno vecchio)
+    settings.instScope = settings.installed ? s.instScope : '';
     settings.name = L.str(s.name).replace(/\s+/g, ' ').trim().slice(0, 30);
     settings.instSnooze = Number(s.instSnooze) || 0;
   } catch (e) {}
@@ -1803,7 +1804,7 @@ function backup() {
    lo mando come .txt (il contenuto e' identico e «Ripristina» lo accetta). Se la condivisione non c'e', scarico il file. */
 async function shareBackup() {
   if (!storable().length) { toast('L\'elenco è vuoto: non c\'è niente da salvare.'); return; }
-  var data = backupData(), base = 'catalogo-libri-backup-' + today(), file = null;
+  var data = backupData(), base = 'next-libris-backup-' + today(), file = null;
   if (!data) { openExport(); toast('Preparo il backup con le tue foto: riprova tra un attimo.'); return; }
   try {
     var cands = [new File([data], base + '.json', { type: 'application/json' }), new File([data], base + '.txt', { type: 'text/plain' })];
@@ -3671,7 +3672,9 @@ $('#btnClearGuess').addEventListener('click', function () {
 /* ---------- installazione e condivisione dell'app ---------- */
 /* Finche' l'app si usa dal browser, in alto c'e' la scheda «Installa»: un tocco apre la richiesta di Chrome
    (quando Chrome la offre), altrimenti spiega i passi giusti per quel telefono e browser. */
-var APP_URL = 'https://piero907.github.io/catalogo-libri/';
+/* indirizzo dell'app: quello da cui gira (cosi' link e condivisioni seguono un eventuale cambio di nome); di riserva quello pubblicato */
+var APP_URL = /\.github\.io$/.test(location.hostname) ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://piero907.github.io/next-libris/';
+var APP_SCOPE = location.pathname.replace(/[^/]*$/, '');      // es. /next-libris/: l'app installata e' legata a questa cartella
 var SHARE_TXT = 'Next Libris: il catalogo della libreria di casa. Inquadri il codice a barre e il libro si compila da solo. Aprilo con Chrome e premi «Installa».';
 var deferred = null;
 function isStandalone() {
@@ -3691,7 +3694,7 @@ function browserKind() {
 }
 function updateInstallUi() {
   var inst = isStandalone();
-  if (inst && !settings.installed) { settings.installed = true; saveSettings(); }   // l'app installata e Chrome condividono i dati: da qui in poi niente scheda
+  if (inst && (!settings.installed || settings.instScope !== APP_SCOPE)) { settings.installed = true; settings.instScope = APP_SCOPE; saveSettings(); }   // l'app installata e Chrome condividono i dati: da qui in poi niente scheda
   var kind = browserKind();
   var show = !inst && !settings.installed && Date.now() - settings.instSnooze > 14 * 86400000;
   $('#instCard').hidden = !show;
@@ -3757,7 +3760,7 @@ async function doInstall() {
 }
 window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; updateInstallUi(); });
 window.addEventListener('appinstalled', function () {
-  deferred = null; settings.installed = true; saveSettings(); updateInstallUi();
+  deferred = null; settings.installed = true; settings.instScope = APP_SCOPE; saveSettings(); updateInstallUi();
   toast('Next Libris è installata: la trovi tra le app del telefono.');
 });
 $('#btnInstall').addEventListener('click', doInstall);

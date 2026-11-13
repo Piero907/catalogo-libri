@@ -32,7 +32,7 @@ IN ALTERNATIVA: GITHUB PAGES (gratis, senza crediti)
 ---------------------------------------------------
 Serve un computer (dal telefono GitHub non carica le cartelle).
 1. Vai su github.com e crea un account gratuito (o entra con il tuo).
-2. In alto a destra "+" > "New repository". Nome: catalogo-libri.
+2. In alto a destra "+" > "New repository". Nome: next-libris.
    Lascia "Public" (con l'account gratuito Pages funziona solo con i
    repository pubblici: dentro c'e' solo il codice dell'app, i tuoi libri
    restano sul telefono). Premi "Create repository".
@@ -46,7 +46,7 @@ Serve un computer (dal telefono GitHub non carica le cartelle).
    In "Build and deployment": Source "Deploy from a branch", Branch "main"
    e cartella "/ (root)", poi "Save".
 5. Dopo 1-3 minuti ricarica la pagina: in alto compare "Your site is live
-   at https://TUONOME.github.io/catalogo-libri/". E' l'indirizzo dell'app.
+   at https://TUONOME.github.io/next-libris/". E' l'indirizzo dell'app.
 Per aggiornare l'app in futuro: nel repository "Add file" > "Upload files",
 trascina i file nuovi (sostituiscono quelli vecchi con lo stesso nome) e
 "Commit changes". Nessun credito da consumare.
@@ -612,7 +612,7 @@ il pulsante "Aggiorna adesso" (lo stesso avviso compare anche in alto
 all'apertura dell'app). La versione si vede anche in Opzioni > App.
 Ogni modifica pubblicata aumenta il numero (file version.json, app.js e
 sw.js insieme).
-Le modifiche si pubblicano su GitHub (Piero907/catalogo-libri, ramo main) e
+Le modifiche si pubblicano su GitHub (Piero907/next-libris, ramo main) e
 GitHub Pages le mette online in un paio di minuti. Sul telefono chiudi
 l'app del tutto e riaprila, oppure usa "Aggiorna adesso". I libri gia'
 inseriti restano.
@@ -623,7 +623,7 @@ L'elenco e' salvato nel browser del telefono. Se cancelli i dati di Chrome,
 disinstalli l'app o cambi telefono, si perde. Per questo:
 - Esporta > "Condividi backup" apre il menu di condivisione del telefono:
   scegli Drive, Gmail, WhatsApp (anche a te stesso)... Il file si chiama
-  catalogo-libri-backup-DATA. Chrome a volte non permette di condividere
+  next-libris-backup-DATA. Chrome a volte non permette di condividere
   file .json: in quel caso lo stesso backup parte come file .txt (il
   contenuto e' identico). Se la condivisione non c'e', il file si scarica.
 - "Scarica backup" lo salva nei Download del telefono.
