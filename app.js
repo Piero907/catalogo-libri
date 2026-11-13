@@ -793,6 +793,15 @@ async function scanTick() {
   if (scanning) scanTimer = setTimeout(scanTick, 130);
 }
 function onScanned(code) {
+  /* Mentre si legge il prezzo il codice a barre (o l'ISBN scritto) dello stesso libro e' spesso li' accanto:
+     lo ignoro in silenzio, niente «Già in elenco». Un codice diverso invece e' il libro successivo. */
+  if (scanMode === 'add' && priceTarget) {
+    var pt = get(priceTarget);
+    if (pt && L.toIsbn13(pt.i) === code) {
+      if (pt.c == null && !scanPaused) scanMsg('È lo stesso libro: per il prezzo inquadra il «€» e tocca «Leggi il prezzo». Per andare avanti, inquadra il prossimo codice.');
+      return;
+    }
+  }
   var now = Date.now();
   if (code === scanCtx.last && now - scanCtx.lastAt < 5000) { scanCtx.lastAt = now; return; }
   scanCtx.last = code; scanCtx.lastAt = now;
