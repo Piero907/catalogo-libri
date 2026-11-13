@@ -27,6 +27,10 @@ var ICON = {
   bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
   chev: '<path d="M6 9l6 6 6-6"/>',
   right: '<path d="M9 5l7 7-7 7"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  pub: '<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M4 20h16"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+  shelf: '<path d="M4 4v16M20 4v16M4 9h16M4 15h16"/><path d="M8 9V5M11 9V6M15 15v-4"/>',
   img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   left: '<path d="M15 5l-7 7 7 7"/>'
@@ -67,7 +71,7 @@ var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0 };
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
-var q = '', sortBy = 'recent', flt = '', tab = 'lib', readFlt = '', shFlt = '', genFlt = '';   // shFlt, genFlt: chiave normalizzata, NONE = senza   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
+var q = '', sortBy = 'recent', flt = '', tab = 'lib', readFlt = '', shFlt = '', genFlt = '', autFlt = '', autName = '', edFlt = '';   // shFlt, genFlt: chiave normalizzata, NONE = senza   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
 var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
 
 function newId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -1021,6 +1025,8 @@ function visible() {
   if (flt === 'dup') { var dm = L.analyzeDups(state.books); a = a.filter(function (b) { return dm[b.id]; }); }
   if (shFlt) a = a.filter(function (b) { return facetKey(b.sh) === shFlt; });
   if (genFlt) a = a.filter(function (b) { return facetKey(b.gen) === genFlt; });
+  if (autFlt) a = a.filter(function (b) { return authorsOf(b).some(function (n) { return L.norm(n) === autFlt; }); });
+  if (edFlt) a = a.filter(function (b) { return facetKey(b.e) === edFlt; });
   if (readFlt && tab === 'lib') a = a.filter(function (b) { return readFlt === 'no' ? !b.rs : b.rs === readFlt; });
   if (flt === 'loan') {
     return a.filter(function (b) { return b.p; }).sort(function (x, y) { return (x.pd || '9') < (y.pd || '9') ? -1 : (x.pd || '9') > (y.pd || '9') ? 1 : cmpFor('titolo')(x, y); });
@@ -1123,13 +1129,42 @@ function readHTML(b, off) {
 function authorLinkHTML(b, ex) {
   if (ex || !hasData(b)) return '';
   var out = '';
-  if (b.a) {
-    var first = b.a.split(/\s*[,;]\s*/)[0].trim(), key = L.norm(first);
-    var n = key.length >= 3 ? state.books.filter(function (x) { return L.norm(x.a).indexOf(key) >= 0; }).length : 0;
-    if (n > 1) out += '<button type="button" class="link" data-act="author" data-q="' + esc(first) + '">Tutti i libri di ' + esc(first) + ' (' + n + ') ›</button>';
-  }
   if (!b.w && (b.t || L.toIsbn13(b.i))) out += '<button type="button" class="link" data-act="addcopy">+ Aggiungi un\'altra copia</button>';
   return out ? '<div class="links">' + out + '</div>' : '';
+}
+var FACET_ICON = { a: 'user', e: 'pub', gen: 'tag', sh: 'shelf' };
+var FACET_WORD = { a: 'Autore', e: 'Casa editrice', gen: 'Genere', sh: 'Scaffale' };
+function facetsHTML(b, ex) {
+  if (ex || !hasData(b)) return '';
+  var books = tabBooks(), out = [];
+  function chip(f, key, label, n) {
+    out.push('<button type="button" class="fchip" data-act="facet" data-f="' + f + '" data-v="' + esc(key) + '" data-name="' + esc(label) + '" title="Mostra tutti i ' + n + ' libri: ' + esc(FACET_WORD[f].toLowerCase() + ' ' + label) + '">' +
+      icon(FACET_ICON[f]) + '<span class="fl">' + esc(label) + '</span><span class="n">' + n + '</span></button>');
+  }
+  if (b.g.indexOf('a') < 0) authorsOf(b).slice(0, 3).forEach(function (name) {
+    var k = L.norm(name);
+    var n = books.filter(function (x) { return authorsOf(x).some(function (y) { return L.norm(y) === k; }); }).length;
+    if (n > 1) chip('a', k, name, n);
+  });
+  [['e', b.g.indexOf('e') < 0], ['gen', true], ['sh', true]].forEach(function (p) {
+    var f = p[0], v = String(b[f] || '').trim();
+    if (!p[1] || !v) return;
+    var k = facetKey(v), n = books.filter(function (x) { return facetKey(x[f]) === k; }).length;
+    if (n > 1) chip(f, k, v, n);
+  });
+  return out.length ? '<div class="facets"><span class="facets-h">' + icon('filt') + 'Vedi tutti i libri di</span><div class="fchips">' + out.join('') + '</div></div>' : '';
+}
+function applyFacet(f, key, name) {
+  flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = '';
+  q = ''; $('#q').value = '';
+  if (f === 'a') { autFlt = key; autName = name; }
+  else if (f === 'e') edFlt = key;
+  else if (f === 'gen') genFlt = key;
+  else if (f === 'sh') shFlt = key;
+  renderList(); updateSummary();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  var n = visible().length;
+  toast((f === 'a' ? 'Libri di ' : FACET_WORD[f] + ' «') + name + (f === 'a' ? '' : '»') + ': ' + n + '. Per tornare a tutti, tocca la × del filtro sotto la ricerca.');
 }
 function dupTag(v) {
   if (v === 'dup') return '<span class="tag tap" data-act="dup" role="button" tabindex="0" title="Un altro libro nell\'elenco ha lo stesso ISBN o lo stesso titolo e autore: tocca per decidere">Doppione?</span>';
@@ -1191,9 +1226,9 @@ function rowHTML(b, dups, ex) {
         '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button></span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
-      (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80, 'shelfList') + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80, 'genreList') +
+      (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80) + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80) +
         inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' : '') +
-      readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
+      facetsHTML(b, ex || busy) + readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
       (openCard ? (moreActs ? '<div class="tail">' + moreActs + '</div>' : '') :
         '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
@@ -1756,7 +1791,7 @@ function setRead(id, what, v) {
 var NONE = '\u0001';
 var READ_TXT = { da: 'Da leggere', in: 'In lettura', ok: 'Letti', no: 'Non indicato' };
 var FLT_TXT = { loan: 'In prestito', gone: 'Venduti, regalati, smarriti', guess: 'Da verificare', dup: 'Copie e doppioni' };
-function facetKey(s) { var k = L.norm(s); return k || NONE; }
+function facetKey(s) { var k = L.norm(String(s || '').trim().replace(/\s+/g, ' ')); return k || NONE; }
 /* scaffali o generi del tab corrente: chiave normalizzata, nome piu' usato, quanti libri */
 function facets(field) {
   var m = {};
@@ -1773,9 +1808,10 @@ function facets(field) {
   });
 }
 function facetName(field, k) { if (k === NONE) return field === 'sh' ? 'senza scaffale' : 'senza genere'; var f = facets(field).find(function (x) { return x.k === k; }); return f ? f.name : ''; }
-function activeCount() { return (flt ? 1 : 0) + (readFlt && tab === 'lib' ? 1 : 0) + (shFlt ? 1 : 0) + (genFlt ? 1 : 0); }
+function activeCount() { return (flt ? 1 : 0) + (readFlt && tab === 'lib' ? 1 : 0) + (shFlt ? 1 : 0) + (genFlt ? 1 : 0) + (autFlt ? 1 : 0) + (edFlt ? 1 : 0); }
+function authorsOf(b) { return String(b.a || '').split(/\s*[,;]\s*/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 1; }); }
 function clearFilters() {
-  flt = ''; readFlt = ''; shFlt = ''; genFlt = '';
+  flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = '';
   q = ''; $('#q').value = '';
   renderList(); updateSummary();
   if (drawerOpen) renderDrawer();
@@ -1787,6 +1823,8 @@ function updateActiveFilters() {
   if (readFlt && tab === 'lib') chip('read', READ_TXT[readFlt]);
   if (shFlt) chip('sh', shFlt === NONE ? 'Senza scaffale' : 'Scaffale: ' + facetName('sh', shFlt));
   if (genFlt) chip('gen', genFlt === NONE ? 'Senza genere' : 'Genere: ' + facetName('gen', genFlt));
+  if (autFlt) chip('aut', 'Autore: ' + autName);
+  if (edFlt) chip('ed', 'Casa editrice: ' + facetName('e', edFlt));
   $('#activeFlt').innerHTML = o;
   var n = activeCount(), bd = $('#fltBadge');
   bd.hidden = !n; bd.textContent = n;
@@ -1800,6 +1838,7 @@ $('#activeFlt').addEventListener('click', function (e) {
   if (!x) return;
   var k = x.dataset.clear;
   if (k === 'flt') flt = ''; else if (k === 'read') readFlt = ''; else if (k === 'sh') shFlt = ''; else if (k === 'gen') genFlt = '';
+  else if (k === 'aut') { autFlt = ''; autName = ''; } else if (k === 'ed') edFlt = '';
   renderList(); updateSummary();
 });
 function renderDrawer() {
@@ -1830,6 +1869,10 @@ function renderDrawer() {
       return '<button type="button" class="dpill' + (x.k === NONE ? ' none-sh' : '') + '" data-g="' + f[0] + '" data-v="' + esc(x.k) + '" aria-pressed="' + (f[3] === x.k ? 'true' : 'false') + '">' + esc(x.k === NONE ? f[2] : x.name) + '<span class="n">' + x.n + '</span></button>';
     }).join('') + '</div>';
   });
+  var pre = '';
+  if (autFlt) pre += '<p class="dq"><span>Autore: ' + esc(autName) + '</span><button type="button" class="ico" data-g="aut" data-v="" aria-label="Togli il filtro autore">×</button></p>';
+  if (edFlt) pre += '<p class="dq"><span>Casa editrice: ' + esc(facetName('e', edFlt)) + '</span><button type="button" class="ico" data-g="ed" data-v="" aria-label="Togli il filtro casa editrice">×</button></p>';
+  o = pre + o;
   var body = $('#drawerBody'), st = body.scrollTop;
   $('#drawerFlt').innerHTML = o;
   body.scrollTop = st;
@@ -1852,6 +1895,8 @@ $('#drawerFlt').addEventListener('click', function (e) {
   else if (g === 'read') readFlt = readFlt === v ? '' : v;
   else if (g === 'sh') shFlt = shFlt === v ? '' : v;
   else if (g === 'gen') genFlt = genFlt === v ? '' : v;
+  else if (g === 'aut') { autFlt = ''; autName = ''; }
+  else if (g === 'ed') edFlt = '';
   renderList(); updateSummary(); renderDrawer();
 });
 
@@ -2019,6 +2064,67 @@ function endSwipe(cancel) {
 document.addEventListener('touchend', function () { endSwipe(false); }, { passive: true });
 document.addEventListener('touchcancel', function () { endSwipe(true); }, { passive: true });
 
+/* ---------- suggerimenti per scaffale, genere e «a chi» (al posto dell'elenco a tendina del browser) ---------- */
+var sugg = { el: null, input: null, k: '', idx: -1 };
+function suggKey(input) {
+  if (input.id === 'loanWho') return loanKind === 's' ? '' : 'p';
+  var k = input.dataset && input.dataset.k;
+  return (k === 'sh' || k === 'gen') && input.closest('#list') && !input.closest('[data-ex]') ? k : '';
+}
+function suggValues(k, input) {
+  var m = {};
+  state.books.forEach(function (b) {
+    var vals = k === 'p' ? [b.p, b.xa] : [b[k]];
+    vals.forEach(function (v) { v = String(v || '').trim(); if (!v) return; var key = L.norm(v); (m[key] || (m[key] = { v: v, n: 0 })).n++; });
+  });
+  return Object.keys(m).map(function (key) { return m[key]; }).sort(function (x, y) { return y.n - x.n || coll.compare(x.v, y.v); });
+}
+function hideSugg() {
+  if (sugg.el) sugg.el.remove();
+  if (sugg.input) sugg.input.setAttribute('aria-expanded', 'false');
+  sugg = { el: null, input: null, k: '', idx: -1 };
+}
+function showSugg(input) {
+  var k = suggKey(input);
+  if (!k) { hideSugg(); return; }
+  var cur = L.norm(input.value.trim());
+  var list = suggValues(k, input).filter(function (x) { var n = L.norm(x.v); return n !== cur && (!cur || n.indexOf(cur) >= 0); }).slice(0, 8);
+  if (sugg.input !== input) hideSugg();
+  if (!list.length) { if (sugg.el) sugg.el.remove(); sugg.el = null; input.setAttribute('aria-expanded', 'false'); return; }
+  var box = sugg.el || document.createElement('div');
+  box.className = 'sugg'; box.id = 'suggBox'; box.setAttribute('role', 'listbox');
+  box.innerHTML = list.map(function (x) { return '<button type="button" role="option" tabindex="-1" data-v="' + esc(x.v) + '">' + esc(x.v) + '<span class="n">' + x.n + '</span></button>'; }).join('');
+  if (!sugg.el) {
+    (input.closest('.f, .field') || input.parentNode).appendChild(box);
+    box.addEventListener('pointerdown', function (e) { e.preventDefault(); });        // il campo resta attivo
+    box.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    box.addEventListener('click', function (e) { var o = e.target.closest('[data-v]'); if (o) { e.preventDefault(); pickSugg(o.dataset.v); } });
+  }
+  input.setAttribute('aria-expanded', 'true'); input.setAttribute('aria-controls', 'suggBox'); input.setAttribute('aria-autocomplete', 'list');
+  sugg = { el: box, input: input, k: k, idx: -1 };
+}
+function pickSugg(v) {
+  var input = sugg.input;
+  hideSugg();
+  if (!input) return;
+  input.value = v;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+document.addEventListener('focusin', function (e) { var t = e.target; if (t && t.tagName === 'INPUT' && suggKey(t)) showSugg(t); });
+document.addEventListener('input', function (e) { var t = e.target; if (t && t.tagName === 'INPUT' && suggKey(t)) showSugg(t); });
+document.addEventListener('focusout', function (e) { if (sugg.input && e.target === sugg.input) setTimeout(function () { if (sugg.input && document.activeElement !== sugg.input) hideSugg(); }, 120); });
+document.addEventListener('keydown', function (e) {
+  if (!sugg.el || e.target !== sugg.input) return;
+  var opts = sugg.el.querySelectorAll('[data-v]');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    sugg.idx = (sugg.idx + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+    Array.prototype.forEach.call(opts, function (o, i) { o.setAttribute('aria-selected', i === sugg.idx ? 'true' : 'false'); });
+  } else if (e.key === 'Enter' && sugg.idx >= 0) { e.preventDefault(); e.stopPropagation(); pickSugg(opts[sugg.idx].dataset.v); }
+  else if (e.key === 'Escape') { e.stopPropagation(); hideSugg(); }
+}, true);
+
 /* ---------- copie dello stesso libro ---------- */
 /* Un'altra copia: stessi dati del libro, ma scaffale, note, prestito e lettura propri. Entrambe vengono segnate come copie. */
 function addCopy(id, quiet) {
@@ -2153,7 +2259,7 @@ async function printCatalog() {
   if (has('p')) cols.push(['p', 'Prestato a']);
   if (has('xs')) cols.push(['xs', 'Non più in libreria']);
   var total = books.reduce(function (s, b) { return s + (b.xs ? 0 : b.c || 0); }, 0);
-  var filt = [q ? 'ricerca «' + q + '»' : '', flt === 'loan' ? 'solo libri in prestito' : '', flt === 'gone' ? 'solo venduti, regalati, smarriti' : '', flt === 'guess' ? 'solo da verificare' : '', flt === 'dup' ? 'solo copie e doppioni' : '', readFlt ? 'lettura: ' + READ_TXT[readFlt].toLowerCase() : '', shFlt ? 'scaffale: ' + facetName('sh', shFlt) : '', genFlt ? 'genere: ' + facetName('gen', genFlt) : ''].filter(Boolean).join(', ');
+  var filt = [q ? 'ricerca «' + q + '»' : '', flt === 'loan' ? 'solo libri in prestito' : '', flt === 'gone' ? 'solo venduti, regalati, smarriti' : '', flt === 'guess' ? 'solo da verificare' : '', flt === 'dup' ? 'solo copie e doppioni' : '', readFlt ? 'lettura: ' + READ_TXT[readFlt].toLowerCase() : '', shFlt ? 'scaffale: ' + facetName('sh', shFlt) : '', genFlt ? 'genere: ' + facetName('gen', genFlt) : '', autFlt ? 'autore: ' + autName : '', edFlt ? 'casa editrice: ' + facetName('e', edFlt) : ''].filter(Boolean).join(', ');
   function cell(b, k) {
     if (k === 'c') return b.c == null ? '' : eur(b.c);
     if (k === 'rs') return readLabel(b);
@@ -2265,7 +2371,7 @@ function moveToLib(id, quiet) {
 }
 function setTab(t) {
   tab = t === 'wish' ? 'wish' : 'lib';
-  flt = ''; shFlt = ''; genFlt = '';
+  flt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = '';
   $('#tipTxt').textContent = tab === 'wish'
     ? 'Sei nei Desideri: Scansiona, Foto e Digita aggiungono qui i libri da comprare.'
     : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere l\'ISBN.';
@@ -2453,6 +2559,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'loan') openLoan(id);
   else if (act === 'toggle') toggleRow(id);
   else if (act === 'dup') openDup(id);
+  else if (act === 'facet') applyFacet(btn.dataset.f, btn.dataset.v, btn.dataset.name);
   else if (act === 'addcopy') addCopy(id);
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
@@ -2787,6 +2894,6 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__app = { openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { filtersAll: function () { return { autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();

@@ -555,3 +555,22 @@ body.drawer-open .edge-tab,body.gridview.drawer-open .edge-tab{visibility:hidden
   .card-top{grid-column:1 / -1;margin-right:-6px}
 }
 .top-acts .danger{margin-right:6px}   /* la X un po' staccata dalla freccetta: meno tocchi per sbaglio */
+
+/* ---- «Vedi tutti i libri di»: autore, casa editrice, genere, scaffale ---- */
+.facets{display:grid;gap:6px}
+.facets-h{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.facets-h svg{width:14px;height:14px}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-height:38px;padding:6px 10px 6px 9px;border-radius:999px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font:600 14px/1.2 var(--font-body);cursor:pointer}
+.fchip svg{flex:none;width:16px;height:16px}
+.fchip .fl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fchip .n{flex:none;min-width:22px;padding:1px 6px;border-radius:999px;background:var(--surface);font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.fchip:hover{filter:brightness(.97)}
+@media (min-width:880px){ .facets{grid-column:1 / -1} }
+/* ---- suggerimenti sotto il campo ---- */
+.f,.field{position:relative}
+.sugg{position:absolute;left:0;top:100%;z-index:8;min-width:100%;width:max-content;max-width:min(80vw,320px);max-height:260px;overflow:auto;margin-top:2px;padding:4px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.sugg button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font:500 15px/1.2 var(--font-body);text-align:left;cursor:pointer}
+.sugg button:hover,.sugg button[aria-selected="true"]{background:var(--surface2)}
+.sugg .n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}

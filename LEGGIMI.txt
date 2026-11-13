@@ -250,6 +250,24 @@ stesso pulsante. La copia nuova prende titolo, autore, editore, prezzo e
 copertina; scaffale, note e prestito sono vuoti. "Unisci i doppioni" non
 tocca mai i libri segnati come copie.
 
+TUTTI I LIBRI DELLO STESSO AUTORE, EDITORE, GENERE O SCAFFALE
+-------------------------------------------------------------
+Nella scheda aperta, sotto i campi, la riga "Vedi tutti i libri di" ha un
+bottone verde per l'autore, la casa editrice, il genere e lo scaffale, con
+il numero di libri. Toccane uno: l'elenco mostra solo quei libri, come un
+filtro (compare sotto la ricerca, per esempio "Autore: Umberto Eco x", e la
+linguetta a sinistra diventa verde). Per tornare a tutti tocca la x, oppure
+"Azzera" nel menu. I bottoni compaiono solo per i dati verificati (non per
+quelli "Da verificare") e solo se i libri sono almeno due. Se un libro ha
+piu' autori, c'e' un bottone per ciascuno.
+
+SUGGERIMENTI PER SCAFFALE, GENERE E "A CHI"
+------------------------------------------
+Quando tocchi Scaffale o Genere (o "A chi" nel prestito) compare sotto il
+campo l'elenco dei valori che hai gia' usato, con quanti libri li hanno;
+mentre scrivi si restringe. Tocca un valore per sceglierlo, oppure scrivi
+quello che vuoi.
+
 PREZZO SCRITTO A MANO
 ---------------------
 Quando l'app chiede il prezzo puoi anche scriverlo, spesso e' piu' veloce:
@@ -267,7 +285,7 @@ pagine si compilano da soli quando Google Libri o Open Library li conoscono
 (il genere arriva in inglese e lo traduco quando posso). Per i libri gia'
 inseriti: Opzioni > Sistema l'elenco > "Completa genere, pagine e copertine" (una ricerca per
 libro: con molti libri serve la chiave Google). Lo scaffale lo scrivi tu e
-l'app ti propone quelli gia' usati. La ricerca in alto cerca anche in
+l'app ti propone quelli gia' usati (elenco sotto il campo). La ricerca in alto cerca anche in
 scaffale, genere, note e nome di chi ha il libro; l'elenco si puo' ordinare
 anche per casa editrice, anno e scaffale (pannello Filtri e ordine).
 
