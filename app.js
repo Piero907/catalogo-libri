@@ -2411,12 +2411,13 @@ function moveToLib(id, quiet) {
   var b = get(id);
   if (!b || !b.w) return;
   var oldTs = b.ts;
-  var oldRs = b.rs;
+  var oldRs = b.rs, oldOpen = openState[id];
   b.w = false; b.ts = Date.now();
   if (!b.rs) b.rs = 'da';
+  openState[id] = false;                         // nell'altro elenco arriva chiuso, in vista compatta
   touch();
   if (!scanning) { renderList(); updateSummary(); }
-  if (!quiet) toast('Spostato in Libreria: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.w = true; x.ts = oldTs; x.rs = oldRs; touch(); renderList(); updateSummary(); } } });
+  if (!quiet) toast('Spostato in Libreria: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.w = true; x.ts = oldTs; x.rs = oldRs; openState[id] = oldOpen; touch(); renderList(); updateSummary(); } } });
 }
 /* Dalla Libreria ai Desideri: il libro torna «da comprare»; prestito, stato e lettura non hanno piu' senso e si tolgono
    (con «Annulla» torna tutto com'era). */
@@ -2425,10 +2426,12 @@ function moveToWish(id) {
   if (!b || b.w) return;
   var keep = ['w', 'ts', 'p', 'pd', 'xs', 'xd', 'xa', 'rs', 'rt', 'rd', 'cp'], before = {};
   keep.forEach(function (k) { before[k] = b[k]; });
+  var oldOpen = openState[id];
+  openState[id] = false;                         // nell'altro elenco arriva chiuso, in vista compatta
   b.w = true; b.ts = Date.now();
   b.p = ''; b.pd = ''; b.xs = ''; b.xd = ''; b.xa = ''; b.rs = ''; b.rt = 0; b.rd = ''; b.cp = false;
   touch(); renderList(); updateSummary();
-  toast('Spostato nei Desideri: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { Object.assign(x, before); touch(); renderList(); updateSummary(); } } });
+  toast('Spostato nei Desideri: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { Object.assign(x, before); openState[id] = oldOpen; touch(); renderList(); updateSummary(); } } });
 }
 function setTab(t) {
   tab = t === 'wish' ? 'wish' : 'lib';
