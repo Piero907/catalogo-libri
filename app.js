@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 45, date: '2026-11-13', note: 'Filtri: elenco compatto; uscita chiara dalla fotocamera; la copertina si cerca a ogni tocco e poi propone la foto' };
+var APP_VERSION = { v: 46, date: '2026-11-13', note: 'Condivisione con prezzo, copertina, genere e pagine; segnalibro giallo sui preferiti nella vista Copertine' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1438,9 +1438,10 @@ function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; 
 function coverHTML(b) {
   var s = S[b.id] || {}, img = bigImg(b);
   var badge = isBusy(b) ? '<span class="badge">…</span>' : b.p ? '<span class="badge loan">Prestato</span>' : b.g.length ? '<span class="badge warn">Da verificare</span>' : '';
-  return '<button class="cover" data-id="' + b.id + '" aria-label="' + esc([b.t || 'Senza titolo', b.a].filter(Boolean).join(', ')) + '">' +
+  var fav = b.fav && !b.w ? '<span class="ribbon" title="Preferito"><svg viewBox="0 0 20 30" aria-hidden="true"><path d="M1 0h18v28l-9-6.5L1 28z"/></svg></span>' : '';
+  return '<button class="cover' + (fav ? ' is-fav' : '') + '" data-id="' + b.id + '" aria-label="' + esc([b.t || 'Senza titolo', b.a, fav ? 'preferito' : ''].filter(Boolean).join(', ')) + '">' +
     '<span class="art">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' :
-      '<span class="ph" style="--h:' + hue(b.t + b.a + b.i) + '"><b>' + esc(b.t || b.i || 'Senza titolo') + '</b><small>' + esc(b.a) + '</small></span>') + badge + '</span>' +
+      '<span class="ph" style="--h:' + hue(b.t + b.a + b.i) + '"><b>' + esc(b.t || b.i || 'Senza titolo') + '</b><small>' + esc(b.a) + '</small></span>') + badge + fav + '</span>' +
     '<span class="cap">' + esc(b.t || b.i || '…') + '</span><span class="cap2">' + esc(b.a) + '</span></button>';
 }
 function autosize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
@@ -2809,8 +2810,9 @@ function openImport(sh) {
   $('#importList').innerHTML = sh.books.map(function (x, i) {
     var o = ownedLike(x), where = o ? (o.w ? 'Già nei Desideri' : 'Ce l\'hai già') : '';
     if (o) have++;
-    var ed = [x.e, x.y].filter(Boolean).join(', ');
+    var ed = [x.e, x.y, x.gen, x.pg ? x.pg + ' pagine' : '', x.c != null ? eur(x.c) : ''].filter(Boolean).join(' · ');
     return '<li><label class="imp-row' + (o ? ' have' : '') + '"><input type="checkbox" data-i="' + i + '"' + (o ? ' disabled' : ' checked') + '>' +
+      '<span class="imp-c">' + (x.img ? '<img src="' + esc(x.img) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
       '<span class="imp-t"><b>' + esc(x.t || 'ISBN ' + x.i) + '</b>' + (x.a ? '<span>' + esc(x.a) + '</span>' : '') + (ed ? '<small>' + esc(ed) + '</small>' : '') + '</span>' +
       (where ? '<span class="tag">' + where + '</span>' : '') + '</label></li>';
   }).join('');
@@ -2830,7 +2832,7 @@ function doImport(wish) {
   if (!picked.length) { toast('Metti la spunta ad almeno un libro.'); return; }
   var from = sh.name || 'un amico', label = L.shareLabel(sh), ids = [], now = Date.now();
   picked.forEach(function (x, k) {
-    var b = blankBook({ t: x.t, a: x.a, e: x.e, y: x.y, i: x.i, w: wish, fr: from, fl: label, ts: now + k, ck: today() });
+    var b = blankBook({ t: x.t, a: x.a, e: x.e, y: x.y, i: x.i, c: x.c, img: x.img, imgL: x.imgL, gen: x.gen, pg: x.pg, w: wish, fr: from, fl: label, ts: now + k, ck: today() });
     state.books.push(b); ids.push(b.id);
   });
   closeImport();

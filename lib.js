@@ -813,14 +813,24 @@
     return out;
   }
   /* ---------- condivisione di un libro o di una lista ----------
-     Pacchetto compatto: { v:1, n: nome di chi invia, k: tipo (book, fav, wish, list), h: nome della lista, b: [[titolo, autore, isbn, editore, anno], ...] }.
-     Viaggia dentro un link (#l=...) o in un file. Solo dati del libro: niente note, prezzi, voti, prestiti, scaffali. */
+     Pacchetto compatto: { v:1, n: nome di chi invia, k: tipo (book, fav, wish, list), h: nome della lista,
+     b: [[titolo, autore, isbn, editore, anno, { c: prezzo, im: copertina, L: 1 se grande, g: genere, p: pagine }], ...] }.
+     Viaggia dentro un link (#l=...) o in un file. Niente note, voti, prestiti, scaffali; le foto fatte da te restano sul telefono. */
+  var COVER_HOST = /^https:\/\/(books\.google\.[a-z.]{2,8}|[a-z0-9-]+\.googleusercontent\.com|covers\.openlibrary\.org|([a-z0-9-]+\.)?archive\.org)\//i;
+  function shareCover(u) { u = str(u); return u.length <= 400 && COVER_HOST.test(u) && !/[\s"'<>\\]/.test(u) ? u : ''; }
   var SHARE_MAX = 300;
   function shareClean(x, max) { return str(x).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }
   function buildShare(books, meta) {
     meta = meta || {};
     var rows = (books || []).filter(function (b) { return b && (b.t || toIsbn13(b.i)); }).slice(0, SHARE_MAX).map(function (b) {
       var r = [shareClean(b.t, 200), shareClean(b.a, 120), toIsbn13(b.i) || '', shareClean(b.e, 80), shareClean(b.y, 4)];
+      var x = {}, big = shareCover(b.imgL), cov = big || shareCover(b.img);
+      if (typeof b.c === 'number' && b.c > 0 && b.c < 1000) x.c = Math.round(b.c * 100) / 100;
+      if (cov) { x.im = cov; if (big) x.L = 1; }
+      if (shareClean(b.gen, 80)) x.g = shareClean(b.gen, 80);
+      if (/^\d{1,5}$/.test(str(b.pg)) && +b.pg > 0) x.p = +b.pg;
+      if (Object.keys(x).length) r[5] = x;
+      for (var k = 0; k < r.length; k++) if (r[k] == null) r[k] = '';
       while (r.length > 1 && !r[r.length - 1]) r.pop();
       return r;
     });
@@ -835,7 +845,15 @@
     if (!o || typeof o !== 'object' || o.v !== 1 || !Array.isArray(o.b)) return null;
     var books = o.b.slice(0, SHARE_MAX).map(function (r) {
       if (!Array.isArray(r)) return null;
-      var b = { t: shareClean(r[0], 200), a: shareClean(r[1], 120), i: toIsbn13(shareClean(r[2], 20)) || '', e: shareClean(r[3], 80), y: shareClean(r[4], 12).replace(/\D/g, '').slice(0, 4) };
+      var b = { t: shareClean(r[0], 200), a: shareClean(r[1], 120), i: toIsbn13(shareClean(r[2], 20)) || '', e: shareClean(r[3], 80), y: shareClean(r[4], 12).replace(/\D/g, '').slice(0, 4),
+        c: null, img: '', imgL: '', gen: '', pg: '' };
+      var x = r[5] && typeof r[5] === 'object' && !Array.isArray(r[5]) ? r[5] : null;
+      if (x) {
+        if (typeof x.c === 'number' && isFinite(x.c) && x.c > 0 && x.c < 1000) b.c = Math.round(x.c * 100) / 100;
+        b.img = shareCover(x.im); if (b.img && x.L === 1) b.imgL = b.img;
+        b.gen = shareClean(x.g, 80);
+        if (typeof x.p === 'number' && x.p > 0 && x.p < 100000) b.pg = String(Math.round(x.p));
+      }
       return b.t || b.i ? b : null;
     }).filter(Boolean);
     if (!books.length) return null;
@@ -862,11 +880,17 @@
   /* Testo leggibile del messaggio (anche per chi non ha l'app); il link si aggiunge dopo */
   function shareText(sh, maxLines) {
     maxLines = maxLines || 25;
-    function line(b) { var ed = [b.e, b.y].filter(Boolean).join(', '); return (b.t ? '«' + b.t + '»' : 'ISBN ' + b.i) + (b.a ? ' di ' + b.a : '') + (ed ? ' (' + ed + ')' : ''); }
+    function eu(v) { return fmtNum(v) + ' €'; }
+    function line(b) { var ed = [b.e, b.y].filter(Boolean).join(', '); return (b.t ? '«' + b.t + '»' : 'ISBN ' + b.i) + (b.a ? ' di ' + b.a : '') + (ed ? ' (' + ed + ')' : '') + (b.c != null ? ' · ' + eu(b.c) : ''); }
     var bs = sh.books, head = shareHeading(sh);
-    if (sh.kind === 'book' || bs.length === 1) return head + ':\n' + line(bs[0]) + (bs[0].i && bs[0].t ? '\nISBN ' + bs[0].i : '');
+    if (sh.kind === 'book' || bs.length === 1) {
+      var b0 = bs[0], more = [b0.gen, b0.pg ? b0.pg + ' pagine' : ''].filter(Boolean).join(' · ');
+      return head + ':\n' + line(b0) + (more ? '\n' + more : '') + (b0.i && b0.t ? '\nISBN ' + b0.i : '');
+    }
     var shown = bs.slice(0, maxLines).map(function (b) { return '• ' + line(b); });
-    return head + ' (' + bs.length + ' libri):\n' + shown.join('\n') + (bs.length > maxLines ? '\n… e altri ' + (bs.length - maxLines) : '');
+    var priced = bs.filter(function (b) { return b.c != null; }), tot = priced.reduce(function (a, b) { return a + b.c; }, 0);
+    return head + ' (' + bs.length + ' libri):\n' + shown.join('\n') + (bs.length > maxLines ? '\n… e altri ' + (bs.length - maxLines) : '') +
+      (priced.length > 1 ? '\n\nTotale: ' + eu(Math.round(tot * 100) / 100) + (priced.length < bs.length ? ' (' + priced.length + ' libri con il prezzo)' : '') : '');
   }
 
   var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd'];

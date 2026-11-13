@@ -431,7 +431,8 @@ Open Library.
 PREFERITI E CONDIVISIONE CON GLI AMICI
 --------------------------------------
 - Preferiti: nella scheda aperta di un libro della Libreria tocca
-  "Preferito". Li ritrovi in Filtri > Preferiti.
+  "Preferito". Li ritrovi in Filtri > Preferiti; nella vista Copertine
+  hanno un segnalibro giallo in alto a destra.
 - Il tuo nome: te lo chiede il benvenuto alla prima apertura, oppure la
   prima volta che condividi; si cambia in Opzioni > Condivisione. Chi
   riceve vede "I preferiti di Piero", "Piero ti consiglia un libro".
@@ -440,8 +441,10 @@ PREFERITI E CONDIVISIONE CON GLI AMICI
   ogni volta che c'e' un filtro o una ricerca (preferiti, un genere, un
   autore...); oppure Esporta > "Condividi questi libri con un amico".
   Alle liste per genere, autore ecc. puoi dare un nome.
-- Cosa parte: titolo, autore, casa editrice, anno, ISBN. Note, prezzi,
-  voti, prestiti e scaffali NON vengono mandati.
+- Cosa parte: titolo, autore, casa editrice, anno, ISBN, prezzo,
+  copertina (quella scaricata da internet), genere e pagine; per le liste
+  anche il totale. Note, voti, prestiti, scaffali e le copertine
+  fotografate da te NON vengono mandati.
 - Come arriva: un messaggio con l'elenco leggibile e un link. Chi ha Next
   Libris tocca il link: vede l'elenco, toglie la spunta a quello che non
   vuole (quelli che ha gia' sono segnati) e sceglie Desideri o Libreria.
