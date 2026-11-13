@@ -1,15 +1,15 @@
 {
   "id": "./",
-  "name": "Catalogo libri",
-  "short_name": "Libri",
-  "description": "Elenco dei libri di casa: scansiona il codice ISBN o fotografa la copertina.",
+  "name": "Next Libris",
+  "short_name": "Next Libris",
+  "description": "La tua libreria di casa, e il prossimo libro: scansiona il codice ISBN o fotografa la copertina.",
   "lang": "it",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#EDF1EE",
-  "theme_color": "#1B6A4F",
+  "background_color": "#EDF0F5",
+  "theme_color": "#EDF0F5",
   "icons": [
     {
       "src": "icons/icon-192.png",

@@ -76,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 33, date: '2026-11-13', note: 'Sposta nei Desideri / in Libreria ora in alto nella scheda aperta, con icone (cuore e scaffale).' };
+var APP_VERSION = { v: 34, date: '2026-11-13', note: 'nuovo nome, Next Libris, e nuova icona con i libri sullo scaffale.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
@@ -1550,7 +1550,7 @@ function markBackup() { settings.lastBackup = Date.now(); saveSettings(); update
 function backup() {
   if (!storable().length) { toast('L\'elenco è vuoto: non c\'è niente da salvare.'); return; }
   if (!backupData()) { openExport(); toast('Preparo il backup con le tue foto: riprova tra un attimo.'); return; }
-  downloadBlob('catalogo-libri-backup-' + today() + '.json', backupData(), 'application/json');
+  downloadBlob('next-libris-backup-' + today() + '.json', backupData(), 'application/json');
   markBackup();
   toast('Backup scaricato. Tienine una copia anche fuori dal telefono (Drive, email).');
 }
@@ -1566,7 +1566,7 @@ async function shareBackup() {
   } catch (e) { file = null; }
   if (file) {
     try {
-      await navigator.share({ files: [file], title: 'Backup catalogo libri', text: 'Backup del catalogo libri del ' + L.itDate(today()) });
+      await navigator.share({ files: [file], title: 'Backup Next Libris', text: 'Backup di Next Libris del ' + L.itDate(today()) });
       markBackup(); toast('Backup condiviso.'); return;
     } catch (e) {
       if (e && e.name === 'AbortError') { toast('Condivisione annullata: il backup non è stato salvato.'); return; }
@@ -2374,7 +2374,7 @@ async function printCatalog() {
     if (k === 'xs') return esc(goneText(b));
     return esc(b[k] || '');
   }
-  $('#printView').innerHTML = '<h1>Catalogo libri · ' + (tab === 'wish' ? 'Desideri' : 'Libreria') + '</h1>' +
+  $('#printView').innerHTML = '<h1>Next Libris · ' + (tab === 'wish' ? 'Desideri' : 'Libreria') + '</h1>' +
     '<p class="pv-sub">' + esc(L.itDate(today())) + ' · ' + books.length + (books.length === 1 ? ' libro' : ' libri') + (total ? ' · valore di copertina ' + esc(eur(total)) : '') + (filt ? ' · ' + esc(filt) : '') + '</p>' +
     '<table><thead><tr>' + (covers ? '<th></th>' : '') + cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
     books.map(function (b) {

@@ -1,5 +1,11 @@
-CATALOGO LIBRI - come metterlo sul telefono
-============================================
+NEXT LIBRIS - la tua libreria, e il prossimo libro
+==================================================
+(prima si chiamava "Catalogo libri": l'indirizzo del sito e i dati sul
+telefono restano gli stessi)
+L'icona: tre libri su uno scaffale, l'ultimo inclinato (il prossimo), in
+ottone su blu inchiostro dentro la cornice di un ex libris (icons/icona.svg).
+Se il telefono mostra ancora la vecchia icona o il vecchio nome, togli l'app
+dalla schermata Home e installala di nuovo da Chrome: i libri restano.
 
 Questa cartella contiene un sito-app (PWA). Non serve installare nulla sul
 computer: basta pubblicarla una volta su internet (gratis) e poi installarla
