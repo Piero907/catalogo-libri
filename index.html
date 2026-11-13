@@ -22,13 +22,25 @@
 <link rel="apple-touch-icon" href="icons/next-libris-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script>/* aspetto e tema prima di disegnare la pagina, senza lampi; app aperta dall'icona: schermata d'apertura con il nome */try{if((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true)document.documentElement.setAttribute('data-splash','');}catch(e){}try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');var th0=s0.themeV2?s0.theme:(s0.theme==='dark'?'dark':'light');if(th0==='light'||th0==='dark')document.documentElement.setAttribute('data-theme',th0);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');document.documentElement.setAttribute('data-theme','light');}</script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<script>/* aspetto e tema prima di disegnare la pagina, senza lampi; app aperta dall'icona: schermata d'apertura con il nome */try{if((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true){document.documentElement.setAttribute('data-splash','');var tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content','#24563F');}}catch(e){}try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');var th0=s0.themeV2?s0.theme:(s0.theme==='dark'?'dark':'light');if(th0==='light'||th0==='dark')document.documentElement.setAttribute('data-theme',th0);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');document.documentElement.setAttribute('data-theme','light');}</script>
 <link rel="preload" href="vendor/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>/* schermata d'apertura: qui e non nel CSS, cosi' e' la primissima cosa disegnata */
+#splash{display:none}
+html[data-splash],html[data-splash] body{background:#24563F}
+html[data-splash] #splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#24563F;transition:opacity .35s ease}
+#splash img{width:168px;height:168px;margin-bottom:6px}
+#splash b{font:600 38px/1.1 "Literata",Georgia,serif;color:#F4F1E8;letter-spacing:-.005em}
+#splashWho{font:400 17px/1.3 system-ui,sans-serif;color:#CFE0D6}
+#splashWho:empty{display:none}
+#splash.out{opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){html[data-splash] #splash{transition:none}}
+</style>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="splash" aria-hidden="true"><img src="icons/next-libris-192.png" alt="" width="120" height="120"><b>Next Libris</b><span id="splashWho"></span></div>
+<div id="splash" aria-hidden="true"><img src="icons/next-libris-192.png" alt="" width="168" height="168"><b>Next Libris</b><span id="splashWho"></span></div>
 <main>
   <header class="top">
     <div>
