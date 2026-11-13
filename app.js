@@ -76,10 +76,10 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 39, date: '2026-11-13', note: 'Ricerca dei libri: worker e chiave ben visibili, contatori separati, Cancella e salvati da rimettere' };
+var APP_VERSION = { v: 40, date: '2026-11-13', note: 'Tema chiaro predefinito, nuovo benvenuto alla prima apertura, worker e chiave anche nel backup' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
 var PALS = { inchiostro: ['#EDF0F5', '#10141D'], bordeaux: ['#F2EFEE', '#161112'], bosco: ['#EEF1EE', '#0F1513'] };
 var FONTS_T = ['literata', 'garamond', 'playfair', 'lora', 'merriweather', 'montserrat', 'roboto'], FONTS_B = ['plex', 'roboto', 'lato', 'atkinson', 'lora'];
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
@@ -127,6 +127,7 @@ function svcVal(k) { return k === 'sbn' ? settings.sbnUrl : settings.gbKey; }
 function svcShort(k, v) { return k === 'sbn' ? v.replace(/^https:\/\//, '') : (v.length > 14 ? v.slice(0, 6) + '…' + v.slice(-4) : v); }
 function setSvc(k, v) {
   if (k === 'sbn') settings.sbnUrl = v; else settings.gbKey = v;
+  backupReady = null;
   saveSettings(); remember(k, v); renderSvc();
 }
 function renderSvc() {
@@ -237,7 +238,9 @@ function loadAll() {
     settings.swiped = s.swiped === true;
     settings.pubFix = s.pubFix === true;
     settings.look = 'nuovo';                       // lo stile «Classico» non c'e' piu': resta solo il nuovo, con palette e caratteri
-    settings.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
+    // da questa versione il tema chiaro e' il predefinito: chi non aveva scelto «Scuro» passa al chiaro (una volta sola)
+    settings.theme = s.themeV2 ? (s.theme === 'dark' || s.theme === 'auto' ? s.theme : 'light') : (s.theme === 'dark' ? 'dark' : 'light');
+    settings.themeV2 = true;
     settings.pal = s.palV2 && PALS[s.pal] ? s.pal : 'bosco';   // da questa versione il verde (Bosco) e' la palette principale
     settings.palV2 = true;
     settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
@@ -1307,14 +1310,19 @@ function rowHTML(b, dups, ex) {
   }
   return '<article class="' + cls + '" data-id="' + b.id + '"' + (ex ? ' data-ex="1"' : '') + '>' + status + body + '</article>';
 }
+/* benvenuto della Libreria vuota: i tre modi di aggiungere (toccabili come i tasti in basso) e il ripristino da backup */
 function emptyHTML() {
-  var ex = blankBook({ id: 'ex', t: 'I promessi sposi', a: 'Alessandro Manzoni', e: 'Einaudi', y: '1840', c: 9.5, i: '9788806000000', ts: 0, sh: 'Soggiorno, 2° ripiano', gen: 'Narrativa', pg: '720', w: false });
-  return '<section class="empty"><h2>Aggiungi il primo libro</h2>' +
-    '<ol class="steps">' +
-    '<li>Tocca <b>Scansiona</b> e inquadra il codice a barre sul retro: titolo, autore, editore e anno arrivano da una banca dati.</li>' +
-    '<li>Per un libro senza codice leggibile, tocca <b>Foto</b> e inquadra la copertina: leggo il testo e ti propongo i libri che corrispondono.</li>' +
-    '<li>Il costo è il prezzo di copertina: dopo ogni libro ti chiedo una foto ravvicinata del prezzo stampato (puoi saltarla), altrimenti lo scrivi tu. Poi correggi quello che serve e scarica l\'elenco.</li></ol>' +
-    '<p class="ex-label">Esempio di scheda</p>' + rowHTML(ex, {}, true) + '</section>';
+  function way(act, ic, html) { return '<li><button type="button" class="way" data-act="' + act + '"><span class="way-i" aria-hidden="true">' + icon(ic) + '</span><span class="way-t">' + html + '</span></button></li>'; }
+  return '<section class="empty welcome"><h2>Aggiungi il primo libro</h2>' +
+    '<p class="lead">Di solito basta il codice a barre sul retro: titolo, autore, editore e anno si compilano da soli.</p>' +
+    '<ul class="ways">' +
+    way('way-scan', 'scan', '<b>Scansiona</b><small>Inquadra il codice a barre. Se il libro non ce l\'ha, nella fotocamera scegli «ISBN scritto» o «Copertina».</small>') +
+    way('way-photo', 'cam', '<b>Foto</b><small>Scatta la copertina o prendila dalla galleria, anche più foto insieme: l\'app le legge e cerca i libri.</small>') +
+    way('way-type', 'key', '<b>Digita</b><small>Scrivi l\'ISBN o il titolo e scegli tra i risultati.</small>') +
+    '</ul>' +
+    '<p class="then">Dopo ogni libro puoi inquadrare il prezzo, scriverlo o saltarlo. Poi tocca un libro per aprire la sua scheda: scaffale, genere, lettura, prestiti e note.</p>' +
+    '<p class="restore-l">Hai già un backup, da un altro telefono o da prima? <button type="button" class="link" data-act="restore">Ripristinalo</button></p>' +
+    '</section>';
 }
 function wishEmptyHTML() {
   return '<section class="empty"><h2>La lista dei Desideri è vuota</h2>' +
@@ -1382,6 +1390,7 @@ function renderList() {
   document.body.classList.toggle('gridview', settings.view === 'grid');
   document.body.classList.toggle('openall', settings.openAll);
   $('#thead').hidden = n === 0 || settings.view === 'grid' || !settings.openAll;
+  document.body.classList.toggle('welcome-on', !n && tab !== 'wish');   // col benvenuto il suggerimento sotto i tasti ripeterebbe le stesse cose
   if (!n) { list.innerHTML = tab === 'wish' ? wishEmptyHTML() : emptyHTML(); autosizeAll(list); return; }
   if (!vis.length) {
     var only = !q && activeCount() === 1;
@@ -1655,9 +1664,11 @@ function saveXLSX() {
 var backupReady = null;
 function coverIds() { return Object.keys(coverURL).filter(function (id) { return !!get(id); }); }
 /* Senza foto tue il backup e' pronto subito; con le foto va preparato prima (si leggono dal telefono), cosi' la condivisione parte al tocco. */
-function backupData() { return coverIds().length ? backupReady : JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable() }); }
+/* nel backup vanno anche worker SBN e chiave Google (in uso e salvati): ripristinando su un altro telefono tornano anche loro */
+function backupCfg() { return { sbnUrl: settings.sbnUrl, gbKey: settings.gbKey, saved: { sbn: saved.sbn.slice(), key: saved.key.slice() } }; }
+function backupData() { return coverIds().length ? backupReady : JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable(), cfg: backupCfg() }); }
 async function buildBackup() {
-  var o = { app: 'catalogo-libri', v: 4, books: storable() }, ids = coverIds();
+  var o = { app: 'catalogo-libri', v: 4, books: storable(), cfg: backupCfg() }, ids = coverIds();
   if (ids.length) {
     o.covers = {};
     var all = await idbAll();
@@ -1674,7 +1685,7 @@ function prepBackup() {
     backupReady = data;
     btns.forEach(function (x) { x.disabled = false; });
     $('#backupNote').textContent = 'Il backup comprende ' + n + (n === 1 ? ' tua foto' : ' tue foto') + ' di copertina (' + (data.length / 1048576).toFixed(1).replace('.', ',') + ' MB).';
-  }, function () { btns.forEach(function (x) { x.disabled = false; }); $('#backupNote').textContent = 'Non riesco a leggere le tue foto: il backup comprenderà solo i dati dei libri.'; backupReady = JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable() }); });
+  }, function () { btns.forEach(function (x) { x.disabled = false; }); $('#backupNote').textContent = 'Non riesco a leggere le tue foto: il backup comprenderà solo i dati dei libri.'; backupReady = JSON.stringify({ app: 'catalogo-libri', v: 4, books: storable(), cfg: backupCfg() }); });
 }
 function markBackup() { settings.lastBackup = Date.now(); saveSettings(); updateBackupInfo(); if (noticeKind === 'backup') $('#notice').hidden = true; }
 function backup() {
@@ -1718,6 +1729,23 @@ function checkBackupNag() {
   notice('Ultimo backup: ' + L.agoText(settings.lastBackup) + '. I ' + n + ' libri sono salvati solo su questo telefono: se cambi telefono o cancelli i dati di Chrome li perdi.',
     'Fai il backup', function () { if (coverIds().length) openExport(); else shareBackup(); }, function () { settings.snooze = Date.now(); saveSettings(); }, 'backup');
 }
+/* dal backup: worker e chiave tornano tra i salvati; se qui mancano, li rimette in uso. Restituisce cosa ha rimesso. */
+function restoreCfg(c) {
+  if (!c || typeof c !== 'object') return '';
+  var okW = function (v) { v = cleanWorker(v); return /^https:\/\/[^\s/]+\.[^\s]+$/.test(v) ? v : ''; };
+  var okK = function (v) { return typeof v === 'string' ? v.replace(/\s+/g, '') : ''; };
+  var sv = c.saved || {}, put = [];
+  ['sbn', 'key'].forEach(function (k) {
+    var list = (Array.isArray(sv[k]) ? sv[k] : []).concat([k === 'sbn' ? c.sbnUrl : c.gbKey]).map(k === 'sbn' ? okW : okK).filter(Boolean);
+    list.forEach(function (v) { if (saved[k].indexOf(v) < 0 && saved[k].length < 4) saved[k].push(v); });
+  });
+  ls.set(LS_SAVED, JSON.stringify(saved));
+  var w = okW(c.sbnUrl), k2 = okK(c.gbKey);
+  if (w && !settings.sbnUrl) { setSvc('sbn', w); put.push('il worker SBN'); }
+  if (k2 && !settings.gbKey) { setSvc('key', k2); put.push('la chiave Google'); }
+  renderSvc();
+  return put.join(' e ');
+}
 function restore(file) {
   var rd = new FileReader();
   rd.onload = function () {
@@ -1733,8 +1761,10 @@ function restore(file) {
       if (d.covers && typeof d.covers === 'object') Object.keys(d.covers).forEach(function (id) {
         if (get(id) && !coverURL[id] && /^data:image\//.test(d.covers[id])) { nc++; saveCoverData(id, d.covers[id]); }
       });
+      var cfg = restoreCfg(d.cfg);
       touch(); renderList(); updateSummary();
-      toast(n + (n === 1 ? ' libro ripristinato' : ' libri ripristinati') + (nc ? ', ' + nc + ' foto di copertina.' : '.'));
+      toast(n + (n === 1 ? ' libro ripristinato' : ' libri ripristinati') + (nc ? ', ' + nc + ' foto di copertina' : '') + '.' +
+        (cfg ? ' Torn' + (/ e /.test(cfg) ? 'ano' : 'a') + ' in uso anche ' + cfg + '.' : ''));
     } catch (e) { toast('Il file non è un backup valido.'); }
   };
   rd.readAsText(file);
@@ -2171,9 +2201,9 @@ document.addEventListener('change', function (e) {
   else if (t.name === 'fb' && FONTS_B.indexOf(t.value) >= 0) { settings.fb = t.value; saveSettings(); applyLook(false); }
 });
 $('#lookReset').addEventListener('click', function () {
-  var before = { pal: settings.pal, ft: settings.ft, fb: settings.fb };
-  settings.pal = 'bosco'; settings.ft = 'literata'; settings.fb = 'plex'; saveSettings(); applyLook(false);
-  toast('Colori e caratteri predefiniti.', { label: 'Annulla', fn: function () { Object.assign(settings, before); saveSettings(); applyLook(false); } });
+  var before = { theme: settings.theme, pal: settings.pal, ft: settings.ft, fb: settings.fb };
+  settings.theme = 'light'; settings.pal = 'bosco'; settings.ft = 'literata'; settings.fb = 'plex'; saveSettings(); applyLook(true);
+  toast('Aspetto predefinito: tema chiaro, verde, Literata.', { label: 'Annulla', fn: function () { Object.assign(settings, before); saveSettings(); applyLook(true); } });
 });
 
 /* ---------- versione: quale stai usando e se ce n'e' una piu' nuova ---------- */
@@ -2804,6 +2834,10 @@ list.addEventListener('click', function (e) {
   if (!btn) return;
   if (btn.dataset.act === 'clearflt') { clearFilters(); return; }
   if (btn.dataset.act === 'typeadd') { openIsbnSheet(); return; }
+  if (btn.dataset.act === 'way-scan') { $('#btnScan').click(); return; }
+  if (btn.dataset.act === 'way-photo') { $('#btnPhoto').click(); return; }
+  if (btn.dataset.act === 'way-type') { $('#btnType').click(); return; }
+  if (btn.dataset.act === 'restore') { $('#fileBackup').click(); return; }
   var row = btn.closest('.row');
   if (!row) return;
   var id = row.dataset.id, act = btn.dataset.act;

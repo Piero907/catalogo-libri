@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');if(s0.theme==='light'||s0.theme==='dark')document.documentElement.setAttribute('data-theme',s0.theme);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');}</script>
+<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');var th0=s0.themeV2?s0.theme:(s0.theme==='dark'?'dark':'light');if(th0==='light'||th0==='dark')document.documentElement.setAttribute('data-theme',th0);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');document.documentElement.setAttribute('data-theme','light');}</script>
 <link rel="preload" href="vendor/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -193,9 +193,9 @@
       <fieldset class="choice">
         <legend>Tema</legend>
         <div class="seg seg-theme">
-          <label><input type="radio" name="theme" value="auto"><span>Automatico</span></label><label><input type="radio" name="theme" value="light"><span>Chiaro</span></label><label><input type="radio" name="theme" value="dark"><span>Scuro</span></label>
+          <label><input type="radio" name="theme" value="light"><span>Chiaro</span></label><label><input type="radio" name="theme" value="dark"><span>Scuro</span></label><label><input type="radio" name="theme" value="auto"><span>Automatico</span></label>
         </div>
-        <p class="hint">Automatico segue il tema del telefono (chiaro di giorno, scuro di sera se l'hai impostato così).</p>
+        <p class="hint">Chiaro è il predefinito. Automatico segue il tema del telefono (chiaro di giorno, scuro di sera se l'hai impostato così).</p>
       </fieldset>
       <div id="lookNew">
         <fieldset class="choice">

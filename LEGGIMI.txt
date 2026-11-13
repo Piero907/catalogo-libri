@@ -143,7 +143,7 @@ COME SI USA
 ASPETTO: TEMA, COLORI E CARATTERI
 ---------------------------------
 Opzioni > Aspetto (o l'ingranaggio in alto a destra > Aspetto):
-- Tema: Automatico (segue il telefono), Chiaro o Scuro.
+- Tema: Chiaro (predefinito), Scuro o Automatico (segue il telefono).
 - Colori: Bosco (verde, predefinito), Inchiostro (blu) o Bordeaux (rosso
   vino), ognuno con la sua versione scura.
 - Carattere dei titoli: Literata (predefinito), EB Garamond, Playfair
@@ -461,8 +461,9 @@ Cloudflare) e "Google Libri" (chiave API). Ognuno mostra:
   metterne un altro. Quello tolto resta tra i "salvati".
 Sotto il campo compaiono i salvati (fino a 4 per tipo): un tocco lo rimette,
 la x lo dimentica. In alto, "Rimetti chiave e worker salvati" rimette in un
-colpo gli ultimi usati. I salvati stanno solo su questo telefono (non sono
-nel backup).
+colpo gli ultimi usati. Worker, chiave e salvati sono anche nel backup:
+ripristinandolo su un altro telefono (o dopo aver reinstallato l'app)
+tornano in uso, se li' non ce ne sono gia'.
 
 DOVE CERCA L'APP I LIBRI E IN CHE ORDINE
 ---------------------------------------
@@ -576,4 +577,9 @@ disinstalli l'app o cambi telefono, si perde. Per questo:
   lo rimanda di 2 settimane). In Esporta vedi quando hai fatto l'ultimo.
 - "Ripristina da backup" accetta il file .json o .txt e aggiunge i libri
   che mancano, senza cancellare quelli che hai. Il backup contiene entrambe
-  le liste, con prestiti, scaffali e note (non la chiave Google).
+  le liste, con prestiti, scaffali e note, e anche il worker SBN e la
+  chiave Google (in uso e salvati): tienilo per te, non mandarlo ad altri.
+  Ripristinando, worker e chiave tornano in uso se in quel telefono
+  mancano; altrimenti finiscono tra i salvati.
+- Alla prima apertura, con la Libreria vuota, il benvenuto ha anche
+  "Hai gia' un backup? Ripristinalo".
