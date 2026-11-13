@@ -843,3 +843,7 @@ body.stuck:not(.card-open) .tip{display:none}
   .stick{margin:0 -24px;padding:10px 24px 0}
   .stick.stuck .btn.sm svg{display:inline}
 }
+
+/* ---- sposta tra Libreria e Desideri, in alto ---- */
+.ico.move svg{width:22px;height:22px}
+.ico.move:hover{color:var(--accent);background:var(--accent-soft)}

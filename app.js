@@ -28,6 +28,8 @@ var ICON = {
   chev: '<path d="M6 9l6 6 6-6"/>',
   right: '<path d="M9 5l7 7-7 7"/>',
   swap: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
+  tolib: '<path d="M2.5 20.5h14"/><path d="M4 20.5V10h3v10.5M4 12.5h3M4 18h3"/><path d="M8.2 20.5V7.5h3.4v13M8.2 10h3.4M8.2 18h3.4"/><path d="M12.8 20.5l2-8.4 2.7.6-1.9 7.8"/><path d="M19.5 2.5v8.5M16.5 8l3 3 3-3"/>',
+  towish: '<path d="M8.8 20.5S2.5 16.9 2.5 12.6A3.2 3.2 0 0 1 8.8 11a3.2 3.2 0 0 1 6.3 1.6c0 4.3-6.3 7.9-6.3 7.9z"/><path d="M19.5 2.5v8.5M16.5 8l3 3 3-3"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   pub: '<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M4 20h16"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
@@ -74,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 32, date: '2026-11-13', note: 'Aspetto semplificato: niente più stile Classico, restano tema, colori e caratteri.' };
+var APP_VERSION = { v: 33, date: '2026-11-13', note: 'Sposta nei Desideri / in Libreria ora in alto nella scheda aperta, con icone (cuore e scaffale).' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
@@ -1146,9 +1148,6 @@ function authorLinkHTML(b, ex) {
   if (ex || !hasData(b)) return '';
   var out = '';
   if (!b.w && (b.t || L.toIsbn13(b.i))) out += '<button type="button" class="link" data-act="addcopy">+ Aggiungi un\'altra copia</button>';
-  out += b.w
-    ? '<button type="button" class="link move" data-act="tolib">' + icon('swap') + 'Sposta in Libreria</button>'
-    : '<button type="button" class="link move" data-act="towish">' + icon('swap') + 'Sposta nei Desideri</button>';
   return out ? '<div class="links">' + out + '</div>' : '';
 }
 var FACET_ICON = { a: 'user', e: 'pub', gen: 'tag', sh: 'shelf' };
@@ -1236,12 +1235,15 @@ function rowHTML(b, dups, ex) {
     var loanBtn = (!busy && !b.w && hasData(b) && (openCard || !stateOn))
       ? '<button class="ico' + (stateOn ? ' on' : '') + '" data-act="loan" title="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Prestato, venduto, regalato o smarrito') + '" aria-label="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ', cambia' : 'Prestato, venduto, regalato o smarrito') + '">' + icon('loan') + '</button>' : '';
     var delBtn = '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina">' + icon('x') + '</button>';
+    var moveBtn = !busy && hasData(b) ? (b.w
+      ? '<button class="ico move" data-act="tolib" title="Sposta in Libreria (l\'ho comprato)" aria-label="Sposta in Libreria">' + icon('tolib') + '</button>'
+      : '<button class="ico move" data-act="towish" title="Sposta nei Desideri" aria-label="Sposta nei Desideri">' + icon('towish') + '</button>') : '';
     var moreActs = (canLookup ? '<button class="ico" data-act="lookup" title="Cerca di nuovo nelle banche dati" aria-label="Cerca di nuovo">' + icon('redo') + '</button>' : '') +
         (canLookup && b.nf ? '<button class="ico" data-act="web" title="Cerca questo codice sul web" aria-label="Cerca questo codice sul web">' + icon('search') + '</button>' : '') +
         (!busy && b.c == null && hasData(b) ? '<button class="ico" data-act="pricephoto" title="Leggi il prezzo di copertina da una foto del retro" aria-label="Leggi il prezzo da una foto">' + icon('cam') + '</button>' : '') +
         (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? '<button class="ico" data-act="priceweb" title="Cerca il prezzo sul web" aria-label="Cerca il prezzo sul web">' + icon('euro') + '</button>' : '') +
-        (!busy && b.w && hasData(b) ? '<button class="ico txt" data-act="bought" title="L\'ho comprato: spostalo in Libreria">' + icon('bag') + 'Comprato</button>' : '');
-    body = (openCard ? '<div class="card-top"><span class="flags">' + flagsHTML(b, dups) + '</span><span class="top-acts">' + delBtn + loanBtn +
+        '';
+    body = (openCard ? '<div class="card-top"><span class="flags">' + flagsHTML(b, dups) + '</span><span class="top-acts">' + delBtn + moveBtn + loanBtn +
         '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button></span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
@@ -1251,7 +1253,7 @@ function rowHTML(b, dups, ex) {
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
       (openCard ? (moreActs ? '<div class="tail">' + moreActs + '</div>' : '') :
         '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
-        (ex ? '<span class="tag">Esempio</span>' : moreActs + loanBtn + delBtn) + '</div>') +
+        (ex ? '<span class="tag">Esempio</span>' : moreActs + moveBtn + loanBtn + delBtn) + '</div>') +
       '</div>';
   }
   return '<article class="' + cls + '" data-id="' + b.id + '"' + (ex ? ' data-ex="1"' : '') + '>' + status + body + '</article>';

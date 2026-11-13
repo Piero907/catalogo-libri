@@ -141,8 +141,9 @@ e caratteri iniziali.
 Le copertine sono disegnate come piccoli volumi con il dorso in ombra; i
 libri senza copertina sembrano rilegati in tela con l'iniziale dorata;
 l'elenco e' un indice continuo e il libro aperto si solleva come una scheda.
-(Il vecchio aspetto verde non c'e' piu' nell'app; il codice di allora e'
-comunque conservato su GitHub nel ramo "aspetto-classico".)
+(Il vecchio aspetto verde non c'e' piu' nell'app; il codice di allora resta
+nella cronologia di GitHub, commit 72ecac7 del 13/11/2026, e si puo'
+recuperare in qualsiasi momento.)
 I caratteri sono inclusi nell'app (cartella vendor/fonts, tutti con licenza
 SIL Open Font License), cosi' funzionano anche senza rete; ognuno si scarica
 solo la prima volta che lo usi o lo vedi nell'elenco.
@@ -302,11 +303,14 @@ quello che vuoi.
 
 SPOSTARE UN LIBRO TRA LIBRERIA E DESIDERI
 ----------------------------------------
-Nella scheda aperta, in fondo, c'e' "Sposta nei Desideri" (per i libri
-della Libreria) oppure "Sposta in Libreria" (per i Desideri; fa come
-"Comprato"). Spostando nei Desideri si tolgono prestito, venduto/regalato/
-smarrito e lettura, che li' non servono; subito dopo c'e' "Annulla", che
-rimette tutto com'era.
+Nella scheda aperta, in alto accanto alla X e alla freccetta:
+- libri della Libreria: il tasto con il cuore e la freccia ("Sposta nei
+  Desideri");
+- libri dei Desideri: il tasto con i libri sullo scaffale e la freccia
+  ("Sposta in Libreria", cioe' l'ho comprato: diventa "Da leggere").
+Il libro passa nell'altro elenco gia' chiuso, in vista compatta. Spostando
+nei Desideri si tolgono prestito, venduto/regalato/smarrito e lettura, che
+li' non servono; subito dopo c'e' "Annulla", che rimette tutto com'era.
 
 PREZZO SCRITTO A MANO
 ---------------------
