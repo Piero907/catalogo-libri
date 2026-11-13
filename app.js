@@ -76,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 37, date: '2026-11-13', note: 'Digita accetta anche il titolo: cerca il libro e propone i risultati (comodo per i Desideri); icona verde con l\'ultimo libro inclinato.' };
+var APP_VERSION = { v: 38, date: '2026-11-13', note: 'Pulsante «Installa» in evidenza e Condividi l\'app con link e QR code' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -196,6 +196,8 @@ function loadAll() {
     settings.palV2 = true;
     settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
     settings.fb = FONTS_B.indexOf(s.fb) >= 0 ? s.fb : 'plex';
+    settings.installed = s.installed === true;
+    settings.instSnooze = Number(s.instSnooze) || 0;
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -2180,7 +2182,7 @@ function openOptions(sec, reuse) {
   if (reuse) { try { history.replaceState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
   else if (!optPushed) { try { history.pushState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
   if (sec === 'search') updateQuotaInfo();
-  if (sec === 'app') { renderVersion(); checkVersion(); }
+  if (sec === 'app') { renderVersion(); checkVersion(); updateInstallUi(); }
 }
 function closeOptions(fromPop) {
   if (!optOpen) return;
@@ -2858,6 +2860,7 @@ document.addEventListener('keydown', function (e) {
   if (drawerOpen) { closeDrawer(); return; }
   if (optOpen) { closeOptions(); return; }
   if (!$('#lightbox').hidden) { closeCover(false); return; }
+  if (!$('#instSheet').hidden) { closeInstallHelp(); return; }
   ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });
@@ -3051,20 +3054,134 @@ $('#btnClearGuess').addEventListener('click', function () {
   renderList(); touch(); updateSummary();
   toast('Svuotate ' + n + ' ipotesi', { label: 'Annulla', fn: function () { state.books = JSON.parse(snapshot); renderList(); touch(); updateSummary(); } });
 });
+/* ---------- installazione e condivisione dell'app ---------- */
+/* Finche' l'app si usa dal browser, in alto c'e' la scheda «Installa»: un tocco apre la richiesta di Chrome
+   (quando Chrome la offre), altrimenti spiega i passi giusti per quel telefono e browser. */
+var APP_URL = 'https://piero907.github.io/catalogo-libri/';
+var SHARE_TXT = 'Next Libris: il catalogo della libreria di casa. Inquadri il codice a barre e il libro si compila da solo. Aprilo con Chrome e premi «Installa».';
 var deferred = null;
-async function doInstall() {
-  if (!deferred) return;
-  var d = deferred;
-  d.prompt();
-  try { await d.userChoice; } catch (e) {}
-  deferred = null; $('#btnInstall').hidden = true;
+function isStandalone() {
+  try {
+    if (window.matchMedia && ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some(function (m) { return matchMedia('(display-mode: ' + m + ')').matches; })) return true;
+  } catch (e) {}
+  return navigator.standalone === true || /^android-app:\/\//.test(document.referrer || '');
 }
-window.addEventListener('beforeinstallprompt', function (e) {
-  e.preventDefault(); deferred = e; $('#btnInstall').hidden = false;
-  setTimeout(function () { if (deferred && !scanning) toast('Puoi installare l\'app sul telefono.', { label: 'Installa', fn: doInstall }); }, 1500);
+function browserKind() {
+  var ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp|GSA\/|Snapchat/i.test(ua)) return 'inapp';
+  if (/SamsungBrowser/i.test(ua)) return 'samsung';
+  if (/Firefox/i.test(ua)) return 'firefox';
+  if (/Android/i.test(ua)) return 'android';
+  return 'desktop';
+}
+function updateInstallUi() {
+  var inst = isStandalone();
+  if (inst && !settings.installed) { settings.installed = true; saveSettings(); }   // l'app installata e Chrome condividono i dati: da qui in poi niente scheda
+  var kind = browserKind();
+  var show = !inst && !settings.installed && Date.now() - settings.instSnooze > 14 * 86400000;
+  $('#instCard').hidden = !show;
+  $('#instGo').textContent = kind === 'inapp' && !deferred ? 'Apri in Chrome' : 'Installa';
+  $('#instMsg').textContent = kind === 'inapp' && !deferred
+    ? 'Sei dentro un\'altra app: aprila in Chrome per averla tra le app del telefono, a schermo intero e anche senza rete.'
+    : 'Avrai l\'icona tra le app del telefono: si apre a schermo intero e funziona anche senza rete.';
+  $('#btnInstall').hidden = inst;
+  $('#instOkTxt').hidden = !inst;
+}
+var INST_STEPS = {
+  android: { lead: 'Chrome non ha ancora proposto l\'installazione: si fa dal suo menu.',
+    steps: ['Tocca <b>⋮</b> in alto a destra.', 'Scegli <b>Installa app</b> (su alcuni telefoni <b>Aggiungi a schermata Home</b>, poi <b>Installa</b>).', 'Conferma: l\'icona di Next Libris compare tra le app.'],
+    note: 'Se nel menu c\'è <b>Apri in Chrome</b>, sei dentro un\'altra app (Gmail, Telegram…): toccalo e poi premi «Installa» qui in alto. Se nel menu c\'è <b>Apri app</b>, è già installata.' },
+  inapp: { lead: 'Il link si è aperto dentro un\'altra app, che non può installarla. Serve Chrome.',
+    steps: ['Tocca <b>⋮</b> (i tre puntini) in alto a destra.', 'Scegli <b>Apri in Chrome</b> o <b>Apri nel browser</b>.', 'In Chrome premi <b>Installa</b> nella scheda in alto.'],
+    note: 'Se non trovi la voce, copia il link e incollalo nella barra degli indirizzi di Chrome.', copy: true, chrome: true },
+  ios: { lead: 'Su iPhone e iPad si aggiunge alla schermata Home da Safari.',
+    steps: ['Tocca <b>Condividi</b> (il quadrato con la freccia in su).', 'Scorri e scegli <b>Aggiungi alla schermata Home</b>.', 'Tocca <b>Aggiungi</b>.'],
+    note: 'Se la voce non c\'è, copia il link e aprilo in Safari.', copy: true },
+  samsung: { lead: 'In Samsung Internet si fa dal menu in basso.',
+    steps: ['Tocca il menu <b>≡</b> in basso a destra.', 'Scegli <b>Aggiungi pagina a</b>, poi <b>Schermata Home</b>.', 'Conferma con <b>Aggiungi</b>.'],
+    note: 'In alternativa apri il link in Chrome: lì basta premere «Installa».', copy: true },
+  firefox: { lead: 'In Firefox si fa dal menu.',
+    steps: ['Tocca <b>⋮</b>.', 'Scegli <b>Installa</b> o <b>Aggiungi alla schermata principale</b>.', 'Conferma.'],
+    note: 'In alternativa apri il link in Chrome: lì basta premere «Installa».', copy: true },
+  desktop: { lead: 'Sul computer si installa da Chrome o Edge.',
+    steps: ['Nella barra dell\'indirizzo, a destra, clicca l\'icona <b>Installa</b>.', 'Se non c\'è: menu <b>⋮</b> › <b>Trasmetti, salva e condividi</b> › <b>Installa pagina come app</b>.', 'Conferma con <b>Installa</b>.'],
+    note: 'Sul telefono è più comoda: apri Opzioni › Condividi l\'app e inquadra il QR code.' }
+};
+var instPushed = false;
+function openInstallHelp() {
+  var k = browserKind(), h = INST_STEPS[k], reuse = false;
+  if (optOpen) { reuse = optPushed; optPushed = false; $('#optSheet').hidden = true; optOpen = false; }   // dalle Opzioni: il foglio prende il loro posto
+  $('#instLead').textContent = h.lead;
+  $('#instSteps').innerHTML = h.steps.map(function (x) { return '<li><span>' + x + '</span></li>'; }).join('');
+  $('#instNote').innerHTML = h.note;
+  $('#instCopy').hidden = !h.copy;
+  var ch = $('#instChrome');
+  ch.hidden = !(h.chrome && /Android/i.test(navigator.userAgent || ''));
+  ch.href = 'intent://' + APP_URL.replace(/^https:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(APP_URL) + ';end';
+  $('#instWhy').hidden = k !== 'android' && k !== 'desktop';
+  $('#instSheet').hidden = false;
+  if (reuse) { try { history.replaceState({ inst: 1 }, ''); instPushed = true; } catch (e) {} }
+  else if (!instPushed) { try { history.pushState({ inst: 1 }, ''); instPushed = true; } catch (e) {} }
+  $('#instOk').focus({ preventScroll: true });
+}
+function closeInstallHelp(fromPop) {
+  if ($('#instSheet').hidden) return;
+  $('#instSheet').hidden = true;
+  if (instPushed && !fromPop) { instPushed = false; try { history.back(); } catch (e) {} }
+  else instPushed = false;
+}
+window.addEventListener('popstate', function () { if (!$('#instSheet').hidden) { instPushed = false; closeInstallHelp(true); } });
+async function doInstall() {
+  if (!deferred) { openInstallHelp(); return; }
+  var d = deferred, out = null;
+  d.prompt();
+  try { out = await d.userChoice; } catch (e) {}
+  deferred = null;
+  if (out && out.outcome === 'dismissed') toast('Va bene. Quando vuoi: Menu › Opzioni › App.');
+  updateInstallUi();
+}
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; updateInstallUi(); });
+window.addEventListener('appinstalled', function () {
+  deferred = null; settings.installed = true; saveSettings(); updateInstallUi();
+  toast('Next Libris è installata: la trovi tra le app del telefono.');
 });
-window.addEventListener('appinstalled', function () { deferred = null; $('#btnInstall').hidden = true; toast('App installata.'); });
 $('#btnInstall').addEventListener('click', doInstall);
+$('#instGo').addEventListener('click', doInstall);
+$('#instLater').addEventListener('click', function () {
+  settings.instSnooze = Date.now(); saveSettings(); updateInstallUi();
+  toast('Quando vuoi: Menu › Opzioni › App.', { label: 'Annulla', fn: function () { settings.instSnooze = 0; saveSettings(); updateInstallUi(); } });
+});
+$('#instOk').addEventListener('click', function () { closeInstallHelp(); });
+$('#instSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeInstallHelp(); });
+$('#instCopy').addEventListener('click', copyAppLink);
+$('#instWhy').addEventListener('click', function () {
+  var had = instPushed; instPushed = false; $('#instSheet').hidden = true;
+  openOptions('app', had);
+  setTimeout(function () { $('#btnInstDiag').click(); }, 60);
+});
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) {}
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    var ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+async function copyAppLink() {
+  toast(await copyText(APP_URL) ? 'Link copiato: incollalo in WhatsApp, in un messaggio o in una mail.' : 'Non riesco a copiarlo. Il link è ' + APP_URL);
+}
+async function shareApp() {
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Next Libris', text: SHARE_TXT, url: APP_URL }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  copyAppLink();
+}
+$('#shareApp').addEventListener('click', shareApp);
+$('#copyApp').addEventListener('click', copyAppLink);
+if (window.matchMedia) { try { var smq = matchMedia('(display-mode: standalone)'); var onSm = function () { updateInstallUi(); }; if (smq.addEventListener) smq.addEventListener('change', onSm); else if (smq.addListener) smq.addListener(onSm); } catch (e) {} }
 function resumeLookups(silent) {
   var waiting = state.books.filter(function (b) { var s = S[b.id]; return s && s.st === 'wait'; });
   waiting.forEach(function (b) { var s = S[b.id]; clearTimeout(s.timer); s.st = 'queued'; refreshRow(b.id); lookupPool(function () { return doLookup(b.id); }); });
@@ -3090,6 +3207,7 @@ $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 loadQuota();
 applyLook(false);
+updateInstallUi();
 setTimeout(function () {
   checkVersion().then(function (j) {
     if (j && j.v > APP_VERSION.v) notice('È disponibile la versione ' + j.v + ' dell\'app (stai usando la ' + APP_VERSION.v + ').', 'Aggiorna adesso', updateNow);

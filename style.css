@@ -852,3 +852,37 @@ body.stuck:not(.card-open) .tip{display:none}
 .tres{display:grid;gap:8px}
 .tres .cands{max-height:46vh;overflow:auto;margin:0}
 .tres .cand .tag{margin-top:4px;justify-self:start}
+
+/* ---- scheda «Installa» (solo quando l'app è aperta nel browser) ---- */
+.inst-card{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px 14px;align-items:center;margin:0 0 14px;padding:14px;border-radius:16px;background:var(--accent-soft);color:var(--ink)}
+.inst-card[hidden]{display:none}
+.inst-card img{width:56px;height:56px;border-radius:13px;display:block}
+.inst-card h2{font-size:19px;margin:0 0 2px}
+.inst-card p{margin:0;font-size:14px;line-height:1.4;color:var(--muted)}
+.inst-acts{grid-column:1 / -1;display:flex;gap:8px;margin-top:10px}
+.inst-acts .btn{flex:1 1 0}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.quiet:hover{background:var(--surface);color:var(--ink)}
+@media (min-width:640px){
+  .inst-card{grid-template-columns:56px minmax(0,1fr) auto}
+  .inst-acts{grid-column:auto;margin-top:0}
+  .inst-acts .btn{flex:none;min-width:120px}
+}
+/* passi per installarla a mano */
+.inst-steps{margin:2px 0;padding:0;list-style:none;counter-reset:st;display:grid;gap:10px}
+.inst-steps li{counter-increment:st;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;font-size:15px;line-height:1.4}
+.inst-steps li::before{content:counter(st);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px}
+#instSheet .hint{margin:0}
+#instSheet .row-btns a.btn{text-decoration:none;color:var(--ink)}
+#instSheet .link{justify-self:start;font-size:14px}
+.inst-ok{margin:0;font-weight:600;color:var(--accent)}
+/* Opzioni › Condividi l'app */
+.share-lead{margin:0;font-size:15px}
+.qr-box{margin:4px 0 0;display:grid;justify-items:center;gap:8px}
+.qr{display:block;width:min(64vw,240px);height:auto;border-radius:14px;background:#fff;box-shadow:0 0 0 1px var(--line)}
+.qr-box figcaption{font-size:14px;color:var(--muted);overflow-wrap:anywhere;text-align:center}
+.share-btns{display:flex;gap:8px;flex-wrap:wrap}
+.share-btns .btn{flex:1 1 140px}
+#instSheet{z-index:35}
+html[data-look="nuovo"] svg.qr,svg.qr{stroke-width:1}
+svg.qr path{fill:none;stroke-linecap:butt}

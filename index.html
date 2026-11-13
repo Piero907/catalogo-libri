@@ -6,6 +6,16 @@
 <title>Next Libris</title>
 <meta name="application-name" content="Next Libris">
 <meta name="apple-mobile-web-app-title" content="Next Libris">
+<meta name="description" content="Il catalogo della tua libreria di casa: inquadri il codice a barre e il libro si compila da solo.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="it_IT">
+<meta property="og:title" content="Next Libris">
+<meta property="og:description" content="Il catalogo della tua libreria di casa: inquadri il codice a barre e il libro si compila da solo.">
+<meta property="og:url" content="https://piero907.github.io/catalogo-libri/">
+<meta property="og:image" content="https://piero907.github.io/catalogo-libri/icons/next-libris-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Icona di Next Libris: libri sullo scaffale, l'ultimo inclinato">
 <meta name="theme-color" content="#EEF1EE">
 <link rel="manifest" href="manifest.json?v=36" crossorigin="use-credentials">
 <link rel="icon" type="image/png" href="icons/next-libris-192.png">
@@ -29,6 +39,18 @@
   </header>
 
   <div class="notice" id="notice" hidden><span id="noticeTxt"></span><button id="noticeBtn" hidden></button><button class="x" id="noticeX" aria-label="Chiudi l'avviso">×</button></div>
+
+  <section class="inst-card" id="instCard" hidden aria-labelledby="instH">
+    <img src="icons/next-libris-192.png" alt="" width="56" height="56">
+    <div class="inst-txt">
+      <h2 id="instH">Installa Next Libris</h2>
+      <p id="instMsg">Avrai l'icona tra le app del telefono: si apre a schermo intero e funziona anche senza rete.</p>
+    </div>
+    <div class="inst-acts">
+      <button class="btn primary" id="instGo" type="button">Installa</button>
+      <button class="btn quiet" id="instLater" type="button">Non ora</button>
+    </div>
+  </section>
 
   <div class="stick-sentinel" id="stickSentinel" aria-hidden="true"></div>
   <div class="stick" id="stick">
@@ -125,6 +147,21 @@
       <button class="btn" id="pickText">Nessuno: tieni il testo letto</button>
       <button class="btn" id="pickClose">Chiudi</button>
     </div>
+  </div>
+</div>
+
+<div class="sheet" id="instSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="instSheetH">
+    <h2 id="instSheetH">Come installarla</h2>
+    <p class="msg" id="instLead"></p>
+    <ol class="inst-steps" id="instSteps"></ol>
+    <p class="hint" id="instNote"></p>
+    <div class="row-btns">
+      <a class="btn" id="instChrome" hidden>Apri in Chrome</a>
+      <button class="btn" id="instCopy" type="button" hidden>Copia il link</button>
+      <button class="btn primary" id="instOk" type="button">Ho capito</button>
+    </div>
+    <button class="link" id="instWhy" type="button">Non trovi la voce? Controlla il telefono</button>
   </div>
 </div>
 
@@ -227,7 +264,20 @@
       </div>
       <p class="hint">Dopo ognuna c'è «Annulla».</p>
     </section>
+    <section class="opt-sec" data-sec="share" data-title="Condividi l'app">
+      <p class="share-lead">Fai inquadrare il codice con la fotocamera del telefono, oppure manda il link.</p>
+      <figure class="qr-box">
+        <svg class="qr" viewBox="0 0 45 45" shape-rendering="crispEdges" role="img" aria-label="QR code dell'indirizzo di Next Libris"><rect width="45" height="45" fill="#fff"/><path stroke="#172420" d="M4 4.5h7m1 0h3m1 0h1m1 0h1m1 0h1m5 0h1m2 0h2m3 0h7m-37 1h1m5 0h1m2 0h1m1 0h2m2 0h1m1 0h3m2 0h2m4 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m2 0h6m2 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m4 0h1m1 0h3m2 0h2m3 0h3m2 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m3 0h2m1 0h1m1 0h2m1 0h2m2 0h3m3 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m2 0h2m2 0h2m1 0h1m1 0h2m2 0h1m1 0h1m3 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h2m1 0h1m1 0h7m4 0h1m1 0h3m-24 1h2m3 0h1m8 0h2m3 0h2m4 0h1m1 0h1m1 0h1m1 0h1m-37 1h1m2 0h1m1 0h1m2 0h2m4 0h3m3 0h3m2 0h3m3 0h4m-35 1h1m1 0h5m1 0h1m1 0h4m2 0h2m2 0h3m2 0h3m2 0h1m3 0h3m-37 1h2m1 0h1m1 0h1m3 0h1m2 0h3m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h4m1 0h2m-36 1h1m1 0h1m2 0h1m2 0h1m1 0h1m1 0h2m1 0h2m1 0h2m2 0h2m2 0h2m1 0h2m1 0h1m2 0h1m-37 1h2m1 0h2m2 0h2m3 0h2m1 0h2m1 0h1m1 0h1m4 0h5m1 0h1m2 0h2m-36 1h7m2 0h1m1 0h1m1 0h2m1 0h2m1 0h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h2m-37 1h1m2 0h3m1 0h3m3 0h3m3 0h1m4 0h1m2 0h2m1 0h1m2 0h4m-37 1h2m3 0h6m1 0h1m1 0h1m1 0h1m5 0h1m1 0h4m2 0h3m1 0h3m-36 1h1m2 0h2m2 0h4m1 0h1m4 0h1m2 0h1m2 0h1m1 0h4m-29 1h1m3 0h2m2 0h6m2 0h2m1 0h1m1 0h1m2 0h1m1 0h2m3 0h2m2 0h1m-37 1h1m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m6 0h3m4 0h3m2 0h2m-32 1h2m2 0h3m1 0h2m3 0h1m1 0h2m1 0h1m1 0h5m3 0h5m-33 1h4m5 0h2m1 0h1m1 0h1m2 0h10m2 0h2m1 0h1m-29 1h2m2 0h3m5 0h1m1 0h3m2 0h3m5 0h4m-35 1h2m1 0h1m2 0h4m4 0h1m1 0h1m1 0h1m2 0h1m2 0h2m1 0h3m3 0h1m-35 1h3m2 0h1m1 0h4m1 0h2m2 0h1m3 0h1m2 0h3m3 0h2m1 0h1m-34 1h1m2 0h3m2 0h1m1 0h6m2 0h1m1 0h3m4 0h2m2 0h1m1 0h3m-36 1h1m1 0h1m2 0h3m3 0h5m1 0h1m5 0h2m2 0h1m2 0h2m2 0h3m-37 1h1m2 0h1m1 0h1m4 0h1m5 0h6m1 0h1m2 0h4m1 0h1m2 0h1m1 0h1m-37 1h1m1 0h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h3m1 0h12m-27 1h1m2 0h1m2 0h1m3 0h1m1 0h4m4 0h1m3 0h2m-34 1h7m5 0h2m3 0h1m3 0h1m1 0h3m2 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h6m1 0h1m4 0h1m6 0h2m3 0h2m1 0h2m-37 1h1m1 0h3m1 0h1m2 0h1m4 0h1m4 0h1m2 0h11m1 0h1m-35 1h1m1 0h3m1 0h1m2 0h2m3 0h1m1 0h2m1 0h3m2 0h1m1 0h2m2 0h1m2 0h1m-34 1h1m1 0h3m1 0h1m2 0h1m2 0h2m3 0h2m1 0h1m3 0h1m3 0h2m1 0h1m2 0h1m1 0h1m-37 1h1m5 0h1m3 0h3m1 0h2m1 0h2m1 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m3 0h1m-37 1h7m3 0h2m1 0h1m2 0h1m1 0h1m3 0h3m2 0h2m7 0h1"/><rect x="17.5" y="17.5" width="10" height="10" rx="1.6" fill="#fff"/><image href="icons/next-libris-192.png" x="18.1" y="18.1" width="8.8" height="8.8"/></svg>
+        <figcaption id="shareUrl">piero907.github.io/catalogo-libri</figcaption>
+      </figure>
+      <div class="share-btns">
+        <button class="btn primary" id="shareApp" type="button">Manda il link</button>
+        <button class="btn" id="copyApp" type="button">Copia il link</button>
+      </div>
+      <p class="hint">Chi apre il link in Chrome trova in alto il pulsante «Installa». Ognuno ha il proprio catalogo: i tuoi libri restano sul tuo telefono.</p>
+    </section>
     <section class="opt-sec" data-sec="app" data-title="App">
+      <p class="inst-ok" id="instOkTxt" hidden>✓ Stai usando l'app installata.</p>
       <div class="menu">
         <button class="btn primary" id="btnInstall" hidden>Installa l'app</button>
         <button class="btn" id="btnInstDiag">Perché non si installa?</button>
@@ -289,7 +339,8 @@
         <button type="button" class="dopt" data-sec="cards"><span><b>Schede e prezzo</b><small>Campi in più, schede aperte, prezzo</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="fix"><span><b>Sistema l'elenco</b><small>Doppioni, case editrici, copertine</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="export"><span><b>Backup ed esportazione</b><small>Backup, Excel, PDF</small></span><span class="n" aria-hidden="true">›</span></button>
-        <button type="button" class="dopt" data-sec="app"><span><b>App</b><small>Installazione</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="share"><span><b>Condividi l'app</b><small>Link e QR code per farla installare ad altri</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="app"><span><b>App</b><small>Installazione e versione</small></span><span class="n" aria-hidden="true">›</span></button>
       </div>
       <p class="dhint" id="optBackupHint"></p>
       <div class="ver" id="verBox">

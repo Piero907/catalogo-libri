@@ -59,8 +59,10 @@ salvata sul telefono, e il backup si scarica anche offline.
 PASSO 2 - Installarla sul telefono Android (senza APK)
 ------------------------------------------------------
 1. Apri l'indirizzo con Chrome sul telefono.
-2. Menu (tre puntini) > "Installa app" (oppure "Aggiungi a schermata Home").
-3. Compare l'icona "Libri". Si apre a schermo intero come una vera app.
+2. In alto c'e' la scheda "Installa Next Libris": premi "Installa" e conferma.
+   (Se Chrome non propone ancora l'installazione, il pulsante spiega i passi:
+   menu con i tre puntini > "Installa app".)
+3. Compare l'icona "Next Libris". Si apre a schermo intero come una vera app.
 4. Alla prima apertura serve internet: scarica il motore di lettura. Dopo,
    l'app parte anche offline (la ricerca dei dati online richiede rete;
    i codici inseriti senza rete vengono messi in coda).
@@ -172,7 +174,11 @@ il menu (linguetta ">" a sinistra, trascinamento o "Filtri") e toccando
 - Schede e prezzo: schede sempre aperte, campi in piu', chiedi il prezzo;
 - Sistema l'elenco: verifica, case editrici, doppioni, copertine...;
 - Backup ed esportazione: backup, Excel, CSV, PDF;
-- App: installazione.
+- Condividi l'app: QR code da far inquadrare, "Manda il link" (WhatsApp,
+  SMS, email) e "Copia il link". Chi apre il link in Chrome trova la scheda
+  "Installa" in alto. Ognuno ha il proprio catalogo: i libri non si
+  condividono (si puo' passare un backup);
+- App: installazione e versione.
 Ogni voce apre la sua pagina; "<" torna al menu, la x o il tasto Indietro
 del telefono la chiudono.
 
