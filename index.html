@@ -132,7 +132,16 @@
   </div>
   <div class="scan-mid"><div class="scan-guide" id="scanGuide"></div></div>
   <div class="scan-res" id="scanRes" hidden aria-live="polite"></div>
-  <div class="scan-price" id="scanPrice" hidden><span id="scanPriceTxt" aria-live="polite"></span><button class="btn primary" id="scanPriceBtn">Leggi il prezzo</button></div>
+  <div class="scan-price" id="scanPrice" hidden>
+    <span id="scanPriceTxt" aria-live="polite"></span>
+    <div class="sp-btns" id="scanPriceBtns"><button class="btn" id="scanPriceType"></button><button class="btn primary" id="scanPriceBtn">Leggi il prezzo</button></div>
+    <form class="sp-type" id="scanPriceForm" hidden>
+      <input id="scanPriceIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="es. 14,50" aria-label="Prezzo in euro">
+      <span class="eur" aria-hidden="true">€</span>
+      <button class="btn primary" type="submit">OK</button>
+      <button class="btn" type="button" id="scanPriceCancel" aria-label="Annulla">×</button>
+    </form>
+  </div>
   <div class="scan-shoot" id="scanShootBox" hidden><button class="shutter" id="scanShoot" aria-label="Scatta la copertina"></button></div>
   <div class="scan-kinds" id="scanKinds" role="radiogroup" aria-label="Cosa inquadri">
     <button type="button" role="radio" data-k="bar" aria-checked="true">Codice a barre</button><button type="button" role="radio" data-k="text" aria-checked="false">ISBN scritto</button><button type="button" role="radio" data-k="cover" aria-checked="false">Copertina</button>
@@ -190,10 +199,18 @@
       <button class="btn" id="priceSkip">Salta</button>
       <button class="btn primary" id="priceShot">Fotografa il prezzo</button>
     </div>
+    <form class="price-type" id="priceAskForm">
+      <label for="priceAskIn">Oppure scrivilo:</label>
+      <input id="priceAskIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="es. 14,50">
+      <span class="eur" aria-hidden="true">€</span>
+      <button class="btn" type="submit">OK</button>
+    </form>
+    <p class="msg bad" id="priceAskErr" hidden>Scrivi un prezzo, per esempio 14,50.</p>
     <p class="hint">Puoi non farti più chiedere il prezzo: Opzioni › «Chiedi il prezzo dopo ogni libro».</p>
   </div>
 </div>
 
+<button class="edge-tab" id="edgeTab" aria-label="Apri i filtri" aria-controls="drawer"></button>
 <div class="drawer-scrim" id="drawerScrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerH" hidden inert>
   <div class="drawer-head">

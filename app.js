@@ -25,11 +25,14 @@ var ICON = {
   down: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   loan: '<path d="M5 4h9a2 2 0 0 1 2 2v3M5 4v14a2 2 0 0 0 2 2h7"/><path d="M13 15h8M18 12l3 3-3 3"/>',
   bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
-  chev: '<path d="M6 9l6 6 6-6"/>'
+  chev: '<path d="M6 9l6 6 6-6"/>',
+  right: '<path d="M9 5l7 7-7 7"/>'
 };
 function icon(n) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
 $('#btnScan').innerHTML = icon('scan') + 'Scansiona';
 $('#icoFilt').innerHTML = icon('filt');
+$('#edgeTab').innerHTML = icon('right');
+$('#scanPriceType').innerHTML = icon('key') + 'Scrivi';
 $('#btnPhoto').innerHTML = icon('cam') + 'Foto';
 $('#btnType').innerHTML = icon('key') + 'Digita';
 $('#btnCheck').innerHTML = icon('check') + 'Ce l\'ho già?';
@@ -163,6 +166,7 @@ function loadAll() {
     settings.sbnUrl = /^https:\/\//.test(L.str(s.sbnUrl)) ? L.str(s.sbnUrl) : '';
     settings.loanSnooze = Number(s.loanSnooze) || 0;
     settings.swiped = s.swiped === true;
+    settings.pubFix = s.pubFix === true;
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -293,14 +297,34 @@ function applyResult(b, r, code) {
   b.g = b.g.filter(function (k) { return ['t', 'a', 'e', 'y', 'i'].indexOf(k) < 0; });
   guessEditor(b);
 }
-/* Se manca la casa editrice, la deduce dall'ISBN (codice dell'editore) guardando gli altri libri dell'elenco. Resta "da verificare". */
+/* Se manca la casa editrice, la deduce dall'ISBN (codice dell'editore). Se la copia dai tuoi libri gia' verificati con lo
+   stesso codice, e quei libri hanno tutti lo stesso editore, e' affidabile: niente "da verificare". Se viene dalla
+   tabellina generica, o i tuoi libri con quel codice hanno editori diversi, resta "da verificare". */
 function guessEditor(b) {
   if (b.e) return false;
   var g = L.guessPublisher(b.i, state.books);
   if (!g) return false;
   b.e = g.name;
-  if (b.g.indexOf('e') < 0) b.g.push('e');
-  return true;
+  if (g.sure) b.g = b.g.filter(function (k) { return k !== 'e'; });
+  else if (b.g.indexOf('e') < 0) b.g.push('e');
+  return g.sure ? 'sure' : 'guess';
+}
+/* Una volta sola: toglie «Da verificare» dalle case editrici gia' dedotte che coincidono con quella dei tuoi libri verificati. */
+function confirmLearnedPublishers() {
+  if (settings.pubFix) return;
+  settings.pubFix = true; saveSettings();
+  var done = [];
+  state.books.forEach(function (b) {
+    if (b.g.length !== 1 || b.g[0] !== 'e' || !b.e || !L.toIsbn13(b.i)) return;
+    var g = L.guessPublisher(b.i, state.books);
+    if (g && g.sure && L.norm(g.name) === L.norm(b.e)) { b.g = []; done.push(b.id); }
+  });
+  if (!done.length) return;
+  touch();
+  setTimeout(function () {
+    notice('Ho tolto «Da verificare» da ' + done.length + (done.length === 1 ? ' casa editrice: coincide' : ' case editrici: coincidono') + ' con quella dei tuoi libri già verificati con lo stesso codice editore.',
+      'Annulla', function () { done.forEach(function (id) { var x = get(id); if (x && x.g.indexOf('e') < 0) x.g.push('e'); }); renderList(); touch(); updateSummary(); });
+  }, 800);
 }
 async function doLookup(id) {
   var b = get(id);
@@ -561,8 +585,20 @@ var askId = null;
 function askPrice(id) {
   askId = id;
   warmPriceOcr();
+  $('#priceAskIn').value = ''; $('#priceAskErr').hidden = true;
   $('#priceAsk').hidden = false;
 }
+$('#priceAskForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var v = L.parseNum($('#priceAskIn').value);
+  if (!(v > 0 && v < 1000)) { $('#priceAskErr').hidden = false; $('#priceAskIn').focus(); return; }
+  var id = askId, b = bookFor(id);
+  $('#priceAsk').hidden = true; askId = null; $('#priceAskIn').blur();
+  v = Math.round(v * 100) / 100;
+  if (b) { b.c = v; touch(); refreshRow(b.id); updateSummary(); }
+  else if (S[id]) S[id].price = v;
+  toast('Prezzo: ' + eur(v) + '.');
+});
 function bookFor(id) { return get(id) || (sameAs[id] && get(sameAs[id])) || null; }
 
 /* ---------- scansione dal vivo ---------- */
@@ -570,6 +606,7 @@ var stream = null, scanTimer = null, scanCtx = { count: 0, added: 0, last: '', l
 var scanMode = 'add';                         // 'add': aggiunge; 'check': «Ce l'ho già?», controlla soltanto
 var priceTarget = null, scanPaused = false;   // libro appena scansionato a cui dare il prezzo
 function priceBar(txt, btnLabel, busy) {
+  if (typingPrice) closePriceType();
   $('#scanPriceTxt').textContent = txt;
   var b = $('#scanPriceBtn');
   b.innerHTML = icon('euro') + (btnLabel || 'Leggi il prezzo');
@@ -599,6 +636,42 @@ function guideCanvas(full) {
   c.getContext('2d').drawImage(v, x, y, w, h, 0, 0, c.width, c.height);
   return c;
 }
+/* Prezzo scritto a mano: piu' veloce quando la fotocamera fatica. Intanto la scansione si ferma, cosi' il libro
+   successivo non arriva mentre scrivi. */
+var typingPrice = false, priceTxtBefore = '';
+function openPriceType() {
+  var b = priceTarget && get(priceTarget);
+  if (!b || !scanning) return;
+  typingPrice = true; scanPaused = true;
+  priceTxtBefore = $('#scanPriceTxt').textContent;
+  $('#scanPriceTxt').textContent = 'Scrivi il prezzo' + (b.t ? ' di «' + b.t + '»' : '') + ' e tocca OK.';
+  $('#scanPriceBtns').hidden = true; $('#scanPriceForm').hidden = false;
+  var inp = $('#scanPriceIn');
+  inp.classList.remove('bad');
+  inp.value = b.c != null ? String(b.c.toFixed(2)).replace('.', ',') : '';
+  inp.focus();
+}
+function closePriceType() {
+  if (!typingPrice) return;
+  typingPrice = false; scanPaused = false;
+  if (priceTxtBefore) $('#scanPriceTxt').textContent = priceTxtBefore;
+  $('#scanPriceForm').hidden = true; $('#scanPriceBtns').hidden = false;
+  try { $('#scanPriceIn').blur(); } catch (e) {}
+}
+function savePriceType(e) {
+  if (e) e.preventDefault();
+  var inp = $('#scanPriceIn'), v = L.parseNum(inp.value), b = priceTarget && get(priceTarget);
+  if (!(v > 0 && v < 1000)) { inp.classList.add('bad'); inp.focus(); return; }
+  closePriceType();
+  if (!b) return;
+  b.c = Math.round(v * 100) / 100; touch();
+  beep(true); vibrate(40);
+  priceBar('✓ ' + eur(b.c) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
+}
+$('#scanPriceType').addEventListener('click', openPriceType);
+$('#scanPriceForm').addEventListener('submit', savePriceType);
+$('#scanPriceCancel').addEventListener('click', closePriceType);
+$('#scanPriceIn').addEventListener('input', function (e) { e.target.classList.remove('bad'); });
 async function readLivePrice() {
   var id = priceTarget, b = id && get(id);
   if (!b || scanPaused) return;
@@ -614,7 +687,7 @@ async function readLivePrice() {
   if (!scanning) return;
   b = get(id);
   if (!b || priceTarget !== id) return;
-  if (pr == null) { beep(false); priceBar('Non trovo il prezzo. Avvicinati al «€» stampato, con buona luce, e riprova. Oppure passa al libro successivo.', 'Riprova'); return; }
+  if (pr == null) { beep(false); priceBar('Non trovo il prezzo. Avvicinati al «€» stampato e riprova, oppure tocca «Scrivi». O passa al libro successivo.', 'Riprova'); return; }
   b.c = pr; touch();
   beep(true); vibrate(40);
   priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
@@ -716,7 +789,7 @@ async function shootCover() {
   $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
   $('#scanRes').hidden = true; resCode = '';
   scanMsg('Copertina presa: la riconosco mentre continui. Se ci sono più libri possibili, alla fine scegli tu dall\'elenco.');
-  if (settings.price) { priceTarget = id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo». Oppure passa alla prossima copertina.'); }
+  if (settings.price) { priceTarget = id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi». Se non ti serve, passa alla prossima copertina.'); }
   else { $('#scanPrice').hidden = true; priceTarget = null; }
 }
 $('#scanKinds').addEventListener('click', function (e) { var b = e.target.closest('[data-k]'); if (b && scanning) setScanKind(b.dataset.k); });
@@ -757,6 +830,7 @@ async function startScan(mode) {
 }
 function stopScan(fromPop) {
   if (!scanning) return;
+  closePriceType();
   scanning = false;
   clearTimeout(scanTimer); clearTimeout(textTimer);
   if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
@@ -798,7 +872,7 @@ function onScanned(code) {
   if (scanMode === 'add' && priceTarget) {
     var pt = get(priceTarget);
     if (pt && L.toIsbn13(pt.i) === code) {
-      if (pt.c == null && !scanPaused) scanMsg('È lo stesso libro: per il prezzo inquadra il «€» e tocca «Leggi il prezzo». Per andare avanti, inquadra il prossimo codice.');
+      if (pt.c == null && !scanPaused) scanMsg('È lo stesso libro: per il prezzo inquadra il «€» e tocca «Leggi il prezzo», oppure «Scrivi». Per andare avanti, inquadra il prossimo codice.');
       return;
     }
   }
@@ -811,7 +885,7 @@ function onScanned(code) {
   var res = addIsbn(code);
   if (!res.dup) { $('#scanRes').hidden = true; resCode = ''; }
   if (res.moved) {
-    if (settings.price && res.moved.c == null) { priceTarget = res.moved.id; priceBar('Prezzo? Inquadra il prezzo stampato nel riquadro e tocca «Leggi il prezzo».'); }
+    if (settings.price && res.moved.c == null) { priceTarget = res.moved.id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi».'); }
     beep(true); vibrate(50);
     scanCtx.count++; scanCtx.added++;
     $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
@@ -841,7 +915,7 @@ function onScanned(code) {
   $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
   scanMsg('Aggiunto ' + code + '. Cerco il titolo…');
   var book = res.book;
-  if (settings.price) { priceTarget = book.id; priceBar('Prezzo? Inquadra il prezzo stampato nel riquadro e tocca «Leggi il prezzo». Se non ti serve, passa al libro successivo.'); }
+  if (settings.price) { priceTarget = book.id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi». Se non ti serve, passa al libro successivo.'); }
   res.done.then(function () {
     if (!scanning) return;
     scanMsg(book.t ? '✓ ' + book.t : (book.nf ? 'Non trovato nelle banche dati: lo completi dopo.' : 'Titolo da completare più tardi.'));
@@ -1703,6 +1777,8 @@ function updateActiveFilters() {
   var n = activeCount(), bd = $('#fltBadge');
   bd.hidden = !n; bd.textContent = n;
   $('#btnFilters').setAttribute('aria-pressed', n ? 'true' : 'false');
+  $('#edgeTab').classList.toggle('on', !!n);
+  $('#edgeTab').setAttribute('aria-label', 'Apri i filtri' + (n ? ' (' + n + (n === 1 ? ' attivo)' : ' attivi)') : ''));
   $('#btnFilters').setAttribute('aria-label', 'Filtri e ordine' + (n ? ' (' + n + (n === 1 ? ' filtro attivo)' : ' filtri attivi)') : ''));
 }
 $('#activeFlt').addEventListener('click', function (e) {
@@ -1809,6 +1885,7 @@ function closeDrawer(fromPop) {
   if (was && drawerReturn && drawerReturn.focus && drawerEl.contains(document.activeElement)) { try { drawerReturn.focus({ preventScroll: true }); } catch (e) {} }
 }
 $('#btnFilters').addEventListener('click', function () { drawerOpen ? closeDrawer() : openDrawer(); });
+$('#edgeTab').addEventListener('click', function () { openDrawer(); });
 $('#drawerX').addEventListener('click', function () { closeDrawer(); });
 $('#drawerShow').addEventListener('click', function () { closeDrawer(); window.scrollTo({ top: 0 }); });
 $('#drawerReset').addEventListener('click', clearFilters);
@@ -2476,14 +2553,16 @@ $('#btnDiag').addEventListener('click', async function () {
   btn.disabled = false;
 });
 $('#btnGuessPub').addEventListener('click', function () {
-  var snapshot = JSON.stringify(state.books), n = 0, missing = 0;
+  var snapshot = JSON.stringify(state.books), n = 0, sure = 0, missing = 0;
   state.books.forEach(function (b) {
     if (b.e || !L.toIsbn13(b.i)) return;
-    if (guessEditor(b)) n++; else missing++;
+    var r = guessEditor(b);
+    if (r) { n++; if (r === 'sure') sure++; } else missing++;
   });
   if (!n) { toast(missing ? 'Non riesco a dedurre le case editrici: servono altri libri dello stesso editore già completi.' : 'Tutti i libri hanno già la casa editrice.'); return; }
   renderList(); touch(); updateSummary();
-  toast('Dedotte ' + n + (n === 1 ? ' casa editrice' : ' case editrici') + ' dall\'ISBN: controllale, sono segnate «Da verificare».', { label: 'Annulla', fn: function () { state.books = JSON.parse(snapshot); renderList(); touch(); updateSummary(); } });
+  var unsure = n - sure;
+  toast('Dedotte ' + n + (n === 1 ? ' casa editrice' : ' case editrici') + ' dall\'ISBN' + (sure ? ': ' + sure + (sure === 1 ? ' confermata' : ' confermate') + ' dai tuoi libri' : '') + (unsure ? (sure ? ', ' : ': ') + unsure + ' «Da verificare»' : '') + '.', { label: 'Annulla', fn: function () { state.books = JSON.parse(snapshot); renderList(); touch(); updateSummary(); } });
 });
 $('#btnInstDiag').addEventListener('click', async function () {
   var out = $('#instOut'), btn = $('#btnInstDiag');
@@ -2614,6 +2693,8 @@ $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 loadQuota();
+confirmLearnedPublishers();
+if (!settings.swiped) setTimeout(function () { var t = $('#edgeTab'); t.classList.add('nudge'); setTimeout(function () { t.classList.remove('nudge'); }, 3000); }, 1500);
 setTab('lib');
 updateBackupInfo();
 loadCovers();

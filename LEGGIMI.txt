@@ -124,7 +124,10 @@ COME SI USA
 
 FILTRI E ORDINE (pannello laterale a sinistra)
 ----------------------------------------------
-Si apre in due modi:
+Si apre in tre modi:
+- toccando la linguetta con la freccetta ">" sul bordo sinistro, a meta'
+  schermo: resta sempre li' mentre scorri l'elenco (diventa verde quando
+  ci sono filtri attivi);
 - trascinando il pollice dal bordo sinistro verso destra (il pannello segue
   il dito). Se Android usa la navigazione a gesti, il bordo sinistro e' il
   gesto "Indietro" del telefono e l'app non lo riceve: in quel caso parti
@@ -221,6 +224,16 @@ copia"; con Scansiona, se il libro c'e' gia', compare il pulsante
 stesso pulsante. La copia nuova prende titolo, autore, editore, prezzo e
 copertina; scaffale, note e prestito sono vuoti. "Unisci i doppioni" non
 tocca mai i libri segnati come copie.
+
+PREZZO SCRITTO A MANO
+---------------------
+Quando l'app chiede il prezzo puoi anche scriverlo, spesso e' piu' veloce:
+- in Scansiona, nella barra del prezzo tocca "Scrivi", scrivi (es. 14,50)
+  e OK. Mentre scrivi la fotocamera si ferma, cosi' non aggiunge altri
+  libri; la x torna ai pulsanti;
+- dopo una Foto, nella finestra "E il prezzo?" c'e' "Oppure scrivilo".
+Mentre inquadri il prezzo, il codice a barre dello stesso libro viene
+ignorato (niente "Gia' in elenco"); un codice diverso e' il libro dopo.
 
 SCAFFALE, GENERE, PAGINE, NOTE
 ------------------------------
@@ -373,8 +386,11 @@ condividono le prime cifre (per esempio 978-88-502-... = TEA).
 - Se non ne ha, usa una piccola tabella di editori molto noti
   (Mondadori, Einaudi, Feltrinelli, Garzanti, Il Mulino, Rizzoli, Bompiani,
   Adelphi, TEA). Gli altri editori restano vuoti: non invento nulla.
-- Il nome dedotto e' sempre segnato "Da verificare". Funziona solo per
-  ISBN italiani; alcuni editori hanno piu' marchi con lo stesso codice.
+- Se il nome viene dai TUOI libri gia' verificati e tutti quelli con lo
+  stesso codice hanno lo stesso editore, e' affidabile: niente "Da
+  verificare". Se viene dalla tabella generica, o i tuoi libri con quel
+  codice hanno editori diversi (es. "Mondadori" e "Oscar Mondadori"),
+  resta segnato "Da verificare". Funziona solo per ISBN italiani.
 - Su un elenco gia' fatto: Opzioni > "Deduci le case editrici mancanti"
   (c'e' "Annulla" subito dopo).
 Se le fonti dicono "non trovato" la scheda resta con l'ISBN: tocca la lente

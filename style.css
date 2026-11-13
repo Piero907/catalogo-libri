@@ -290,8 +290,8 @@ button.bar-row:hover,button.bar-row:focus-visible{background:var(--surface2)}
 }
 
 /* ---- prezzo durante la scansione ---- */
-.scan-price{position:relative;z-index:3;margin:0 12px 8px;padding:10px 10px 10px 14px;border-radius:14px;background:#000c;border:1px solid #ffffff40;display:flex;align-items:center;gap:10px;font-size:14px;line-height:1.3}
-.scan-price span{flex:1;min-width:0}
+.scan-price{position:relative;z-index:3;margin:0 12px 8px;padding:10px;border-radius:14px;background:#000c;border:1px solid #ffffff40;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;line-height:1.3}
+#scanPriceTxt{flex:1 1 100%;min-width:0;padding:0 4px}
 .scan-price .btn{flex:none;min-height:48px;white-space:nowrap}
 .scan-price .btn:disabled{opacity:.7}
 #priceAsk .hint{margin:4px 0 0}
@@ -477,3 +477,32 @@ html,body{overscroll-behavior-x:none}
 .shutter:active{transform:scale(.94);background:#fff}
 .shutter:disabled{opacity:.5}
 .scan.flash::after{content:'';position:absolute;inset:0;z-index:5;background:#fff;opacity:.55;pointer-events:none}
+
+/* ---- prezzo scritto a mano ---- */
+.sp-btns{display:flex;gap:8px;width:100%}
+.sp-btns .btn{flex:1 1 0}
+.sp-btns #scanPriceBtn{flex:1.4 1 0}
+.scan-price .btn:not(.primary){background:#ffffff1f;border-color:#ffffff45;color:#fff}
+.sp-type{display:flex;align-items:center;gap:8px;width:100%}
+.sp-type input{flex:1 1 auto;min-width:0;min-height:48px;padding:8px 12px;border-radius:12px;border:2px solid #fff;background:#fff;color:#16262A;font:600 20px var(--font-body);font-variant-numeric:tabular-nums}
+.sp-type input.bad{border-color:#F08A7E}
+.sp-type .eur{font:600 20px var(--font-body)}
+.sp-type .btn{min-width:48px}
+.price-type{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:2px}
+.price-type label{flex:1 1 100%;font-size:14px;color:var(--muted)}
+.price-type input{flex:1 1 120px;min-width:0;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font:600 18px var(--font-body);font-variant-numeric:tabular-nums}
+.price-type .eur{font:600 18px var(--font-body);color:var(--muted)}
+
+/* ---- linguetta fissa sul bordo sinistro: c'e' un menu a scomparsa ---- */
+.edge-tab{position:fixed;left:env(safe-area-inset-left);top:50%;transform:translateY(-50%);z-index:20;width:22px;height:68px;padding:0;
+  display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-left:0;border-radius:0 14px 14px 0;
+  background:var(--surface);color:var(--muted);box-shadow:2px 3px 12px rgba(0,0,0,.14);cursor:pointer}
+.edge-tab::before{content:'';position:absolute;top:-10px;bottom:-10px;left:0;right:-16px}
+.edge-tab svg{width:18px;height:18px;margin-left:-1px}
+.edge-tab:hover{color:var(--ink)}
+.edge-tab.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.edge-tab.nudge{animation:edgeNudge 1.3s ease-in-out 2}
+@keyframes edgeNudge{0%,100%{transform:translateY(-50%)}35%{transform:translate(6px,-50%)}65%{transform:translateY(-50%)}}
+body.drawer-open .edge-tab,body.gridview.drawer-open .edge-tab{visibility:hidden}
+@media (prefers-reduced-motion: reduce){.edge-tab.nudge{animation:none}}
+@media print{.edge-tab{display:none}}

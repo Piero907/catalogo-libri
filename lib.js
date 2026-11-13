@@ -388,14 +388,16 @@
   function guessPublisher(isbn, books) {
     var p = isbnPrefix(isbn);
     if (!p) return null;
-    var count = {}, best = '', bn = 0;
+    var count = {}, best = '', bn = 0, names = {};
     (books || []).forEach(function (b) {
       if (!b || !b.e || (b.g || []).indexOf('e') >= 0 || isbnPrefix(b.i) !== p) return;
       var k = b.e.trim(); count[k] = (count[k] || 0) + 1;
+      names[norm(k)] = 1;
       if (count[k] > bn) { bn = count[k]; best = k; }
     });
-    if (best) return { name: best, learned: true };
-    return PUB_SEED[p] ? { name: PUB_SEED[p], learned: false } : null;
+    // sure: tutti i tuoi libri gia' verificati con questo codice editore hanno lo stesso editore -> non serve verificarlo
+    if (best) return { name: best, learned: true, sure: Object.keys(names).length === 1 };
+    return PUB_SEED[p] ? { name: PUB_SEED[p], learned: false, sure: false } : null;
   }
 
   /* Prova le banche dati con un ISBN noto e dice cosa risponde ciascuna (per la diagnosi nelle Opzioni). */
