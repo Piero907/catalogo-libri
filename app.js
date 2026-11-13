@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 47, date: '2026-11-13', note: 'All\'apertura dall\'icona compare la scritta Next Libris' };
+var APP_VERSION = { v: 48, date: '2026-11-13', note: 'In alto «Libreria di» con il tuo nome; la scritta all\'apertura ora si vede' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -2744,7 +2744,15 @@ function saveName(v) {
   if (v === (settings.name || '')) return;
   settings.name = v; saveSettings();
   $('#optName').value = v;
+  renderOwner();
 }
+/* in testata, sotto «Next Libris»: «Libreria di Piero»; senza nome, l'invito a scriverlo */
+function renderOwner() {
+  var el = $('#owner');
+  el.innerHTML = settings.name ? 'Libreria di <b>' + esc(settings.name) + '</b>'
+    : '<button type="button" class="link" id="ownerSet">Scrivi il tuo nome</button>';
+}
+$('#owner').addEventListener('click', function (e) { if (e.target.closest('#ownerSet')) { openOptions('share'); setTimeout(function () { try { $('#optName').focus(); } catch (x) {} }, 80); } });
 async function sendShare(copyOnly) {
   if (!shareCtx) return;
   var pack = sharePack(), sh = L.parseShare(pack);
@@ -3729,6 +3737,7 @@ saveSettings();                                  // salva subito eventuali scelt
 loadSaved();
 renderSvc();
 $('#optName').value = settings.name || '';
+renderOwner();
 $('#optPrice').checked = settings.price;
 $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;
@@ -3756,11 +3765,12 @@ checkIncoming();
 (function () {
   var el = document.getElementById('splash');
   if (!el || !document.documentElement.hasAttribute('data-splash')) { if (el) el.remove(); return; }
-  var since = (window.performance && performance.now) ? performance.now() : 0;
+  if (settings.name) $('#splashWho').textContent = 'Libreria di ' + settings.name;
+  // tempo fisso da quando l'app e' pronta: la schermata di Android copre la pagina finche' non e' caricata
   setTimeout(function () {
     el.classList.add('out');
     setTimeout(function () { el.remove(); document.documentElement.removeAttribute('data-splash'); }, 350);
-  }, Math.max(0, 700 - since));
+  }, 900);
 })();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
