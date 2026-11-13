@@ -74,7 +74,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 30, date: '2026-11-13', note: 'numero di versione e «Aggiorna adesso» nel menu; la scheda si chiude dopo Sposta nei Desideri / in Libreria.' };
+var APP_VERSION = { v: 31, date: '2026-11-13', note: 'la barra in alto (schede, ricerca, filtri, Copertine…) resta ferma mentre scorri l\'elenco compatto.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
@@ -1123,6 +1123,7 @@ function toggleRow(id) {
   var open = !isOpen(b);
   openState[id] = open;
   refreshRow(id);
+  updateStick();
   var el = rowEl(id);
   if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
 }
@@ -1301,8 +1302,26 @@ function fillDatalists() {
   $('#loanNames').innerHTML = opts('p');
 }
 var tGrid = null;
+/* Barra in alto (schede, ricerca, filtri, Copertine...) ferma mentre scorri l'elenco compatto;
+   se c'e' una scheda aperta torna a scorrere via con la pagina, per lasciare spazio ai campi. */
+function updateStick() {
+  var open = settings.openAll || !!document.querySelector('#list .row.open');
+  document.body.classList.toggle('card-open', open);
+  var st = $('#stick');
+  if (st) document.documentElement.style.setProperty('--stick-h', (open ? 0 : st.offsetHeight) + 'px');
+}
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(function (en) {
+    var stuck = !en[0].isIntersecting && en[0].boundingClientRect.top < 0;
+    $('#stick').classList.toggle('stuck', stuck);
+    document.body.classList.toggle('stuck', stuck);
+    setTimeout(updateStick, 0);
+  }).observe($('#stickSentinel'));
+}
+window.addEventListener('resize', function () { updateStick(); });
 function renderList() {
   clearTimeout(tGrid);
+  setTimeout(updateStick, 0);
   if (scanning) return;
   var list = $('#list');
   syncThumbs();

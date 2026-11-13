@@ -824,3 +824,22 @@ html[data-look="nuovo"][data-pal="bosco"] .res-b .btn.primary{background:#24563F
 .ver-state.ok{color:var(--accent)}
 .ver-state.new{color:var(--warn)}
 .ver .btn{margin-top:6px;min-height:40px;font-size:14px}
+
+/* ---- barra in alto ferma durante lo scorrimento (solo con l'elenco compatto) ---- */
+.stick-sentinel{height:1px;margin-bottom:-1px}
+.stick{position:sticky;top:0;z-index:12;margin:0 -16px;padding:8px 16px 0;background:var(--bg)}
+.stick.stuck{box-shadow:0 1px 0 var(--line),0 6px 14px -8px rgba(0,0,0,.25)}
+body.card-open .stick{position:static;box-shadow:none}
+/* quando e' ferma si stringe un po': piu' spazio per i libri */
+.stick.stuck .tabbar{margin-bottom:8px}
+.stick.stuck .tools{margin-bottom:8px}
+.stick.stuck .btn.sm{min-height:40px;padding:4px 2px}
+.stick.stuck .btn.sm svg{display:none}
+.stick.stuck .chips{margin-bottom:8px}
+.stick.stuck .chips .chip{min-height:38px;padding:6px 12px}
+body.stuck:not(.card-open) .tip{display:none}
+.row{scroll-margin-top:calc(var(--stick-h,0px) + 8px)}
+@media (min-width:880px){
+  .stick{margin:0 -24px;padding:10px 24px 0}
+  .stick.stuck .btn.sm svg{display:inline}
+}

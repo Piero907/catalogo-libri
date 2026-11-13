@@ -193,6 +193,16 @@ Indietro del telefono. Con il pannello chiuso, i filtri attivi restano
 visibili sotto la ricerca: tocca la x di uno per toglierlo. Il numerino
 su "Filtri" dice quanti sono attivi.
 
+BARRA IN ALTO FERMA
+-------------------
+Mentre scorri l'elenco compatto, la barra con Libreria/Desideri/Prestati,
+Filtri, ricerca e i tasti Copertine, Ce l'ho gia'?, Statistiche, Esporta
+resta ferma in alto (un po' piu' stretta, e la riga di suggerimento sotto
+Scansiona sparisce per lasciare spazio ai libri). Quando apri la scheda di
+un libro la barra scorre via con la pagina, cosi' hai tutto lo spazio per i
+campi; richiusa la scheda torna ferma. Con "Mostra le schede sempre aperte"
+la barra non resta ferma.
+
 SCHEDE CHIUSE E APERTE
 ----------------------
 Ogni libro mostra la copertina (o un riquadro con l'iniziale, se manca),
