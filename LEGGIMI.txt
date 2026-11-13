@@ -172,7 +172,12 @@ Ogni libro mostra la copertina (o un riquadro con l'iniziale, se manca),
 titolo e autore (piu' le etichette importanti, come
 "Prestato a Marco · da 3 settimane" o "Da verificare"). Tocca il libro o
 la freccetta per aprire la scheda con tutti i dati e modificarli; la
-freccetta in alto a destra la richiude. I libri senza titolo (per esempio
+freccetta in alto a destra la richiude. Accanto alla freccetta, in alto,
+ci sono la X (elimina il libro, con "Annulla" subito dopo) e il tasto per
+prestato / venduto / regalato / smarrito (azzurro quando il libro e' fuori
+casa: toccalo per cambiare o per segnarlo come tornato); le etichette
+(Prestato, Da verificare...) sono in alto anche loro. In fondo restano i
+tasti per cercare di nuovo il libro o il prezzo. I libri senza titolo (per esempio
 non trovati) si aprono da soli perche' vanno completati a mano.
 Tocca la copertina per vederla in grande (si chiude con la X, toccando
 fuori o con il tasto "indietro").

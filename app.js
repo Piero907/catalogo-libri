@@ -1175,24 +1175,30 @@ function rowHTML(b, dups, ex) {
   } else {
     if (!ex && !isOpen(b)) return summaryHTML(b, dups, status);
     var canLookup = !busy && !ex && !b.t && L.toIsbn13(b.i);
-    if (!ex && !settings.openAll) cls += ' open';
-    body = (!ex && !settings.openAll ? '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button>' : '') +
+    var openCard = !ex && !settings.openAll;
+    if (openCard) cls += ' open has-top';
+    /* azioni principali: in alto accanto alla freccetta (scheda aperta), in fondo nelle schede sempre aperte */
+    var stateOn = !!(b.p || b.xs);
+    var loanBtn = (!busy && !b.w && hasData(b) && (openCard || !stateOn))
+      ? '<button class="ico' + (stateOn ? ' on' : '') + '" data-act="loan" title="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Prestato, venduto, regalato o smarrito') + '" aria-label="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ', cambia' : 'Prestato, venduto, regalato o smarrito') + '">' + icon('loan') + '</button>' : '';
+    var delBtn = '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina">' + icon('x') + '</button>';
+    var moreActs = (canLookup ? '<button class="ico" data-act="lookup" title="Cerca di nuovo nelle banche dati" aria-label="Cerca di nuovo">' + icon('redo') + '</button>' : '') +
+        (canLookup && b.nf ? '<button class="ico" data-act="web" title="Cerca questo codice sul web" aria-label="Cerca questo codice sul web">' + icon('search') + '</button>' : '') +
+        (!busy && b.c == null && hasData(b) ? '<button class="ico" data-act="pricephoto" title="Leggi il prezzo di copertina da una foto del retro" aria-label="Leggi il prezzo da una foto">' + icon('cam') + '</button>' : '') +
+        (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? '<button class="ico" data-act="priceweb" title="Cerca il prezzo sul web" aria-label="Cerca il prezzo sul web">' + icon('euro') + '</button>' : '') +
+        (!busy && b.w && hasData(b) ? '<button class="ico txt" data-act="bought" title="L\'ho comprato: spostalo in Libreria">' + icon('bag') + 'Comprato</button>' : '');
+    body = (openCard ? '<div class="card-top"><span class="flags">' + flagsHTML(b, dups) + '</span><span class="top-acts">' + delBtn + loanBtn +
+        '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button></span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80, 'shelfList') + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80, 'genreList') +
         inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' : '') +
       readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
-      '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
-      (ex ? '<span class="tag">Esempio</span>' :
-        (canLookup ? '<button class="ico" data-act="lookup" title="Cerca di nuovo nelle banche dati" aria-label="Cerca di nuovo">' + icon('redo') + '</button>' : '') +
-        (canLookup && b.nf ? '<button class="ico" data-act="web" title="Cerca questo codice sul web" aria-label="Cerca questo codice sul web">' + icon('search') + '</button>' : '') +
-        (!busy && b.c == null && hasData(b) ? '<button class="ico" data-act="pricephoto" title="Leggi il prezzo di copertina da una foto del retro" aria-label="Leggi il prezzo da una foto">' + icon('cam') + '</button>' : '') +
-        (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? '<button class="ico" data-act="priceweb" title="Cerca il prezzo sul web" aria-label="Cerca il prezzo sul web">' + icon('euro') + '</button>' : '') +
-        (!busy && !b.w && !b.p && !b.xs && hasData(b) ? '<button class="ico" data-act="loan" title="Prestato, venduto, regalato o smarrito" aria-label="Prestato, venduto, regalato o smarrito">' + icon('loan') + '</button>' : '') +
-        (!busy && b.w && hasData(b) ? '<button class="ico txt" data-act="bought" title="L\'ho comprato: spostalo in Libreria">' + icon('bag') + 'Comprato</button>' : '') +
-        '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina">' + icon('x') + '</button>') +
-      '</div></div>';
+      (openCard ? (moreActs ? '<div class="tail">' + moreActs + '</div>' : '') :
+        '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
+        (ex ? '<span class="tag">Esempio</span>' : moreActs + loanBtn + delBtn) + '</div>') +
+      '</div>';
   }
   return '<article class="' + cls + '" data-id="' + b.id + '"' + (ex ? ' data-ex="1"' : '') + '>' + status + body + '</article>';
 }

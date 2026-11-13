@@ -540,3 +540,18 @@ body.drawer-open .edge-tab,body.gridview.drawer-open .edge-tab{visibility:hidden
 .opt-sec input[type="text"],.opt-sec input[type="url"]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink)}
 .btn.mitem{flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:2px;padding:10px 14px}
 .btn.mitem small{font-weight:400;font-size:13px;color:var(--muted)}
+
+/* ---- scheda aperta: etichette e azioni principali in alto, accanto alla freccetta ---- */
+.card-top{display:flex;align-items:flex-start;gap:6px;margin:-6px -6px -2px 0;min-height:44px}
+.card-top .flags{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:44px;padding-top:2px}
+.card-top .flags:empty{visibility:hidden}
+.top-acts{flex:none;display:flex;align-items:center;gap:2px}
+.card-top .chev-btn{position:static}
+.row.has-top .head,.row.open.has-top:not(.has-thumb) .head{padding-right:0}
+.ico.on{color:var(--info);background:var(--info-bg)}
+.ico.on:hover{color:var(--info)}
+@media (min-width:880px){
+  body:not(.openall) .row.open.has-top{padding-right:13px}
+  .card-top{grid-column:1 / -1;margin-right:-6px}
+}
+.top-acts .danger{margin-right:6px}   /* la X un po' staccata dalla freccetta: meno tocchi per sbaglio */
