@@ -886,3 +886,36 @@ body.stuck:not(.card-open) .tip{display:none}
 #instSheet{z-index:35}
 html[data-look="nuovo"] svg.qr,svg.qr{stroke-width:1}
 svg.qr path{fill:none;stroke-linecap:butt}
+
+/* ---- Opzioni › Ricerca dei libri: worker SBN e chiave Google ---- */
+.svc{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.svc-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.svc-h h3{margin:0;font:600 18px/1.2 var(--font-display)}
+.svc-h h3 small{display:block;margin-top:2px;font:400 13px/1.3 var(--font-body);color:var(--muted)}
+.svc-st{display:inline-flex;align-items:center;gap:6px;margin-top:2px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
+.svc-st::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid var(--muted);box-sizing:border-box}
+.svc-st.on{color:var(--accent)}
+.svc-st.on::before{background:var(--accent);border-color:var(--accent)}
+.svc-count{margin:0;font-size:14px;line-height:1.4;color:var(--muted);font-variant-numeric:tabular-nums}
+.svc-count b{color:var(--ink);font-weight:700;font-size:16px}
+.svc-row{display:flex;gap:8px;align-items:stretch}
+.svc-row input{flex:1 1 auto;min-width:0}
+.svc-row .btn{flex:none;padding:8px 12px}
+.svc-saved{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.svc-saved[hidden]{display:none}
+.svc-saved-l{font-size:13px;color:var(--muted);margin-right:2px}
+.schip{display:inline-flex;align-items:stretch;max-width:100%;border:1px solid var(--line);border-radius:999px;background:var(--surface2);overflow:hidden}
+.schip button{border:0;background:none;color:var(--ink);cursor:pointer;min-height:36px;font:inherit;font-size:14px}
+.schip-use{min-width:0;padding:0 4px 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.schip-x{flex:none;padding:0 11px 0 7px;color:var(--muted);font-size:18px;line-height:1}
+.schip button:hover{background:var(--accent-soft)}
+.svc .hint{margin:0}
+.svc-how summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--accent)}
+.svc-how .keysteps{margin:6px 0 0}
+.opt-sec>*{min-width:0}
+.opt-sec .svc-row input{flex:1 1 0;width:0;min-width:0}
+.opt-sec .svc-row input{font-size:15px}
+.svc-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.svc-acts:not(:has(> :not([hidden]))){display:none}
+.btn.svc-clear{min-height:38px;padding:6px 14px;font-size:14px}
+.btn.svc-clear::before{content:"×";font-size:18px;line-height:1;margin-right:-2px;color:var(--muted)}

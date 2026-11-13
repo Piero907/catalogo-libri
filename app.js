@@ -76,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 38, date: '2026-11-13', note: 'Pulsante «Installa» in evidenza e Condividi l\'app con link e QR code' };
+var APP_VERSION = { v: 39, date: '2026-11-13', note: 'Ricerca dei libri: worker e chiave ben visibili, contatori separati, Cancella e salvati da rimettere' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -90,20 +90,66 @@ function newId() { return 'b' + Date.now().toString(36) + Math.random().toString
 function get(id) { for (var i = 0; i < state.books.length; i++) if (state.books[i].id === id) return state.books[i]; return null; }
 function smallImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.img || b.imgL || s.thumb || ''; }
 function bigImg(b) { var s = S[b.id] || {}; return coverURL[b.id] || b.imgL || b.img || s.big || s.thumb || ''; }
-/* Richieste di oggi a Google Libri e all'intermediario SBN. Il giorno di Google finisce a mezzanotte ora del Pacifico. */
+/* Richieste di oggi a Google Libri e al worker SBN. Il giorno di Google finisce a mezzanotte ora del Pacifico (le 9 da noi),
+   quello di Cloudflare a mezzanotte UTC (l'1 o le 2 di notte da noi). */
 var G_LIMIT = 1000, G_STOP = 950, G_EXTRA = 700;          // con la chiave: 1.000 al giorno; le copertine grandi si fermano prima
-var quota = { d: '', g: 0, s: 0 };
+var quota = { d: '', g: 0, ds: '', s: 0 };
 function pacificDay() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); } }
-function loadQuota() { try { var q = JSON.parse(ls.get('catalogo-libri-quota') || '{}'); if (q && q.d) quota = { d: q.d, g: q.g | 0, s: q.s | 0 }; } catch (e) {} }
-function rollQuota() { var d = pacificDay(); if (quota.d !== d) quota = { d: d, g: 0, s: 0 }; }
+function utcDay() { return new Date().toISOString().slice(0, 10); }
+function loadQuota() { try { var q = JSON.parse(ls.get('catalogo-libri-quota') || '{}'); if (q && q.d) quota = { d: q.d, g: q.g | 0, ds: q.ds || q.d, s: q.s | 0 }; } catch (e) {} }
+function rollQuota() {
+  var d = pacificDay(), ds = utcDay();
+  if (quota.d !== d) { quota.d = d; quota.g = 0; }
+  if (quota.ds !== ds) { quota.ds = ds; quota.s = 0; }
+}
 function countCall(k) { rollQuota(); quota[k]++; ls.set('catalogo-libri-quota', JSON.stringify(quota)); if ($('#optSheet').hidden) return; updateQuotaInfo(); }
 function googleLeft(extra) { rollQuota(); return !settings.gbKey || quota.g < (extra ? G_EXTRA : G_STOP); }
 function updateQuotaInfo() {
   rollQuota();
   var nf = new Intl.NumberFormat('it-IT');
-  $('#quotaInfo').textContent = 'Oggi: ' + nf.format(quota.g) + ' richieste a Google Libri' +
-    (settings.gbKey ? ' su 1.000 (si azzera verso le 9 del mattino)' + (quota.g >= G_EXTRA ? '; le copertine grandi aspettano domani' : '') : '') +
-    (settings.sbnUrl ? ' · ' + nf.format(quota.s) + ' al catalogo SBN su 100.000' : '') + '.';
+  $('#gbCount').innerHTML = 'Richieste oggi: <b>' + nf.format(quota.g) + '</b>' + (settings.gbKey
+    ? ' su 1.000 · si azzera verso le 9' + (quota.g >= G_STOP ? '. Limite quasi raggiunto: le ricerche riprendono domattina' : quota.g >= G_EXTRA ? '. Le copertine grandi aspettano domani' : '')
+    : ' · senza chiave il limite lo decide Google');
+  $('#sbnCount').innerHTML = 'Richieste oggi: <b>' + nf.format(quota.s) + '</b>' + (settings.sbnUrl ? ' su 100.000 · si azzera nella notte' : '');
+}
+/* Worker SBN e chiave Google: quelli usati restano tra i «salvati» (anche dopo «Cancella») per rimetterli con un tocco */
+var LS_SAVED = 'catalogo-libri-saved', saved = { sbn: [], key: [] };
+function loadSaved() {
+  try {
+    var o = JSON.parse(ls.get(LS_SAVED) || '{}');
+    ['sbn', 'key'].forEach(function (k) { saved[k] = Array.isArray(o[k]) ? o[k].filter(function (x) { return typeof x === 'string' && x; }).slice(0, 4) : []; });
+  } catch (e) {}
+  if (settings.sbnUrl && saved.sbn.indexOf(settings.sbnUrl) < 0) remember('sbn', settings.sbnUrl);
+  if (settings.gbKey && saved.key.indexOf(settings.gbKey) < 0) remember('key', settings.gbKey);
+}
+function remember(k, v) { if (!v) return; saved[k] = [v].concat(saved[k].filter(function (x) { return x !== v; })).slice(0, 4); ls.set(LS_SAVED, JSON.stringify(saved)); }
+function svcVal(k) { return k === 'sbn' ? settings.sbnUrl : settings.gbKey; }
+function svcShort(k, v) { return k === 'sbn' ? v.replace(/^https:\/\//, '') : (v.length > 14 ? v.slice(0, 6) + '…' + v.slice(-4) : v); }
+function setSvc(k, v) {
+  if (k === 'sbn') settings.sbnUrl = v; else settings.gbKey = v;
+  saveSettings(); remember(k, v); renderSvc();
+}
+function renderSvc() {
+  var sb = settings.sbnUrl, gk = settings.gbKey;
+  if (document.activeElement !== $('#sbnUrl')) $('#sbnUrl').value = sb;
+  if (document.activeElement !== $('#gbKey')) $('#gbKey').value = gk;
+  $('#sbnSt').textContent = sb ? 'In uso' : 'Non impostato'; $('#sbnSt').className = 'svc-st' + (sb ? ' on' : '');
+  $('#gbSt').textContent = gk ? 'In uso' : 'Nessuna chiave'; $('#gbSt').className = 'svc-st' + (gk ? ' on' : '');
+  $('#sbnClear').hidden = !sb; $('#gbClear').hidden = !gk;
+  ['sbn', 'key'].forEach(function (k) {
+    var cur = svcVal(k), box = $(k === 'sbn' ? '#sbnSaved' : '#gbSaved'), html = '';
+    saved[k].forEach(function (x, i) {
+      if (x === cur) return;
+      html += '<span class="schip"><button type="button" class="schip-use" data-k="' + k + '" data-i="' + i + '" title="Usa ' + esc(svcShort(k, x)) + '">' + esc(svcShort(k, x)) + '</button>' +
+        '<button type="button" class="schip-x" data-k="' + k + '" data-forget="' + i + '" aria-label="Togli ' + esc(svcShort(k, x)) + ' dai salvati">×</button></span>';
+    });
+    box.innerHTML = html ? '<span class="svc-saved-l">' + (k === 'sbn' ? 'Worker salvati:' : 'Chiavi salvate:') + '</span>' + html : '';
+    box.hidden = !html;
+  });
+  var rs = !sb && saved.sbn.length, rk = !gk && saved.key.length;
+  $('#svcRestore').hidden = !(rs || rk);
+  $('#svcRestore').textContent = rs && rk ? 'Rimetti chiave e worker salvati' : rs ? 'Rimetti il worker salvato' : 'Rimetti la chiave salvata';
+  updateQuotaInfo();
 }
 /* fetch che conta le richieste e, con la chiave, non supera il limite giornaliero di Google (ne lascia un margine) */
 function apiFetch(url, init) {
@@ -2181,7 +2227,7 @@ function openOptions(sec, reuse) {
   $('#optSheet .sheet-in').scrollTop = 0;
   if (reuse) { try { history.replaceState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
   else if (!optPushed) { try { history.pushState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
-  if (sec === 'search') updateQuotaInfo();
+  if (sec === 'search') renderSvc();
   if (sec === 'app') { renderVersion(); checkVersion(); updateInstallUi(); }
 }
 function closeOptions(fromPop) {
@@ -3038,13 +3084,58 @@ $('#btnInstDiag').addEventListener('click', async function () {
 });
 $('#gbKey').value = '';
 $('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: resta il tasto fotocamera sulla scheda del libro.'); });
+/* l'indirizzo del worker si puo' incollare anche senza https:// o con ?isbn=... della prova a mano */
+function cleanWorker(v) {
+  v = String(v || '').trim().split(/[?#]/)[0].replace(/\/+$/, '');
+  if (v && !/^[a-z][a-z0-9+.-]*:\/\//i.test(v) && /^[^\s/]+\.[a-z]{2,}(\/|$)/i.test(v)) v = 'https://' + v;
+  return v;
+}
 $('#sbnUrl').addEventListener('change', function (e) {
-  var v = e.target.value.trim().replace(/\/+$/, '');
+  var v = cleanWorker(e.target.value), before = settings.sbnUrl;
   if (v && !/^https:\/\/[^\s/]+\.[^\s]+$/.test(v)) { toast('L\'indirizzo deve iniziare con https:// (es. https://sbn-libri.tuonome.workers.dev).'); return; }
-  settings.sbnUrl = v; e.target.value = v; saveSettings();
-  toast(v ? 'Catalogo SBN attivato. Premi «Prova la ricerca ISBN» per controllare.' : 'Catalogo SBN disattivato.');
+  if (v === before) { e.target.value = v; return; }
+  e.target.value = v; setSvc('sbn', v);
+  if (v) toast('Worker SBN in uso. Premi «Prova la ricerca ISBN» per controllare.');
+  else toast('Worker tolto: ora cerco senza il catalogo SBN.', { label: 'Annulla', fn: function () { setSvc('sbn', before); } });
 });
-$('#gbKey').addEventListener('change', function (e) { settings.gbKey = e.target.value.trim(); saveSettings(); toast(settings.gbKey ? 'Chiave salvata.' : 'Chiave rimossa.'); });
+$('#gbKey').addEventListener('change', function (e) {
+  var v = e.target.value.replace(/\s+/g, ''), before = settings.gbKey;
+  if (v === before) { e.target.value = v; return; }
+  e.target.value = v; setSvc('key', v);
+  if (!v) toast('Chiave tolta: ora cerco su Google senza chiave.', { label: 'Annulla', fn: function () { setSvc('key', before); } });
+  else toast(/^AIza[\w-]{30,}$/.test(v) ? 'Chiave in uso. Premi «Prova la ricerca ISBN» per controllare.' : 'Chiave in uso, ma non sembra una chiave Google (di solito inizia con AIza e ha 39 caratteri): controlla.');
+});
+function clearSvc(k) {
+  var before = svcVal(k);
+  if (!before) return;
+  setSvc(k, '');
+  toast(k === 'sbn' ? 'Worker tolto. Resta tra i salvati.' : 'Chiave tolta. Resta tra le salvate.',
+    { label: 'Annulla', fn: function () { setSvc(k, before); } });
+}
+$('#sbnClear').addEventListener('click', function () { clearSvc('sbn'); });
+$('#gbClear').addEventListener('click', function () { clearSvc('key'); });
+$('#svcRestore').addEventListener('click', function () {
+  var did = [];
+  if (!settings.sbnUrl && saved.sbn[0]) { setSvc('sbn', saved.sbn[0]); did.push('sbn'); }
+  if (!settings.gbKey && saved.key[0]) { setSvc('key', saved.key[0]); did.push('key'); }
+  if (!did.length) return;
+  toast(did.length === 2 ? 'Chiave e worker rimessi.' : did[0] === 'sbn' ? 'Worker rimesso.' : 'Chiave rimessa.',
+    { label: 'Annulla', fn: function () { did.forEach(function (k) { setSvc(k, ''); }); } });
+});
+$('#svcSbn').parentNode.addEventListener('click', function (e) {
+  var u = e.target.closest('.schip-use'), x = e.target.closest('.schip-x');
+  if (u) {
+    var k = u.dataset.k, v = saved[k][+u.dataset.i], before = svcVal(k);
+    if (!v) return;
+    setSvc(k, v);
+    toast(k === 'sbn' ? 'Worker rimesso: ' + svcShort(k, v) + '.' : 'Chiave rimessa: ' + svcShort(k, v) + '.', { label: 'Annulla', fn: function () { setSvc(k, before); } });
+  } else if (x) {
+    var k2 = x.dataset.k, i2 = +x.dataset.forget, v2 = saved[k2][i2];
+    if (!v2) return;
+    saved[k2].splice(i2, 1); ls.set(LS_SAVED, JSON.stringify(saved)); renderSvc();
+    toast((k2 === 'sbn' ? 'Worker tolto dai salvati.' : 'Chiave tolta dalle salvate.'), { label: 'Annulla', fn: function () { saved[k2].splice(i2, 0, v2); ls.set(LS_SAVED, JSON.stringify(saved)); renderSvc(); } });
+  }
+});
 $('#btnClearGuess').addEventListener('click', function () {
   var snapshot = JSON.stringify(state.books), n = 0;
   state.books.forEach(function (b) {
@@ -3199,8 +3290,8 @@ window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeou
 /* ---------- avvio ---------- */
 loadAll();
 saveSettings();                                  // salva subito eventuali scelte aggiornate (es. palette predefinita)
-$('#gbKey').value = settings.gbKey;
-$('#sbnUrl').value = settings.sbnUrl;
+loadSaved();
+renderSvc();
 $('#optPrice').checked = settings.price;
 $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;

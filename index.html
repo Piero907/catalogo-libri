@@ -218,23 +218,51 @@
       </div>
     </section>
     <section class="opt-sec" data-sec="search" data-title="Ricerca dei libri">
-      <p class="hint quota" id="quotaInfo"></p>
-      <label class="field">
-        <span>Catalogo SBN (facoltativo)</span>
-        <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://sbn-libri.tuonome.workers.dev">
-        <p class="hint">Il catalogo delle biblioteche italiane ha i dati più precisi su editore, anno e pagine. Serve un piccolo intermediario gratuito su Cloudflare: le istruzioni sono nel LEGGIMI, sezione «Catalogo SBN».</p>
-      </label>
-      <label class="field">
-        <span>Chiave Google Libri (facoltativa)</span>
-        <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla qui la chiave, se Google limita le ricerche">
-        <p class="hint">Serve se compare «limite di richieste». È gratis e si crea una volta sola:</p>
-        <ol class="hint keysteps">
+      <p class="hint">Senza worker e senza chiave l'app cerca lo stesso (Google Libri e Open Library): servono a fare più ricerche e ad avere dati più precisi.</p>
+      <button class="btn primary" id="svcRestore" type="button" hidden>Rimetti chiave e worker salvati</button>
+
+      <div class="svc" id="svcSbn">
+        <div class="svc-h">
+          <h3>Catalogo SBN<small>Worker Cloudflare</small></h3>
+          <span class="svc-st" id="sbnSt"></span>
+        </div>
+        <p class="svc-count" id="sbnCount" aria-live="polite"></p>
+        <div class="svc-row">
+          <label class="sr" for="sbnUrl">Indirizzo del worker Cloudflare</label>
+          <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla l'indirizzo del worker">
+        </div>
+        <div class="svc-acts">
+          <button class="btn svc-clear" id="sbnClear" type="button" hidden>Cancella</button>
+          <div class="svc-saved" id="sbnSaved" hidden></div>
+        </div>
+        <p class="hint">Il catalogo delle biblioteche italiane ha i dati più precisi su editore, anno e pagine. Il worker è un piccolo intermediario gratuito su Cloudflare: le istruzioni sono nel LEGGIMI, sezione «Catalogo SBN».</p>
+      </div>
+
+      <div class="svc" id="svcKey">
+        <div class="svc-h">
+          <h3>Google Libri<small>Chiave API</small></h3>
+          <span class="svc-st" id="gbSt"></span>
+        </div>
+        <p class="svc-count" id="gbCount" aria-live="polite"></p>
+        <div class="svc-row">
+          <label class="sr" for="gbKey">Chiave API di Google Libri</label>
+          <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla la chiave (inizia con AIza)">
+        </div>
+        <div class="svc-acts">
+          <button class="btn svc-clear" id="gbClear" type="button" hidden>Cancella</button>
+          <div class="svc-saved" id="gbSaved" hidden></div>
+        </div>
+        <details class="svc-how">
+          <summary>Come si crea la chiave (gratis, una volta sola)</summary>
+          <ol class="hint keysteps">
           <li>Apri <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> con il tuo account Google e crea un progetto.</li>
           <li>Apri <a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Books API</a> e premi «Abilita».</li>
           <li>Vai in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credenziali</a> › «Crea credenziali» › «Chiave API».</li>
           <li>Copia la chiave e incollala qui sopra.</li>
         </ol>
-      </label>
+        </details>
+      </div>
+
       <div class="opts-row"><button class="btn" id="btnDiag">Prova la ricerca ISBN</button></div>
       <div class="diag" id="diagOut" hidden aria-live="polite"></div>
     </section>

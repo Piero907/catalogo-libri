@@ -395,7 +395,8 @@ giorno, ne usi due per libro). Si fa una volta sola, da computer o tablet:
    contenuto del file cloudflare-sbn-worker.js (e' nella cartella
    dell'app e nel repository GitHub). Premi "Deploy".
 4. Copia l'indirizzo del worker, tipo https://sbn-libri.TUONOME.workers.dev
-5. Nell'app: Opzioni > Ricerca dei libri > "Catalogo SBN" > incolla l'indirizzo. Poi
+5. Nell'app: Opzioni > Ricerca dei libri > riquadro "Catalogo SBN" > incolla
+   l'indirizzo (va bene anche senza https:// o con ?isbn=... in fondo). Poi
    "Prova la ricerca ISBN": deve comparire "✓ Catalogo SBN".
 Prova anche a mano: apri nel browser l'indirizzo con ?isbn=9788806219352
 alla fine; deve comparire un testo con "briefRecords".
@@ -446,8 +447,22 @@ limite diventa tuo e il problema sparisce. Si crea una volta sola:
    dovrebbero esserci addebiti, ma controlla le condizioni mostrate.
 3. Vai in https://console.cloud.google.com/apis/credentials > "Crea
    credenziali" > "Chiave API" e copia la chiave.
-4. Nell'app: Opzioni > Ricerca dei libri > "Chiave Google Libri" e incollala.
+4. Nell'app: Opzioni > Ricerca dei libri > riquadro "Google Libri" e incollala.
 Poi premi "Riprova" sui libri in errore (o il pulsante "Completa n libri").
+
+WORKER E CHIAVE: CONTATORI, CANCELLA, SALVATI
+--------------------------------------------
+In Opzioni > Ricerca dei libri ci sono due riquadri, "Catalogo SBN" (worker
+Cloudflare) e "Google Libri" (chiave API). Ognuno mostra:
+- se e' "In uso" o "Non impostato", con l'indirizzo o la chiave nel campo;
+- le richieste di oggi: Google su 1.000 (riparte verso le 9 del mattino),
+  SBN su 100.000 (riparte nella notte, a mezzanotte UTC);
+- "Cancella": toglie worker o chiave, per provare l'app senza o per
+  metterne un altro. Quello tolto resta tra i "salvati".
+Sotto il campo compaiono i salvati (fino a 4 per tipo): un tocco lo rimette,
+la x lo dimentica. In alto, "Rimetti chiave e worker salvati" rimette in un
+colpo gli ultimi usati. I salvati stanno solo su questo telefono (non sono
+nel backup).
 
 DOVE CERCA L'APP I LIBRI E IN CHE ORDINE
 ---------------------------------------
