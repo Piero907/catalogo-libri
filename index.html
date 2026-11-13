@@ -69,7 +69,7 @@
     <button class="btn" id="btnPhoto"></button>
     <button class="btn" id="btnType"></button>
   </div>
-  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere l'ISBN.</p>
+  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere il titolo o l'ISBN.</p>
 </div>
 
 <div class="scan" id="scan" hidden>
@@ -100,10 +100,15 @@
 
 <div class="sheet" id="isbnSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="isbnH">
-    <h2 id="isbnH">Digita l'ISBN</h2>
-    <p class="msg">Uno o più codici, anche con i trattini. Per più libri vai a capo o separa con la virgola.</p>
-    <textarea class="big" id="isbnText" inputmode="text" autocomplete="off" aria-label="Codici ISBN" placeholder="978-88-06-21935-2"></textarea>
+    <h2 id="isbnH">Titolo o ISBN</h2>
+    <p class="msg" id="isbnIntro">Scrivi il <b>titolo</b> (con l'autore, se lo sai): ti propongo i libri trovati. Oppure uno o più codici <b>ISBN</b>, uno per riga.</p>
+    <textarea class="big" id="isbnText" inputmode="text" autocomplete="off" enterkeyhint="search" aria-label="Titolo o codici ISBN" placeholder="Il nome della rosa Eco"></textarea>
     <p class="msg bad" id="isbnErr" hidden></p>
+    <div class="tres" id="isbnResBox" hidden>
+      <p class="msg" id="isbnResMsg" aria-live="polite"></p>
+      <ul class="cands" id="isbnRes"></ul>
+      <button class="btn" id="isbnAsIs" type="button" hidden></button>
+    </div>
     <div class="row-btns">
       <button class="btn" id="isbnCancel">Annulla</button>
       <button class="btn primary" id="isbnGo">Cerca</button>

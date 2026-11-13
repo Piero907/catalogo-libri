@@ -76,7 +76,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 36, date: '2026-11-13', note: 'icona verde con i colori della palette Bosco, con un nome di file nuovo per obbligare il telefono ad aggiornarla.' };
+var APP_VERSION = { v: 37, date: '2026-11-13', note: 'Digita accetta anche il titolo: cerca il libro e propone i risultati (comodo per i Desideri); icona verde con l\'ultimo libro inclinato.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1271,7 +1271,8 @@ function emptyHTML() {
 function wishEmptyHTML() {
   return '<section class="empty"><h2>La lista dei Desideri è vuota</h2>' +
     '<p>Qui metti i libri che vuoi comprare. Mentre sei in questa scheda, <b>Scansiona</b>, <b>Foto</b> e <b>Digita</b> aggiungono i libri ai Desideri invece che alla Libreria.</p>' +
-    '<p>Quando ne compri uno tocca <b>Comprato</b>: passa in Libreria. In negozio usa <b>Ce l\'ho già?</b> per non ricomprare un libro che hai.</p></section>';
+    '<p>Un amico ti consiglia un libro? Cercalo per titolo e aggiungilo qui:</p><p><button class="btn primary" data-act="typeadd">' + icon('search') + 'Cerca per titolo</button></p>' +
+    '<p>Quando ne compri uno, nella sua scheda tocca il tasto con i libri e la freccia: passa in Libreria. In negozio usa <b>Ce l\'ho già?</b> per non ricomprare un libro che hai.</p></section>';
 }
 /* vista copertine */
 function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h % 360; }
@@ -1437,14 +1438,94 @@ function retryRow(id) {
 function openIsbnSheet() {
   $('#isbnText').value = '';
   $('#isbnErr').hidden = true;
+  $('#isbnResBox').hidden = true; $('#isbnRes').innerHTML = ''; titleSeq++;
+  $('#isbnH').textContent = tab === 'wish' ? 'Aggiungi ai Desideri' : 'Titolo o ISBN';
   $('#isbnSheet').hidden = false;
   setTimeout(function () { $('#isbnText').focus(); }, 50);
 }
+/* ---------- ricerca per titolo (per esempio un libro consigliato da un amico) ---------- */
+var titleSeq = 0, titleCands = [], titleText = '';
+function looksLikeTitle(s) { return (String(s).replace(/isbn/ig, '').match(/[a-zàèéìòùç]/ig) || []).length >= 3; }
+function whereTxt() { return tab === 'wish' ? 'ai Desideri' : 'alla Libreria'; }
+async function searchTitle(text) {
+  var my = ++titleSeq;
+  titleText = text; titleCands = [];
+  $('#isbnErr').hidden = true;
+  $('#isbnResBox').hidden = false;
+  $('#isbnResMsg').textContent = 'Cerco «' + text + '»…';
+  $('#isbnRes').innerHTML = '';
+  var asIs = $('#isbnAsIs');
+  asIs.textContent = 'Aggiungi solo «' + (text.length > 40 ? text.slice(0, 38) + '…' : text) + '», senza cercare'; asIs.hidden = true;
+  var res;
+  try { res = await L.searchText(text, lookupOpts()); }
+  catch (e) {
+    if (my !== titleSeq) return;
+    $('#isbnResMsg').textContent = e && e.code === 'rate' ? 'Google Libri è al limite di richieste: riprova tra poco, oppure aggiungi solo il titolo e completalo dopo.' : 'Non riesco a cercare: controlla la connessione. Puoi aggiungere solo il titolo e completarlo dopo.';
+    asIs.hidden = false; return;
+  }
+  if (my !== titleSeq || $('#isbnSheet').hidden) return;
+  // prima le edizioni italiane, poi quelle con l'ISBN; per il resto l'ordine di Google
+  titleCands = res.map(function (c, i) { return { c: c, i: i }; }).sort(function (x, y) {
+    return ((y.c.lang === 'it') - (x.c.lang === 'it')) || ((!!y.c.i) - (!!x.c.i)) || (x.i - y.i);
+  }).map(function (x) { return x.c; }).slice(0, 8);
+  $('#isbnRes').innerHTML = titleCands.map(function (c, i) {
+    var have = (c.isbns || []).map(findByIsbn).filter(Boolean)[0];
+    var badge = have ? '<span class="tag ' + (have.w ? 'loan' : 'warn') + '">' + (have.w ? 'Già nei Desideri' : 'Ce l\'hai già') + '</span>' : '';
+    return '<li><button class="cand" data-i="' + i + '"><span class="cimg">' + (c.img ? '<img src="' + esc(c.img) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span><span><b>' + esc(c.t) + '</b>' +
+      '<span>' + esc(c.a || 'Autore non indicato') + '</span><span>' + esc([c.e, c.y].filter(Boolean).join(', ') || 'Editore e anno non indicati') + '</span>' + badge + '</span></button></li>';
+  }).join('');
+  $('#isbnResMsg').textContent = titleCands.length ? 'Tocca il libro giusto per aggiungerlo ' + whereTxt() + ':' : 'Non ho trovato libri per «' + text + '». Prova con meno parole, o aggiungi l\'autore.';
+  asIs.hidden = false;
+}
+function addedToast(b) {
+  var id = b.id;
+  toast('Aggiunto ' + (b.w ? 'ai Desideri' : 'alla Libreria') + ': ' + (b.t || b.i), { label: 'Annulla', fn: function () {
+    state.books = state.books.filter(function (x) { return x.id !== id; }); delete S[id]; renderList(); touch(); updateSummary();
+  } });
+}
+function pickTitle(i) {
+  var c = titleCands[i];
+  if (!c) return;
+  var code = L.toIsbn13(c.i);
+  q = ''; $('#q').value = '';
+  if (code) {
+    var res = addIsbn(code);
+    if (res.dup) { toast((res.dup.w ? 'È già nei Desideri: ' : 'Ce l\'hai già in Libreria: ') + (res.dup.t || code)); return; }
+    $('#isbnSheet').hidden = true;
+    if (res.moved) { openState[res.moved.id] = false; renderList(); updateSummary(); toast('Era nei Desideri: spostato in Libreria. ' + (res.moved.t || code)); return; }
+    var b = res.book;
+    b.t = c.t; b.a = c.a; if (c.img) b.img = c.img;           // si vede subito; il resto arriva dalle banche dati
+    openState[b.id] = false;
+    renderList(); updateSummary(); addedToast(b);
+    return;
+  }
+  var nb = blankBook({ t: c.t, a: c.a, e: c.e, y: c.y, img: c.img || '', gen: c.gen || '', pg: c.pg || '' });
+  state.books.push(nb); openState[nb.id] = false;
+  $('#isbnSheet').hidden = true;
+  touch(); renderList(); updateSummary(); addedToast(nb);
+}
+function addTitleAsIs() {
+  var t = titleText.replace(/\s+/g, ' ').trim();
+  if (!t) return;
+  var nb = blankBook({ t: t.slice(0, 300) });
+  state.books.push(nb); openState[nb.id] = false;
+  $('#isbnSheet').hidden = true; q = ''; $('#q').value = '';
+  touch(); renderList(); updateSummary(); addedToast(nb);
+}
+$('#isbnRes').addEventListener('click', function (e) { var b = e.target.closest('[data-i]'); if (b) pickTitle(+b.dataset.i); });
+$('#isbnAsIs').addEventListener('click', addTitleAsIs);
+$('#isbnText').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey && looksLikeTitle(e.target.value)) { e.preventDefault(); submitIsbn(); }
+});
+$('#isbnText').addEventListener('input', function () { $('#isbnErr').hidden = true; });
+
 function submitIsbn() {
+  var raw = $('#isbnText').value.trim();
+  if (looksLikeTitle(raw) && !L.parseIsbnList(raw).valid.length) { searchTitle(raw); return; }
   var r = L.parseIsbnList($('#isbnText').value);
   var err = $('#isbnErr');
   if (!r.valid.length) {
-    err.textContent = r.invalid.length ? 'Codice non valido: ' + r.invalid.slice(0, 3).join(', ') + '. Controlla le cifre.' : 'Scrivi almeno un codice ISBN.';
+    err.textContent = r.invalid.length ? 'Codice non valido: ' + r.invalid.slice(0, 3).join(', ') + '. Controlla le cifre.' : 'Scrivi un titolo o un codice ISBN.';
     err.hidden = false;
     return;
   }
@@ -1472,7 +1553,7 @@ function openPick(id) {
   if (!s || !s.cands) return;
   pickId = id;
   $('#pickList').innerHTML = s.cands.map(function (c, i) {
-    return '<li><button class="cand" data-i="' + i + '"><span class="cimg">' + (c.img ? '<img src="' + esc(c.img) + '" alt="" referrerpolicy="no-referrer">' : '') + '</span><span><b>' + esc(c.t) + '</b>' +
+    return '<li><button class="cand" data-i="' + i + '"><span class="cimg">' + (c.img ? '<img src="' + esc(c.img) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span><span><b>' + esc(c.t) + '</b>' +
       '<span>' + esc(c.a || 'Autore non indicato') + '</span><span>' + esc([c.e, c.y].filter(Boolean).join(' · ') || 'Editore e anno non indicati') + '</span></span></button></li>';
   }).join('');
   $('#pickSheet').hidden = false;
@@ -2497,8 +2578,8 @@ function setTab(t) {
   tab = t === 'wish' ? 'wish' : 'lib';
   flt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = '';
   $('#tipTxt').textContent = tab === 'wish'
-    ? 'Sei nei Desideri: Scansiona, Foto e Digita aggiungono qui i libri da comprare.'
-    : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere l\'ISBN.';
+    ? 'Sei nei Desideri: Scansiona, Foto e Digita aggiungono qui i libri da comprare. Un amico ti consiglia un libro? Digita e scrivi il titolo.'
+    : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere il titolo o l\'ISBN.';
   document.body.classList.toggle('wishtab', tab === 'wish');
   renderList(); updateSummary();
 }
@@ -2674,6 +2755,7 @@ list.addEventListener('click', function (e) {
   var btn = e.target.closest('[data-act]');
   if (!btn) return;
   if (btn.dataset.act === 'clearflt') { clearFilters(); return; }
+  if (btn.dataset.act === 'typeadd') { openIsbnSheet(); return; }
   var row = btn.closest('.row');
   if (!row) return;
   var id = row.dataset.id, act = btn.dataset.act;

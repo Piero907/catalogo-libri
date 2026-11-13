@@ -107,7 +107,14 @@ COME SI USA
   telefono, cerca il libro e, se e' certa, lo compila da sola; se ci sono
   piu' possibilita' ti fa scegliere. I dati ricavati dalla copertina hanno
   l'etichetta "Da verificare".
-- Digita: scrivi o incolla uno o piu' codici ISBN (uno per riga).
+- Digita: scrivi il TITOLO (con l'autore, se lo sai) e premi Cerca o
+  Invio: l'app ti propone i libri trovati (prima le edizioni italiane;
+  "Ce l'hai gia'" o "Gia' nei Desideri" se li hai gia'); tocca quello
+  giusto e viene aggiunto nella scheda in cui sei (Libreria o Desideri),
+  poi completato dalle banche dati. Comodo per un libro consigliato da un
+  amico: vai nei Desideri > Digita > titolo. Se non lo trova, "Aggiungi
+  solo il titolo" lo salva cosi' com'e'. Oppure scrivi o incolla uno o
+  piu' codici ISBN (uno per riga).
 - Il costo e' il PREZZO DI COPERTINA, che nessuna banca dati gratuita
   conosce per i libri italiani: l'app lo legge dal prezzo stampato
   (es. "€ 14,00"), di solito sul retro in basso.

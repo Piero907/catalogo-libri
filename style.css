@@ -847,3 +847,8 @@ body.stuck:not(.card-open) .tip{display:none}
 /* ---- sposta tra Libreria e Desideri, in alto ---- */
 .ico.move svg{width:22px;height:22px}
 .ico.move:hover{color:var(--accent);background:var(--accent-soft)}
+
+/* ---- risultati della ricerca per titolo ---- */
+.tres{display:grid;gap:8px}
+.tres .cands{max-height:46vh;overflow:auto;margin:0}
+.tres .cand .tag{margin-top:4px;justify-self:start}
