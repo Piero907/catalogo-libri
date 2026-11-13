@@ -136,11 +136,21 @@ Opzioni > Aspetto (o l'ingranaggio in alto a destra > Aspetto):
 - Stile "Classico": l'aspetto di prima, verde, identico.
 - Tema: Automatico (segue il telefono), Chiaro o Scuro, per entrambi gli
   stili.
+- Solo con lo stile Nuovo:
+  * Colori: Inchiostro (blu), Bordeaux (rosso vino) o Bosco (verde
+    bottiglia), ognuno con la sua versione scura;
+  * Carattere dei titoli: Literata (predefinito), EB Garamond, Playfair
+    Display, Lora, Merriweather, Montserrat, Roboto;
+  * Carattere del testo: IBM Plex Sans (predefinito), Roboto, Lato,
+    Atkinson Hyperlegible (molto leggibile), Lora.
+  Ogni carattere si vede scritto con se stesso; la scelta vale subito.
+  "Torna all'aspetto predefinito" rimette colori e caratteri iniziali.
 La scelta resta salvata sul telefono. Se lo stile nuovo non piace basta
 scegliere "Classico". Il codice dell'app com'era prima del nuovo aspetto e'
 salvato anche su GitHub nel ramo "aspetto-classico".
-Il carattere Literata e' incluso nell'app (cartella vendor/fonts, licenza
-SIL Open Font License), cosi' funziona anche senza rete.
+I caratteri sono inclusi nell'app (cartella vendor/fonts, tutti con licenza
+SIL Open Font License), cosi' funzionano anche senza rete; ognuno si scarica
+solo la prima volta che lo usi o lo vedi nell'elenco.
 
 OPZIONI
 -------

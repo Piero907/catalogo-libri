@@ -74,7 +74,9 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto' };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
+var PALS = { inchiostro: ['#EDF0F5', '#10141D'], bordeaux: ['#F2EFEE', '#161112'], bosco: ['#EEF1EE', '#0F1513'] };
+var FONTS_T = ['literata', 'garamond', 'playfair', 'lora', 'merriweather', 'montserrat', 'roboto'], FONTS_B = ['plex', 'roboto', 'lato', 'atkinson', 'lora'];
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
 var q = '', sortBy = 'recent', flt = '', tab = 'lib', readFlt = '', shFlt = '', genFlt = '', autFlt = '', autName = '', edFlt = '';   // shFlt, genFlt: chiave normalizzata, NONE = senza   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
 var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
@@ -185,6 +187,9 @@ function loadAll() {
     settings.pubFix = s.pubFix === true;
     settings.look = s.look === 'classico' ? 'classico' : 'nuovo';
     settings.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
+    settings.pal = PALS[s.pal] ? s.pal : 'inchiostro';
+    settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
+    settings.fb = FONTS_B.indexOf(s.fb) >= 0 ? s.fb : 'plex';
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -1990,11 +1995,15 @@ function applyLook(rerender) {
   var root = document.documentElement;
   root.setAttribute('data-look', settings.look);
   if (settings.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', settings.theme);
+  root.setAttribute('data-pal', settings.pal); root.setAttribute('data-ft', settings.ft); root.setAttribute('data-fb', settings.fb);
   var dark = settings.theme === 'dark' || (settings.theme === 'auto' && darkMQ && darkMQ.matches);
   var m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.setAttribute('content', settings.look === 'classico' ? '#1B6A4F' : (dark ? '#10141D' : '#EDF0F5'));
-  Array.prototype.forEach.call(document.querySelectorAll('input[name="look"]'), function (r) { r.checked = r.value === settings.look; });
-  Array.prototype.forEach.call(document.querySelectorAll('input[name="theme"]'), function (r) { r.checked = r.value === settings.theme; });
+  if (m) m.setAttribute('content', settings.look === 'classico' ? '#1B6A4F' : PALS[settings.pal][dark ? 1 : 0]);
+  ['look', 'theme', 'pal', 'ft', 'fb'].forEach(function (k) {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="' + k + '"]'), function (r) { r.checked = r.value === settings[k]; });
+  });
+  $('#lookNew').hidden = settings.look !== 'nuovo';
+  $('#lookClassicNote').hidden = settings.look === 'nuovo';
   $('#icoLoan').innerHTML = icon('loan');
   if (rerender) { renderList(); updateSummary(); }
 }
@@ -2003,6 +2012,14 @@ document.addEventListener('change', function (e) {
   var t = e.target;
   if (t.name === 'look') { settings.look = t.value === 'classico' ? 'classico' : 'nuovo'; saveSettings(); applyLook(true); toast(settings.look === 'classico' ? 'Aspetto classico, come prima.' : 'Nuovo aspetto.'); }
   else if (t.name === 'theme') { settings.theme = t.value === 'light' || t.value === 'dark' ? t.value : 'auto'; saveSettings(); applyLook(true); }
+  else if (t.name === 'pal' && PALS[t.value]) { settings.pal = t.value; saveSettings(); applyLook(false); }
+  else if (t.name === 'ft' && FONTS_T.indexOf(t.value) >= 0) { settings.ft = t.value; saveSettings(); applyLook(false); }
+  else if (t.name === 'fb' && FONTS_B.indexOf(t.value) >= 0) { settings.fb = t.value; saveSettings(); applyLook(false); }
+});
+$('#lookReset').addEventListener('click', function () {
+  var before = { pal: settings.pal, ft: settings.ft, fb: settings.fb };
+  settings.pal = 'inchiostro'; settings.ft = 'literata'; settings.fb = 'plex'; saveSettings(); applyLook(false);
+  toast('Colori e caratteri predefiniti.', { label: 'Annulla', fn: function () { Object.assign(settings, before); saveSettings(); applyLook(false); } });
 });
 
 /* Pagina delle opzioni: una sezione alla volta, con «‹» per tornare al menu e il tasto Indietro del telefono per chiudere */
