@@ -77,7 +77,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 42, date: '2026-11-13', note: 'Prezzo dalla fotocamera più preciso (anche in verticale) e veloce; «Scrivi» apre subito la tastiera' };
+var APP_VERSION = { v: 43, date: '2026-11-13', note: '«Elimina» con la scritta, in rosso e lontano dalla freccetta' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1346,7 +1346,7 @@ function rowHTML(b, dups, ex) {
   var body;
   if (fresh) {
     cls += ' fresh';
-    var acts = (st === 'error' || st === 'choose') ? '<div class="tail"><button class="ico danger" data-act="del" aria-label="Elimina" title="Elimina">' + icon('x') + '</button></div>' : '';
+    var acts = (st === 'error' || st === 'choose') ? '<div class="tail"><button class="ico act danger" data-act="del" title="Elimina il libro" aria-label="Elimina il libro">' + icon('x') + '<span class="al" aria-hidden="true">Elimina</span></button></div>' : '';
     return '<article class="' + cls + '" data-id="' + b.id + '">' + (hasThumb ? thumb : '') + status + acts + '</article>';
   } else {
     if (!ex && !isOpen(b)) return summaryHTML(b, dups, status);
@@ -1360,7 +1360,7 @@ function rowHTML(b, dups, ex) {
     var stateLabel = b.xs ? (L.GONE_LABEL[b.xs] || 'Non più qui') : b.p ? 'Prestato' : 'Presta';
     var loanBtn = (!busy && !b.w && hasData(b) && (openCard || !stateOn))
       ? act('loan', 'loan', stateLabel, stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Segna il libro come prestato, venduto, regalato o smarrito', stateOn ? ' on' : '') : '';
-    var delBtn = '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina il libro">' + icon('x') + '</button>';
+    var delBtn = act('del', 'x', 'Elimina', 'Elimina il libro', ' danger');
     var moveBtn = !busy && hasData(b) ? (b.w
       ? act('tolib', 'tolib', 'Libreria', 'Sposta in Libreria (l\'ho comprato)', ' move')
       : act('towish', 'towish', 'Desideri', 'Sposta nei Desideri', ' move')) : '';
@@ -1369,7 +1369,7 @@ function rowHTML(b, dups, ex) {
         (!busy && b.c == null && hasData(b) ? act('pricephoto', 'pricetag', 'Prezzo da foto', 'Leggi il prezzo di copertina da una foto del retro') : '') +
         (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? act('priceweb', 'euro', 'Prezzo dal web', 'Cerca il prezzo sul web') : '') +
         '';
-    body = (openCard ? '<div class="card-top"><span class="top-acts"><span class="acts-main">' + loanBtn + moveBtn + '</span><span class="acts-win">' + delBtn +
+    body = (openCard ? '<div class="card-top"><span class="top-acts"><span class="acts-main">' + loanBtn + moveBtn + delBtn + '</span><span class="acts-win">' +
         '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi la scheda">' + icon('chev') + '</button></span></span>' +
         '<span class="flags">' + flagsHTML(b, dups) + '</span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +

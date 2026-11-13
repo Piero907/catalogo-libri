@@ -987,3 +987,9 @@ body.welcome-on .tip{display:none}
 .scan-price.typing .sp-field:has(input.bad){border-color:#F08A7E;box-shadow:0 0 0 2px #F08A7E}
 .scan-price.typing #scanPriceBtn{display:none}
 .scan-price.typing #scanPriceOk,.scan-price.typing #scanPriceCancel{display:inline-flex}
+/* «Elimina»: stessa forma delle altre azioni, in rosso; in alto sta con le azioni, lontano dalla freccetta */
+.ico.act.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}
+.ico.act.danger svg{color:var(--bad)}
+.ico.act.danger:hover{background:var(--bad-bg);color:var(--bad)}
+.top-acts .ico.act.danger{margin-right:0}
+.acts-win{margin-left:auto;padding-left:8px}
