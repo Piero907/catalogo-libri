@@ -509,7 +509,14 @@ Cloudflare) e "Google Libri" (chiave API). Ognuno mostra:
   metterne un altro. Quello tolto resta tra i "salvati".
 Sotto il campo compaiono i salvati (fino a 4 per tipo): un tocco lo rimette,
 la x lo dimentica. In alto, "Rimetti chiave e worker salvati" rimette in un
-colpo gli ultimi usati. Worker, chiave e salvati sono anche nel backup:
+colpo gli ultimi usati.
+Per darli a un familiare o a un amico: Opzioni > Condivisione > "Condividi
+chiave e worker". Parte un link: chi lo apre in Next Libris sceglie "Usali"
+o "Mettili tra i salvati". Mandalo solo a persone di fiducia, in privato:
+chi ha il link usa la tua quota (gratuita). Consigliato: in Google Cloud >
+Credenziali limita la chiave alla "Books API" e al sito
+https://piero907.github.io/*.
+Worker, chiave e salvati sono anche nel backup:
 ripristinandolo su un altro telefono (o dopo aver reinstallato l'app)
 tornano in uso, se li' non ce ne sono gia'.
 

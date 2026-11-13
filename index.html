@@ -211,6 +211,38 @@
   </div>
 </div>
 
+<div class="sheet" id="svcSheet" hidden>
+  <form class="sheet-in" id="svcForm" role="dialog" aria-modal="true" aria-labelledby="svcH">
+    <h2 id="svcH">Condividi chiave e worker</h2>
+    <p class="msg" id="svcWhat"></p>
+    <label class="check"><input type="checkbox" id="svcSbnOn"><span>Worker SBN (catalogo delle biblioteche)</span></label>
+    <label class="check"><input type="checkbox" id="svcKeyOn"><span>Chiave Google Libri</span></label>
+    <label class="field"><span>Il tuo nome</span><input type="text" id="svcSendName" maxlength="30" autocomplete="given-name" autocapitalize="words" placeholder="es. Piero"></label>
+    <div class="svc-warn">
+      <p><b>Mandalo solo a persone di fiducia, in un messaggio privato.</b> Chi ha il link usa la tua quota: Google 1.000 ricerche al giorno, Cloudflare 100.000, divise tra chi le usa. Non costa nulla, ma se finisce la quota le ricerche rallentano per tutti fino al giorno dopo.</p>
+      <p>Consigliato: in Google Cloud › Credenziali limita la chiave alla sola «Books API» e al sito https://piero907.github.io/*. Il worker risponde già solo a Next Libris.</p>
+    </div>
+    <div class="row-btns">
+      <button class="btn primary" type="submit">Manda</button>
+      <button class="btn" type="button" id="svcCopy">Copia</button>
+      <button class="btn" type="button" id="svcClose">Annulla</button>
+    </div>
+  </form>
+</div>
+
+<div class="sheet" id="svcInSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="svcInH">
+    <h2 id="svcInH"></h2>
+    <ul class="svc-in" id="svcInList"></ul>
+    <p class="msg">Servono a rendere la ricerca dei libri più completa. Usali solo se ti fidi di chi te li manda.</p>
+    <div class="row-btns">
+      <button class="btn primary" type="button" id="svcInUse">Usali</button>
+      <button class="btn" type="button" id="svcInLater">Mettili tra i salvati</button>
+      <button class="btn" type="button" id="svcInNo">No, grazie</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="copySheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="copyH">
     <h2 id="copyH">Copia l'elenco</h2>
@@ -342,6 +374,10 @@
       <label class="field"><span>Il tuo nome</span>
         <input type="text" id="optName" maxlength="30" autocomplete="given-name" autocapitalize="words" placeholder="es. Piero"></label>
       <p class="hint">Compare quando condividi un libro o una lista: «I preferiti di Piero», «Piero ti consiglia un libro». Per un libro apri la sua scheda e tocca «Condividi»; per una lista usa «Condividi la lista» sopra l'elenco, oppure Esporta.</p>
+      <h3 class="opt-h3">Chiave Google e worker</h3>
+      <p class="hint">Puoi mandarli a un familiare o a un amico che usa Next Libris: la sua ricerca diventa completa come la tua.</p>
+      <button class="btn" id="svcShareBtn" type="button">Condividi chiave e worker</button>
+      <p class="hint" id="svcShareNone" hidden>Non ne hai ancora: si impostano in Opzioni › Ricerca dei libri.</p>
       <h3 class="opt-h3">Fai conoscere l'app</h3>
       <p class="share-lead">Fai inquadrare il codice con la fotocamera del telefono, oppure manda il link.</p>
       <figure class="qr-box">
