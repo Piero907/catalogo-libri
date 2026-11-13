@@ -625,7 +625,8 @@
     { k: 'sh', h: 'Scaffale', w: 16, opt: true }, { k: 'gen', h: 'Genere', w: 16, opt: true }, { k: 'pg', h: 'Pagine', w: 8, type: 'n', opt: true },
     { k: 'n', h: 'Note', w: 36, opt: true }, { k: 'p', h: 'Prestato a', w: 16, opt: true }, { k: 'pd', h: 'Data prestito', w: 13, opt: true },
     { k: 'rs', h: 'Lettura', w: 12, opt: true }, { k: 'rt', h: 'Voto', w: 7, type: 'n', opt: true }, { k: 'rd', h: 'Data lettura', w: 13, opt: true },
-    { k: 'xs', h: 'Non più in libreria', w: 18, opt: true }, { k: 'xa', h: 'Dato a', w: 16, opt: true }, { k: 'xd', h: 'In data', w: 13, opt: true }
+    { k: 'xs', h: 'Non più in libreria', w: 18, opt: true }, { k: 'xa', h: 'Dato a', w: 16, opt: true }, { k: 'xd', h: 'In data', w: 13, opt: true },
+    { k: 'fav', h: 'Preferito', w: 10, opt: true }, { k: 'fr', h: 'Ricevuto da', w: 16, opt: true }
   ];
   var READ_LABEL = { da: 'Da leggere', in: 'In lettura', ok: 'Letto' };
   var GONE_LABEL = { v: 'Venduto', r: 'Regalato', s: 'Smarrito' };
@@ -640,6 +641,7 @@
     if (c.k === 'rs') return READ_LABEL[v] || '';
     if (c.k === 'xs') return GONE_LABEL[v] || '';
     if (c.k === 'rt') return v ? String(v) : '';
+    if (c.k === 'fav') return v ? 'Sì' : '';
     return v == null ? '' : String(v);
   }
   function rowsFor(books) {
@@ -810,6 +812,63 @@
     });
     return out;
   }
+  /* ---------- condivisione di un libro o di una lista ----------
+     Pacchetto compatto: { v:1, n: nome di chi invia, k: tipo (book, fav, wish, list), h: nome della lista, b: [[titolo, autore, isbn, editore, anno], ...] }.
+     Viaggia dentro un link (#l=...) o in un file. Solo dati del libro: niente note, prezzi, voti, prestiti, scaffali. */
+  var SHARE_MAX = 300;
+  function shareClean(x, max) { return str(x).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }
+  function buildShare(books, meta) {
+    meta = meta || {};
+    var rows = (books || []).filter(function (b) { return b && (b.t || toIsbn13(b.i)); }).slice(0, SHARE_MAX).map(function (b) {
+      var r = [shareClean(b.t, 200), shareClean(b.a, 120), toIsbn13(b.i) || '', shareClean(b.e, 80), shareClean(b.y, 4)];
+      while (r.length > 1 && !r[r.length - 1]) r.pop();
+      return r;
+    });
+    var kind = ['book', 'fav', 'wish', 'list'].indexOf(meta.kind) >= 0 ? meta.kind : 'list';
+    var o = { v: 1, k: kind, b: rows };
+    if (shareClean(meta.name, 30)) o.n = shareClean(meta.name, 30);
+    if (kind === 'list' && shareClean(meta.title, 40)) o.h = shareClean(meta.title, 40);
+    return o;
+  }
+  /* Controlla e ripulisce un pacchetto ricevuto (dati non fidati). Restituisce { name, kind, title, books:[{t,a,i,e,y}] } o null. */
+  function parseShare(o) {
+    if (!o || typeof o !== 'object' || o.v !== 1 || !Array.isArray(o.b)) return null;
+    var books = o.b.slice(0, SHARE_MAX).map(function (r) {
+      if (!Array.isArray(r)) return null;
+      var b = { t: shareClean(r[0], 200), a: shareClean(r[1], 120), i: toIsbn13(shareClean(r[2], 20)) || '', e: shareClean(r[3], 80), y: shareClean(r[4], 12).replace(/\D/g, '').slice(0, 4) };
+      return b.t || b.i ? b : null;
+    }).filter(Boolean);
+    if (!books.length) return null;
+    var kind = ['book', 'fav', 'wish', 'list'].indexOf(o.k) >= 0 ? o.k : 'list';
+    if (kind === 'book' && books.length > 1) kind = 'list';
+    return { name: shareClean(o.n, 30), kind: kind, title: kind === 'list' ? shareClean(o.h, 40) : '', books: books };
+  }
+  function diChi(n) { return 'di ' + n; }
+  /* Titolo che vede chi riceve: «I preferiti di Piero», «Piero ti consiglia un libro», «Gialli · lista di Piero»... */
+  function shareHeading(sh) {
+    var n = sh.name, k = sh.kind, c = sh.books.length;
+    if (k === 'book') return n ? n + ' ti consiglia un libro' : 'Un libro consigliato';
+    if (k === 'fav') return n ? 'I preferiti ' + diChi(n) : 'Una lista di libri preferiti';
+    if (k === 'wish') return n ? 'I desideri ' + diChi(n) : 'Una lista dei desideri';
+    if (sh.title) return '«' + sh.title + '»' + (n ? ' · lista ' + diChi(n) : '');
+    return n ? (c === 1 ? 'Un libro da ' + n : 'Una lista ' + diChi(n)) : (c === 1 ? 'Un libro per te' : 'Una lista di libri');
+  }
+  /* Etichetta breve salvata sul libro importato: da quale lista arriva */
+  function shareLabel(sh) {
+    if (sh.kind === 'fav') return 'Preferiti';
+    if (sh.kind === 'wish') return 'Desideri';
+    return sh.kind === 'list' ? sh.title : '';
+  }
+  /* Testo leggibile del messaggio (anche per chi non ha l'app); il link si aggiunge dopo */
+  function shareText(sh, maxLines) {
+    maxLines = maxLines || 25;
+    function line(b) { var ed = [b.e, b.y].filter(Boolean).join(', '); return (b.t ? '«' + b.t + '»' : 'ISBN ' + b.i) + (b.a ? ' di ' + b.a : '') + (ed ? ' (' + ed + ')' : ''); }
+    var bs = sh.books, head = shareHeading(sh);
+    if (sh.kind === 'book' || bs.length === 1) return head + ':\n' + line(bs[0]) + (bs[0].i && bs[0].t ? '\nISBN ' + bs[0].i : '');
+    var shown = bs.slice(0, maxLines).map(function (b) { return '• ' + line(b); });
+    return head + ' (' + bs.length + ' libri):\n' + shown.join('\n') + (bs.length > maxLines ? '\n… e altri ' + (bs.length - maxLines) : '');
+  }
+
   var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd'];
   /* Tiene il libro piu' completo (a parita', il piu' vecchio) e lo riempie con i dati degli altri; le note si sommano. */
   function mergeBooks(group) {
@@ -879,7 +938,7 @@
     toIsbn13: toIsbn13, fmtIsbn: fmtIsbn, extractIsbns: extractIsbns, ocrIsbns: ocrIsbns, parseIsbnList: parseIsbnList,
     parseGoogle: parseGoogle, parseOpenLibrary: parseOpenLibrary, lookupIsbn: lookupIsbn, parseCrossref: parseCrossref, isbnPrefix: isbnPrefix, guessPublisher: guessPublisher, diagnose: diagnose, openLibrarySearch: openLibrarySearch, searchText: searchText,
     tokens: tokens, fuzzyHas: fuzzyHas, splitTitleAuthor: splitTitleAuthor, ocrLines: ocrLines, goodLines: goodLines, topLines: topLines, buildQueries: buildQueries,
-    scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice, findPrice: findPrice,
+    scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice, findPrice: findPrice, buildShare: buildShare, parseShare: parseShare, shareHeading: shareHeading, shareLabel: shareLabel, shareText: shareText, SHARE_MAX: SHARE_MAX,
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
     computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,

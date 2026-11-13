@@ -423,11 +423,29 @@ codice. Nota: il servizio JSON di SBN non e' un'API ufficiale documentata
 e potrebbe cambiare; se smette di rispondere, l'app continua con Google e
 Open Library.
 
-DESIDERI DA CONDIVIDERE
------------------------
-Nella scheda Desideri, "Condividi la lista" manda a WhatsApp, SMS o email
-l'elenco con titolo, autore, editore, prezzo, ISBN e totale (utile per i
-regali). Se il telefono non condivide, la lista viene copiata.
+PREFERITI E CONDIVISIONE CON GLI AMICI
+--------------------------------------
+- Preferiti: nella scheda aperta di un libro della Libreria tocca
+  "Preferito". Li ritrovi in Filtri > Preferiti.
+- Il tuo nome: te lo chiede il benvenuto alla prima apertura, oppure la
+  prima volta che condividi; si cambia in Opzioni > Condivisione. Chi
+  riceve vede "I preferiti di Piero", "Piero ti consiglia un libro".
+- Un libro: scheda aperta > "Condividi" (in fondo).
+- Una lista: "Condividi la lista" sopra l'elenco compare nei Desideri e
+  ogni volta che c'e' un filtro o una ricerca (preferiti, un genere, un
+  autore...); oppure Esporta > "Condividi questi libri con un amico".
+  Alle liste per genere, autore ecc. puoi dare un nome.
+- Cosa parte: titolo, autore, casa editrice, anno, ISBN. Note, prezzi,
+  voti, prestiti e scaffali NON vengono mandati.
+- Come arriva: un messaggio con l'elenco leggibile e un link. Chi ha Next
+  Libris tocca il link: vede l'elenco, toglie la spunta a quello che non
+  vuole (quelli che ha gia' sono segnati) e sceglie Desideri o Libreria.
+  Chi non ha l'app legge l'elenco, e dal link puo' installarla.
+- Liste molto lunghe (oltre un centinaio di libri) partono come file
+  allegato: chi lo riceve lo apre da Esporta > "Ripristina da backup o
+  apri una lista ricevuta". Al massimo 300 libri per volta.
+- Provenienza: i libri ricevuti hanno l'etichetta "Da Piero". In Filtri
+  compare "Ricevuti da" con i nomi. E' anche nell'Excel.
 
 SISTEMARE L'ELENCO (Opzioni > Sistema l'elenco)
 -----------------------------------------------
