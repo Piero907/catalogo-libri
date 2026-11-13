@@ -2,9 +2,7 @@ NEXT LIBRIS - la tua libreria, e il prossimo libro
 ==================================================
 (prima si chiamava "Catalogo libri": l'indirizzo del sito e i dati sul
 telefono restano gli stessi)
-L'icona: tre libri su uno scaffale, l'ultimo inclinato (il prossimo), in
-ottone su blu inchiostro dentro la cornice di un ex libris (icons/icona.svg).
-Se il telefono mostra ancora la vecchia icona o il vecchio nome, togli l'app
+Se il telefono mostra ancora il vecchio nome, togli l'app
 dalla schermata Home e installala di nuovo da Chrome: i libri restano.
 
 Questa cartella contiene un sito-app (PWA). Non serve installare nulla sul
@@ -135,8 +133,8 @@ ASPETTO: TEMA, COLORI E CARATTERI
 ---------------------------------
 Opzioni > Aspetto (o l'ingranaggio in alto a destra > Aspetto):
 - Tema: Automatico (segue il telefono), Chiaro o Scuro.
-- Colori: Inchiostro (blu), Bordeaux (rosso vino) o Bosco (verde
-  bottiglia), ognuno con la sua versione scura.
+- Colori: Bosco (verde, predefinito), Inchiostro (blu) o Bordeaux (rosso
+  vino), ognuno con la sua versione scura.
 - Carattere dei titoli: Literata (predefinito), EB Garamond, Playfair
   Display, Lora, Merriweather, Montserrat, Roboto.
 - Carattere del testo: IBM Plex Sans (predefinito), Roboto, Lato,

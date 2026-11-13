@@ -76,10 +76,10 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 34, date: '2026-11-13', note: 'nuovo nome, Next Libris, e nuova icona con i libri sullo scaffale.' };
+var APP_VERSION = { v: 35, date: '2026-11-13', note: 'il verde (Bosco) torna la palette principale, con l\'icona verde di prima; Inchiostro e Bordeaux restano a scelta.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'bosco', ft: 'literata', fb: 'plex' };
 var PALS = { inchiostro: ['#EDF0F5', '#10141D'], bordeaux: ['#F2EFEE', '#161112'], bosco: ['#EEF1EE', '#0F1513'] };
 var FONTS_T = ['literata', 'garamond', 'playfair', 'lora', 'merriweather', 'montserrat', 'roboto'], FONTS_B = ['plex', 'roboto', 'lato', 'atkinson', 'lora'];
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
@@ -192,7 +192,8 @@ function loadAll() {
     settings.pubFix = s.pubFix === true;
     settings.look = 'nuovo';                       // lo stile «Classico» non c'e' piu': resta solo il nuovo, con palette e caratteri
     settings.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
-    settings.pal = PALS[s.pal] ? s.pal : 'inchiostro';
+    settings.pal = s.palV2 && PALS[s.pal] ? s.pal : 'bosco';   // da questa versione il verde (Bosco) e' la palette principale
+    settings.palV2 = true;
     settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
     settings.fb = FONTS_B.indexOf(s.fb) >= 0 ? s.fb : 'plex';
   } catch (e) {}
@@ -2042,7 +2043,7 @@ document.addEventListener('change', function (e) {
 });
 $('#lookReset').addEventListener('click', function () {
   var before = { pal: settings.pal, ft: settings.ft, fb: settings.fb };
-  settings.pal = 'inchiostro'; settings.ft = 'literata'; settings.fb = 'plex'; saveSettings(); applyLook(false);
+  settings.pal = 'bosco'; settings.ft = 'literata'; settings.fb = 'plex'; saveSettings(); applyLook(false);
   toast('Colori e caratteri predefiniti.', { label: 'Annulla', fn: function () { Object.assign(settings, before); saveSettings(); applyLook(false); } });
 });
 
@@ -2998,6 +2999,7 @@ window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeou
 
 /* ---------- avvio ---------- */
 loadAll();
+saveSettings();                                  // salva subito eventuali scelte aggiornate (es. palette predefinita)
 $('#gbKey').value = settings.gbKey;
 $('#sbnUrl').value = settings.sbnUrl;
 $('#optPrice').checked = settings.price;

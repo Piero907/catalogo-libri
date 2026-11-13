@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');if(s0.theme==='light'||s0.theme==='dark')document.documentElement.setAttribute('data-theme',s0.theme);if(s0.pal)document.documentElement.setAttribute('data-pal',s0.pal);if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');}</script>
+<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');if(s0.theme==='light'||s0.theme==='dark')document.documentElement.setAttribute('data-theme',s0.theme);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');}</script>
 <link rel="preload" href="vendor/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -159,9 +159,9 @@
         <fieldset class="choice">
           <legend>Colori</legend>
           <div class="pal-row">
+            <label class="pal"><input type="radio" name="pal" value="bosco"><span class="sw sw-bos" aria-hidden="true"><i></i><i></i><i></i></span><b>Bosco</b><small>Verde (predefinito)</small></label>
             <label class="pal"><input type="radio" name="pal" value="inchiostro"><span class="sw sw-ink" aria-hidden="true"><i></i><i></i><i></i></span><b>Inchiostro</b><small>Blu</small></label>
             <label class="pal"><input type="radio" name="pal" value="bordeaux"><span class="sw sw-bor" aria-hidden="true"><i></i><i></i><i></i></span><b>Bordeaux</b><small>Rosso vino</small></label>
-            <label class="pal"><input type="radio" name="pal" value="bosco"><span class="sw sw-bos" aria-hidden="true"><i></i><i></i><i></i></span><b>Bosco</b><small>Verde bottiglia</small></label>
           </div>
         </fieldset>
         <fieldset class="choice">
