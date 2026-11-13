@@ -86,6 +86,15 @@ personale il passo 2 e' piu' semplice e da' lo stesso risultato.
 
 COME SI USA
 -----------
+- Scheda aperta: in alto a sinistra i pulsanti con la scritta ("Presta",
+  che mostra anche lo stato: Prestato, Venduto, Regalato, Smarrito; e
+  "Desideri" o "Libreria" per spostare il libro), a destra la x (elimina)
+  e la freccetta (chiude). Sotto, le etichette del libro. In fondo
+  "Prezzo da foto" e "Prezzo dal web" se il prezzo manca.
+- Libro senza copertina: il riquadro "Copertina" accanto al titolo prima
+  la cerca online (stesso ISBN su Open Library e Google Libri; altrimenti
+  una copertina di un'altra edizione, da controllare: "Non e' questa" la
+  toglie). Se non la trova apre la fotocamera per fotografarla.
 - Scansiona: inquadra il codice a barre sul retro del libro. Ogni libro
   riconosciuto viene aggiunto e il telefono fa un "bip"; poi passi al
   successivo senza toccare nulla. Titolo, autore, editore e anno arrivano

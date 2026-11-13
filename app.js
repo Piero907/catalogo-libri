@@ -17,6 +17,7 @@ var ICON = {
   key: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   redo: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  pricetag: '<path d="M3.5 12V5a1.5 1.5 0 0 1 1.5-1.5h7l8.5 8.5a1.5 1.5 0 0 1 0 2.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.5"/>',
   grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
   filt: '<path d="M4 6h16M7 12h10M10 18h4"/>',
@@ -76,7 +77,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 40, date: '2026-11-13', note: 'Tema chiaro predefinito, nuovo benvenuto alla prima apertura, worker e chiave anche nel backup' };
+var APP_VERSION = { v: 41, date: '2026-11-13', note: 'Copertina mancante: prima la cerco online; pulsanti della scheda con icona e scritta' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1270,7 +1271,9 @@ function rowHTML(b, dups, ex) {
   else if (st === 'error') status = '<div class="status err" role="alert"><span class="txt">' + esc(s.err || 'Operazione non riuscita.') + '</span>' + (s.retry ? '<button class="btn" data-act="retry">Riprova</button>' : '') + '</div>';
 
   var thumb = canShoot
-    ? '<button class="thumb add" data-act="coverphoto" title="Fotografa la copertina" aria-label="Fotografa la copertina">' + icon('cam') + '</button>'
+    ? (covSearching[b.id]
+      ? '<span class="thumb add busy" role="status" title="Cerco la copertina…"><span class="spin" aria-hidden="true"></span><span class="tl">Cerco…</span></span>'
+      : '<button class="thumb add" data-act="coverphoto" title="Cerca la copertina online; se non c\'è, la fotografi">' + icon('cam') + '<span class="tl">Copertina</span></button>')
     : '<div class="thumb' + (hasThumb ? '' : ' empty') + (imgSrc && !ex ? ' zoom" data-act="zoom" role="button" tabindex="0" title="Ingrandisci la copertina' : '') + '">' + (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="" referrerpolicy="no-referrer">' : '') + '</div>';
   var body;
   if (fresh) {
@@ -1284,19 +1287,23 @@ function rowHTML(b, dups, ex) {
     if (openCard) cls += ' open has-top';
     /* azioni principali: in alto accanto alla freccetta (scheda aperta), in fondo nelle schede sempre aperte */
     var stateOn = !!(b.p || b.xs);
+    /* azioni con icona e scritta, tutte nello stesso stile; la × (elimina) e la freccetta (chiudi) restano solo icona */
+    function act(a, ic, label, title, cls) { return '<button class="ico act' + (cls || '') + '" data-act="' + a + '" title="' + esc(title) + '" aria-label="' + esc(title) + '">' + icon(ic) + '<span class="al" aria-hidden="true">' + esc(label) + '</span></button>'; }
+    var stateLabel = b.xs ? (L.GONE_LABEL[b.xs] || 'Non più qui') : b.p ? 'Prestato' : 'Presta';
     var loanBtn = (!busy && !b.w && hasData(b) && (openCard || !stateOn))
-      ? '<button class="ico' + (stateOn ? ' on' : '') + '" data-act="loan" title="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Prestato, venduto, regalato o smarrito') + '" aria-label="' + esc(stateOn ? (b.xs ? goneText(b) : loanText(b)) + ', cambia' : 'Prestato, venduto, regalato o smarrito') + '">' + icon('loan') + '</button>' : '';
-    var delBtn = '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina">' + icon('x') + '</button>';
+      ? act('loan', 'loan', stateLabel, stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Segna il libro come prestato, venduto, regalato o smarrito', stateOn ? ' on' : '') : '';
+    var delBtn = '<button class="ico danger" data-act="del" aria-label="Elimina il libro" title="Elimina il libro">' + icon('x') + '</button>';
     var moveBtn = !busy && hasData(b) ? (b.w
-      ? '<button class="ico move" data-act="tolib" title="Sposta in Libreria (l\'ho comprato)" aria-label="Sposta in Libreria">' + icon('tolib') + '</button>'
-      : '<button class="ico move" data-act="towish" title="Sposta nei Desideri" aria-label="Sposta nei Desideri">' + icon('towish') + '</button>') : '';
-    var moreActs = (canLookup ? '<button class="ico" data-act="lookup" title="Cerca di nuovo nelle banche dati" aria-label="Cerca di nuovo">' + icon('redo') + '</button>' : '') +
-        (canLookup && b.nf ? '<button class="ico" data-act="web" title="Cerca questo codice sul web" aria-label="Cerca questo codice sul web">' + icon('search') + '</button>' : '') +
-        (!busy && b.c == null && hasData(b) ? '<button class="ico" data-act="pricephoto" title="Leggi il prezzo di copertina da una foto del retro" aria-label="Leggi il prezzo da una foto">' + icon('cam') + '</button>' : '') +
-        (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? '<button class="ico" data-act="priceweb" title="Cerca il prezzo sul web" aria-label="Cerca il prezzo sul web">' + icon('euro') + '</button>' : '') +
+      ? act('tolib', 'tolib', 'Libreria', 'Sposta in Libreria (l\'ho comprato)', ' move')
+      : act('towish', 'towish', 'Desideri', 'Sposta nei Desideri', ' move')) : '';
+    var moreActs = (canLookup ? act('lookup', 'redo', 'Cerca di nuovo', 'Cerca di nuovo nelle banche dati') : '') +
+        (canLookup && b.nf ? act('web', 'search', 'Cerca sul web', 'Cerca questo codice sul web') : '') +
+        (!busy && b.c == null && hasData(b) ? act('pricephoto', 'pricetag', 'Prezzo da foto', 'Leggi il prezzo di copertina da una foto del retro') : '') +
+        (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? act('priceweb', 'euro', 'Prezzo dal web', 'Cerca il prezzo sul web') : '') +
         '';
-    body = (openCard ? '<div class="card-top"><span class="flags">' + flagsHTML(b, dups) + '</span><span class="top-acts">' + delBtn + moveBtn + loanBtn +
-        '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi">' + icon('chev') + '</button></span></div>' : '') +
+    body = (openCard ? '<div class="card-top"><span class="top-acts"><span class="acts-main">' + loanBtn + moveBtn + '</span><span class="acts-win">' + delBtn +
+        '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi la scheda">' + icon('chev') + '</button></span></span>' +
+        '<span class="flags">' + flagsHTML(b, dups) + '</span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80) + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80) +
@@ -1887,6 +1894,97 @@ function probeCover(id) {
     return false;
   })();
   return probing[id].then(function (ok) { delete probing[id]; if (!ok) noBig[id] = true; return ok; });
+}
+/* ---------- libro senza copertina: prima di aprire la fotocamera la cerco online ----------
+   1) stessa edizione (stesso ISBN): Open Library e Google Libri;
+   2) altrimenti la copertina di un'altra edizione: Open Library (opera dell'ISBN) e Google Libri per titolo e autore.
+   Tutto entro pochi secondi: Chrome lascia aprire la fotocamera solo poco dopo il tocco. */
+var covSearching = {}, covNone = {};
+function testImg(u, minW, ms) {
+  return new Promise(function (res) {
+    var im = new Image(), t = setTimeout(function () { im.onload = im.onerror = null; res(0); }, ms || 3000);
+    im.referrerPolicy = 'no-referrer';
+    im.onload = function () { clearTimeout(t); var w = im.naturalWidth, r = im.naturalHeight / Math.max(1, w); res(w >= (minW || 80) && r > 1.05 && r < 2.1 ? w : 0); };
+    im.onerror = function () { clearTimeout(t); res(0); };
+    im.src = u;
+  });
+}
+function tkey(s) { return L.norm(s).replace(/[^a-z0-9]+/g, ' ').trim(); }
+function gThumb(v) { var l = v && v.imageLinks; var u = l && (l.thumbnail || l.smallThumbnail); return u ? String(u).replace(/^http:\/\//i, 'https://').replace(/&edge=curl/g, '') : ''; }
+async function findCover(b, budget) {
+  var deadline = Date.now() + (budget || 3500);
+  function left() { return Math.max(300, deadline - Date.now()); }
+  var isbn = L.toIsbn13(b.i), i10 = isbn ? L.isbn13to10(isbn) : '', useG = googleLeft(false);
+  function gq(q, n) {
+    return L.getJson(apiFetch, 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(q) + '&maxResults=' + n +
+      '&fields=items(volumeInfo(title,authors,language,publisher,industryIdentifiers,imageLinks))' + (settings.gbKey ? '&key=' + encodeURIComponent(settings.gbKey) : ''), { waits: [], timeout: left() });
+  }
+  async function img(u, rank, alt, minW) { var w = u ? await testImg(u, minW || 80, left()) : 0; return w ? { url: u, big: w >= 250, alt: alt, rank: rank } : null; }
+  function safe(p) { return p.then(function (x) { return x; }, function () { return null; }); }
+  var jobs = [];
+  if (isbn) {
+    [isbn, i10].filter(Boolean).forEach(function (x) { jobs.push(safe(img('https://covers.openlibrary.org/b/isbn/' + x + '-L.jpg?default=false', 1, false))); });
+    if (useG) jobs.push(safe(gq('isbn:' + isbn, 3).then(function (j) {
+      var v = ((j && j.items) || []).map(function (it) { return it.volumeInfo; }).filter(function (v) { return gThumb(v); })[0];
+      return v ? img(gThumb(v), 2, false, 60) : null;
+    })));
+    jobs.push(safe(L.getJson(fetch, 'https://openlibrary.org/search.json?q=' + encodeURIComponent('isbn:' + isbn) + '&fields=cover_i&limit=1', { waits: [], timeout: left() }).then(function (j) {
+      var c = j && j.docs && j.docs[0] && j.docs[0].cover_i;
+      return c ? img('https://covers.openlibrary.org/b/id/' + c + '-L.jpg', 3, true) : null;
+    })));
+  }
+  var tk = tkey(b.t), sur = tkey(String(b.a || '').split(/[,;]| e /)[0]).split(' ').pop() || '';
+  if (useG && tk.length >= 3) jobs.push(safe(gq('intitle:"' + b.t + '"' + (sur ? ' inauthor:' + sur : ''), 10).then(function (j) {
+    var ok = ((j && j.items) || []).map(function (it) { return it.volumeInfo || {}; }).filter(function (v) {
+      var vt = tkey(v.title);
+      if (!gThumb(v) || !vt || !(vt.indexOf(tk) === 0 || tk.indexOf(vt) === 0)) return false;
+      return !sur || (v.authors || []).some(function (a) { return tkey(a).indexOf(sur) >= 0; });
+    });
+    var same = ok.filter(function (v) { return isbn && (v.industryIdentifiers || []).some(function (x) { return L.toIsbn13(x.identifier) === isbn; }); })[0];
+    if (same) return img(gThumb(same), 2, false, 60);
+    var pub = tkey(b.e);
+    ok.sort(function (x, y) {
+      function sc(v) { return (v.language === 'it' ? 2 : 0) + (pub && tkey(v.publisher).indexOf(pub) >= 0 ? 1 : 0); }
+      return sc(y) - sc(x);
+    });
+    return ok[0] ? img(gThumb(ok[0]), 4, true, 60) : null;
+  })));
+  // la migliore: stessa edizione prima di un'altra, grande prima di piccola; una grande della stessa edizione chiude subito la ricerca
+  return new Promise(function (res) {
+    var best = null, pending = jobs.length;
+    if (!pending) { res(null); return; }
+    jobs.forEach(function (p) {
+      p.then(function (x) {
+        if (x && (!best || x.rank < best.rank || (x.rank === best.rank && x.big && !best.big))) best = x;
+        if (--pending === 0 || (best && !best.alt && best.big)) res(best);
+      });
+    });
+  });
+}
+function openCoverCamera(id) { coverPhotoId = id; $('#fileCover').click(); }
+async function coverTap(id) {
+  var b = get(id);
+  if (!b || covSearching[id]) return;
+  if (navigator.onLine === false || covNone[id]) { openCoverCamera(id); return; }    // senza rete, o gia' cercata invano: subito la fotocamera
+  covSearching[id] = true; refreshRow(id);
+  var r = null;
+  try { r = await findCover(b, 3500); } catch (e) {}
+  delete covSearching[id];
+  var x = get(id);
+  if (!x) return;
+  if (r && !smallImg(x)) {
+    var before = { img: x.img, imgL: x.imgL, nb: x.nb };
+    x.img = r.url; if (r.big) x.imgL = r.url; x.nb = false;
+    touch(); syncThumbs(); refreshRow(id);
+    if (r.alt) toast('Ho trovato la copertina di un\'altra edizione: controlla che vada bene.', { label: 'Non è questa', fn: function () {
+      var y = get(id); if (y) { Object.assign(y, before); touch(); syncThumbs(); refreshRow(id); } covNone[id] = true; openCoverCamera(id); } });
+    else toast('Copertina trovata.', { label: 'Usa una mia foto', fn: function () { openCoverCamera(id); } });
+    return;
+  }
+  covNone[id] = true; refreshRow(id);
+  var ua = navigator.userActivation;
+  if (ua && ua.isActive) { toast('Nessuna copertina trovata online: fotografala.'); openCoverCamera(id); }
+  else toast('Nessuna copertina trovata online.', { label: 'Fotografala', fn: function () { openCoverCamera(id); } });
 }
 async function improveCovers() {
   var todo = state.books.filter(function (b) { return !b.imgL && !coverURL[b.id] && !b.nb && (b.img || L.toIsbn13(b.i)); });
@@ -2854,7 +2952,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
   else if (act === 'zoom') openCover(id);
-  else if (act === 'coverphoto') { coverPhotoId = id; $('#fileCover').click(); }
+  else if (act === 'coverphoto') coverTap(id);
   else if (act === 'bought') moveToLib(id);
   else if (act === 'pricephoto') { priceId = id; $('#filePrice').click(); }
   else if (act === 'priceweb') {

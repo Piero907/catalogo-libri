@@ -935,3 +935,36 @@ svg.qr path{fill:none;stroke-linecap:butt}
 .welcome .restore-l{margin:0;padding-top:12px;border-top:1px solid var(--line);font-size:14.5px;color:var(--muted)}
 .welcome .restore-l .link{font-size:inherit;padding:4px 0}
 body.welcome-on .tip{display:none}
+
+/* ---- ricerca della copertina dalla miniatura ---- */
+.thumb.add.busy{cursor:progress;border-style:solid;border-color:var(--accent-soft)}
+.thumb .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.thumb .spin{animation-duration:2.4s}}
+
+/* ---- azioni della scheda: icona + scritta, tutte nello stesso stile (× e freccetta solo icona) ---- */
+.ico.act{gap:6px;min-width:0;min-height:40px;padding:0 12px 0 9px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:600;line-height:1.1;white-space:nowrap}
+.ico.act svg,.ico.act.move svg{width:19px;height:19px;flex:none;color:var(--muted)}
+.ico.act:hover{background:var(--surface2);color:var(--ink)}
+.ico.act.move:hover{background:var(--accent-soft);border-color:var(--accent-soft)}
+.ico.act.move:hover svg{color:var(--accent)}
+.ico.act.on{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}
+.ico.act.on svg{color:var(--info)}
+/* in alto: prima riga azioni a sinistra, × e freccetta a destra; sotto le etichette del libro */
+.card-top{flex-wrap:wrap;row-gap:6px;margin:-6px -6px 0 0}
+.card-top .top-acts{flex:1 1 100%;display:flex;align-items:flex-start;gap:8px;min-width:0}
+.acts-main{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:6px;min-width:0;padding-top:2px}
+.acts-win{flex:none;display:flex;align-items:center;gap:2px;margin-left:auto}
+.card-top .flags{flex:1 1 100%;min-height:0;padding-top:0}
+.card-top .flags:empty{display:none}
+.top-acts .danger{margin-right:4px}
+/* in fondo: le azioni sul prezzo e sulla ricerca */
+.foot .tail{gap:6px}
+/* miniatura senza copertina: icona e scritta */
+.thumb.add{gap:3px;align-content:center}
+.thumb.add .tl{font-size:9.5px;font-weight:600;line-height:1;letter-spacing:-.01em;color:inherit}
+@media (min-width:880px){
+  /* schermo largo: la miniatura «Copertina» sta nella riga dei pulsanti, non su una riga tutta sua */
+  body:not(.thumbs) .row.open.has-top .head .thumb.add{grid-row:1;grid-column:1;align-self:start;position:relative;z-index:1}
+  body:not(.thumbs) .row.open.has-top:has(.head .thumb.add) .card-top{grid-row:1;padding-left:62px}
+}
