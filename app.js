@@ -26,12 +26,15 @@ var ICON = {
   loan: '<path d="M5 4h9a2 2 0 0 1 2 2v3M5 4v14a2 2 0 0 0 2 2h7"/><path d="M13 15h8M18 12l3 3-3 3"/>',
   bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
   chev: '<path d="M6 9l6 6 6-6"/>',
-  right: '<path d="M9 5l7 7-7 7"/>'
+  right: '<path d="M9 5l7 7-7 7"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>'
 };
 function icon(n) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
 $('#btnScan').innerHTML = icon('scan') + 'Scansiona';
 $('#icoFilt').innerHTML = icon('filt');
 $('#edgeTab').innerHTML = icon('right');
+$('#photoCam').innerHTML = icon('cam') + 'Scatta una foto';
+$('#photoGal').innerHTML = icon('img') + 'Scegli dalla galleria';
 $('#scanPriceType').innerHTML = icon('key') + 'Scrivi';
 $('#btnPhoto').innerHTML = icon('cam') + 'Foto';
 $('#btnType').innerHTML = icon('key') + 'Digita';
@@ -1251,7 +1254,7 @@ function renderList() {
     list.innerHTML = only && flt === 'loan'
       ? '<p class="none">Nessun libro in prestito. Per prestarne uno apri la sua scheda con la freccetta e tocca il tasto con la freccia verso destra.</p>'
       : only && flt === 'gone' ? '<p class="none">Nessun libro venduto, regalato o smarrito.</p>'
-      : '<p class="none">Nessun libro corrisponde ' + (activeCount() ? 'ai filtri.</p><p><button class="btn" data-act="clearflt">Azzera i filtri</button></p>' : 'alla ricerca.</p>');
+      : '<p class="none">Nessun libro corrisponde ' + (activeCount() ? (q ? 'alla ricerca e ai filtri.' : 'ai filtri.') : 'alla ricerca.') + '</p><p><button class="btn" data-act="clearflt">' + (activeCount() ? (q ? 'Azzera ricerca e filtri' : 'Azzera i filtri') : 'Cancella la ricerca') + '</button></p>';
     return;
   }
   if (settings.view === 'grid') { list.innerHTML = '<div class="grid">' + vis.map(coverHTML).join('') + '</div>'; return; }
@@ -1763,6 +1766,7 @@ function facetName(field, k) { if (k === NONE) return field === 'sh' ? 'senza sc
 function activeCount() { return (flt ? 1 : 0) + (readFlt && tab === 'lib' ? 1 : 0) + (shFlt ? 1 : 0) + (genFlt ? 1 : 0); }
 function clearFilters() {
   flt = ''; readFlt = ''; shFlt = ''; genFlt = '';
+  q = ''; $('#q').value = '';
   renderList(); updateSummary();
   if (drawerOpen) renderDrawer();
 }
@@ -1826,7 +1830,9 @@ function renderDrawer() {
 function updateDrawerFoot() {
   var n = visible().length;
   $('#drawerShow').textContent = n === 1 ? 'Mostra 1 libro' : 'Mostra ' + n + ' libri';
-  $('#drawerReset').disabled = !activeCount();
+  $('#drawerReset').disabled = !activeCount() && !q;
+  $('#drawerQ').hidden = !q;
+  $('#drawerQTxt').textContent = 'Ricerca: «' + q + '»';
 }
 $('#drawerFlt').addEventListener('click', function (e) {
   var x = e.target.closest('[data-g]');
@@ -1889,6 +1895,7 @@ $('#edgeTab').addEventListener('click', function () { openDrawer(); });
 $('#drawerX').addEventListener('click', function () { closeDrawer(); });
 $('#drawerShow').addEventListener('click', function () { closeDrawer(); window.scrollTo({ top: 0 }); });
 $('#drawerReset').addEventListener('click', clearFilters);
+$('#drawerQX').addEventListener('click', function () { q = ''; $('#q').value = ''; renderList(); updateSummary(); renderDrawer(); });
 scrimEl.addEventListener('click', function () { closeDrawer(); });
 window.addEventListener('popstate', function () { if (drawerOpen) { drawerPushed = false; closeDrawer(true); } });
 
@@ -2433,12 +2440,19 @@ bindFile('#filePrice', async function (f) {
   } catch (e) { toast('Non riesco a leggere la foto. Scrivi il prezzo a mano.'); }
 });
 bindFile('#fileCam', function (f) { addPhotos(f, true); });
-bindFile('#fileGal', function (f) { addPhotos(f, false); });
+bindFile('#fileGal', function (f) {
+  var n = Array.prototype.filter.call(f || [], function (x) { return !x.type || x.type.indexOf('image/') === 0; }).length;
+  addPhotos(f, n === 1);                       // una foto sola: chiede anche il prezzo, come dalla fotocamera
+  if (n > 1) toast((n > 60 ? 'Ne ho prese 60 su ' + n : 'Aggiunte ' + n + ' foto') + ': le riconosco una alla volta, intanto puoi continuare.');
+});
 $('#priceShot').addEventListener('click', function () { $('#priceAsk').hidden = true; priceId = askId; askId = null; $('#filePrice').click(); });
 $('#priceSkip').addEventListener('click', function () { $('#priceAsk').hidden = true; askId = null; });
 bindFile('#fileBackup', function (f) { restore(f[0]); });
 $('#btnScan').addEventListener('click', startScan);
-$('#btnPhoto').addEventListener('click', function () { $('#fileCam').click(); });
+$('#btnPhoto').addEventListener('click', function () { $('#photoSheet').hidden = false; });
+$('#photoCam').addEventListener('click', function () { $('#photoSheet').hidden = true; $('#fileCam').click(); });
+$('#photoGal').addEventListener('click', function () { $('#photoSheet').hidden = true; $('#fileGal').click(); });
+$('#photoClose').addEventListener('click', function () { $('#photoSheet').hidden = true; });
 $('#btnType').addEventListener('click', openIsbnSheet);
 $('#btnGallery').addEventListener('click', function () { $('#fileGal').click(); });
 $('#scanClose').addEventListener('click', function () { stopScan(false); });
@@ -2461,7 +2475,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
   if (drawerOpen) { closeDrawer(); return; }
   if (!$('#lightbox').hidden) { closeCover(false); return; }
-  ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet'].forEach(function (k) { $(k).hidden = true; });
+  ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });
 $('#q').addEventListener('input', function (e) { q = e.target.value; renderList(); });

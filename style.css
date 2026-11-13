@@ -506,3 +506,12 @@ html,body{overscroll-behavior-x:none}
 body.drawer-open .edge-tab,body.gridview.drawer-open .edge-tab{visibility:hidden}
 @media (prefers-reduced-motion: reduce){.edge-tab.nudge{animation:none}}
 @media print{.edge-tab{display:none}}
+
+/* ---- ricerca attiva nel pannello ---- */
+.dq{display:flex;align-items:center;gap:4px;margin:12px 0 0;padding:4px 4px 4px 10px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font:600 13.5px/1.25 var(--font-body)}
+.dq span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.dq .ico{min-width:36px;min-height:36px;font-size:20px;color:inherit}
+
+/* il testo del toast non blocca i tocchi sulle finestre sotto: risponde solo il suo pulsante */
+.toast{pointer-events:none}
+.toast button{pointer-events:auto}

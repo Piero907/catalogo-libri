@@ -94,7 +94,10 @@ COME SI USA
     successivo; se ci sono piu' possibilita', alla fine scegli dall'elenco.
   Anche "Ce l'ho gia'?" accetta l'ISBN scritto. La modalita' scelta resta
   finche' non chiudi l'app.
-- Foto: fotografa la copertina (o il codice). L'app legge il testo sul
+- Foto: scegli "Scatta una foto" oppure "Scegli dalla galleria" (dalla
+  galleria anche piu' foto insieme, fino a 60: ogni foto diventa un libro
+  e vengono riconosciute una alla volta mentre continui a usare l'app).
+  Fotografa la copertina (o il codice). L'app legge il testo sul
   telefono, cerca il libro e, se e' certa, lo compila da sola; se ci sono
   piu' possibilita' ti fa scegliere. I dati ricavati dalla copertina hanno
   l'etichetta "Da verificare".
@@ -141,7 +144,8 @@ prestito, venduti/regalati/smarriti, da verificare, copie e doppioni);
 Lettura (da leggere, in lettura, letti, non indicato); Scaffale; Genere.
 Ogni voce ha il numero dei libri. I filtri si sommano (es. "Da leggere" +
 scaffale "Studio"); "Mostra N libri" chiude il pannello, "Azzera" toglie
-tutti i filtri.
+tutti i filtri e svuota anche la ricerca (se c'e' una ricerca, il pannello
+la mostra in alto, con la x per cancellarla).
 Per chiuderlo: trascina verso sinistra, tocca fuori, la X o il gesto
 Indietro del telefono. Con il pannello chiuso, i filtri attivi restano
 visibili sotto la ricerca: tocca la x di uno per toglierlo. Il numerino
