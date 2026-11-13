@@ -110,6 +110,24 @@ COME SI USA
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
 
+FILTRI E ORDINE (pannello laterale)
+-----------------------------------
+Si apre in due modi:
+- trascinando il pollice da destra verso sinistra sull'elenco. Parti dalla
+  meta' destra dello schermo, NON dal bordo: su Android il bordo e' il gesto
+  "Indietro" del telefono;
+- toccando "Filtri" accanto alla ricerca.
+Dentro trovi: Ordina per; Mostra (tutti, in prestito, venduti/regalati/
+smarriti, da verificare, copie e doppioni); Lettura (da leggere, in
+lettura, letti, non indicato); Scaffale; Genere. Ogni voce ha il numero
+dei libri. I filtri si sommano (es. "Da leggere" + scaffale "Studio") e
+l'elenco dietro cambia subito; in fondo "Mostra N libri" chiude il
+pannello, "Azzera" toglie tutti i filtri.
+Per chiuderlo: trascina verso destra, tocca fuori, la X o il gesto
+Indietro del telefono. Con il pannello chiuso, i filtri attivi restano
+visibili sotto la ricerca: tocca la x di uno per toglierlo. Il numerino
+su "Filtri" dice quanti sono attivi.
+
 SCHEDE CHIUSE E APERTE
 ----------------------
 Ogni libro mostra la copertina (o un riquadro con l'iniziale, se manca),
@@ -168,7 +186,7 @@ scegli Prestato, Venduto, Regalato o Smarrito.
   Smarrito: da quando.
 Venduti, regalati e smarriti restano nell'elenco in grigio, con
 l'etichetta (es. "Venduto il 13/11/2026"), ma non contano piu' nel numero
-dei libri ne' nel valore della libreria. La scelta rapida "Venduti,
+dei libri ne' nel valore della libreria. Nel pannello Filtri, "Venduti,
 regalati, smarriti" li mostra da soli; le Statistiche li contano a parte;
 Excel e stampa hanno le colonne in piu'. "Ce l'ho gia'?" risponde "Non ce
 l'hai piu'". Se torna a casa: tocca l'etichetta > "E' tornato in libreria"
@@ -197,7 +215,7 @@ inseriti: Opzioni > "Completa genere, pagine e copertine" (una ricerca per
 libro: con molti libri serve la chiave Google). Lo scaffale lo scrivi tu e
 l'app ti propone quelli gia' usati. La ricerca in alto cerca anche in
 scaffale, genere, note e nome di chi ha il libro; l'elenco si puo' ordinare
-anche per casa editrice, anno e scaffale.
+anche per casa editrice, anno e scaffale (pannello Filtri e ordine).
 
 COPERTINE E STATISTICHE
 -----------------------
@@ -213,8 +231,8 @@ Nella scheda aperta di ogni libro (Libreria) c'e' "Lettura": Da leggere,
 In lettura, Letto (toccalo di nuovo per togliere). I libri nuovi entrano
 in Libreria gia' come "Da leggere" (anche quelli spostati dai Desideri); le stelle da 1 a 5 e,
 per i libri letti, la data (si mette da sola: oggi). Nella riga chiusa
-compaiono "In lettura" o "Letto · ★★★★". Accanto ai filtri c'e' il menu
-"Lettura: tutti / Da leggere / In lettura / Letti / Non indicato"; si puo'
+compaiono "In lettura" o "Letto · ★★★★". Nel pannello Filtri c'e'
+"Lettura: Da leggere / In lettura / Letti / Non indicato"; si puo'
 ordinare per Voto o Letti di recente. Statistiche: letti, pagine lette,
 voto medio, libri letti per anno. Lettura, voto e data finiscono in Excel.
 

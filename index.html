@@ -35,16 +35,7 @@
 
   <section class="tools" aria-label="Strumenti">
     <input id="q" type="search" placeholder="Cerca nell'elenco" aria-label="Cerca nell'elenco" autocomplete="off">
-    <select id="sort" aria-label="Ordina per">
-      <option value="recent">Più recenti</option>
-      <option value="titolo">Titolo A–Z</option>
-      <option value="autore">Autore A–Z</option>
-      <option value="editore">Casa editrice</option>
-      <option value="anno">Anno</option>
-      <option value="scaffale">Scaffale</option>
-      <option value="voto">Voto</option>
-      <option value="letti">Letti di recente</option>
-    </select>
+    <button class="btn filt" id="btnFilters" aria-expanded="false" aria-controls="drawer"><span id="icoFilt" aria-hidden="true"></span>Filtri<span class="badge" id="fltBadge" hidden></span></button>
     <div class="acts">
       <button class="btn sm" id="btnView"></button>
       <button class="btn sm" id="btnCheck"></button>
@@ -55,10 +46,7 @@
   <div class="chips">
     <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
     <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
-    <button class="chip" id="fltGone" aria-pressed="false" hidden>Venduti, regalati, smarriti</button>
-    <select class="chip chip-select" id="fltRead" aria-label="Filtra per lettura" hidden>
-      <option value="">Lettura: tutti</option><option value="da">Da leggere</option><option value="in">In lettura</option><option value="ok">Letti</option><option value="no">Non indicato</option>
-    </select>
+    <span class="active-flt" id="activeFlt"></span>
     <button class="chip share" id="btnShareWish" hidden>Condividi la lista</button>
   </div>
 
@@ -201,6 +189,33 @@
     <p class="hint">Puoi non farti più chiedere il prezzo: Opzioni › «Chiedi il prezzo dopo ogni libro».</p>
   </div>
 </div>
+
+<div class="drawer-scrim" id="drawerScrim" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerH" hidden inert>
+  <div class="drawer-head">
+    <h2 id="drawerH">Filtri e ordine</h2>
+    <button class="ico" id="drawerX" aria-label="Chiudi i filtri">×</button>
+  </div>
+  <div class="drawer-body" id="drawerBody">
+    <h3 id="hSort">Ordina per</h3>
+    <select id="sort" class="dsel" aria-labelledby="hSort">
+      <option value="recent">Più recenti</option>
+      <option value="titolo">Titolo A–Z</option>
+      <option value="autore">Autore A–Z</option>
+      <option value="editore">Casa editrice</option>
+      <option value="anno">Anno</option>
+      <option value="scaffale">Scaffale</option>
+      <option value="voto">Voto</option>
+      <option value="letti">Letti di recente</option>
+    </select>
+    <div id="drawerFlt"></div>
+    <p class="dhint" id="drawerHint" hidden>Puoi aprire questo pannello anche trascinando il pollice da destra verso sinistra sull'elenco.</p>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" id="drawerReset">Azzera</button>
+    <button class="btn primary" id="drawerShow">Mostra</button>
+  </div>
+</aside>
 
 <div class="sheet" id="dupSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="dupH">
