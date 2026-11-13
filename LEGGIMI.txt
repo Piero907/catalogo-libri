@@ -45,7 +45,7 @@ Per aggiornare l'app in futuro: nel repository "Add file" > "Upload files",
 trascina i file nuovi (sostituiscono quelli vecchi con lo stesso nome) e
 "Commit changes". Nessun credito da consumare.
 ATTENZIONE: i libri sono legati all'indirizzo. Prima di cambiare fai il
-backup dall'app vecchia (Esporta o Opzioni > Scarica backup), poi nella
+backup dall'app vecchia (Esporta > Scarica backup), poi nella
 nuova usa "Ripristina da backup". Se l'app vecchia non si apre perche' il
 sito e' fermo, attiva la modalita' aereo e riaprila: parte dalla copia
 salvata sul telefono, e il backup si scarica anche offline.
@@ -114,7 +114,7 @@ COME SI USA
     foto da scattare. Se non ti serve, passa al libro successivo.
   * Se l'hai saltato: sulla scheda del libro il tasto fotocamera legge il
     prezzo da una foto, il tasto € lo cerca sul web.
-  * Non ti interessa il prezzo? Opzioni > togli "Chiedi il prezzo dopo
+  * Non ti interessa il prezzo? Opzioni > Schede e prezzo > togli "Chiedi il prezzo dopo
     ogni libro".
   * Il prezzo letto va controllato: con foto storta o mossa l'app puo' non
     trovarlo (scrivilo a mano) o, raramente, leggere male una cifra.
@@ -124,6 +124,21 @@ COME SI USA
   "Copia per Excel o Fogli Google" e "Scarica CSV". Si esporta la scheda
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
+
+OPZIONI
+-------
+Le Opzioni stanno nel menu laterale, scheda "Opzioni". Ci arrivi toccando
+l'ingranaggio in alto a destra (si apre direttamente li'), oppure aprendo
+il menu (linguetta ">" a sinistra, trascinamento o "Filtri") e toccando
+"Opzioni" in alto. Sono divise in:
+- Ricerca dei libri: chiave Google, catalogo SBN, richieste di oggi,
+  "Prova la ricerca ISBN";
+- Schede e prezzo: schede sempre aperte, campi in piu', chiedi il prezzo;
+- Sistema l'elenco: verifica, case editrici, doppioni, copertine...;
+- Backup ed esportazione: backup, Excel, CSV, PDF;
+- App: installazione.
+Ogni voce apre la sua pagina; "<" torna al menu, la x o il tasto Indietro
+del telefono la chiudono.
 
 FILTRI E ORDINE (pannello laterale a sinistra)
 ----------------------------------------------
@@ -167,7 +182,8 @@ COPERTINE
 - Le banche dati danno copertine piccole. Per ogni libro trovato l'app
   cerca da sola la versione grande ufficiale (Google Libri, poi Open
   Library per ISBN) e la usa nella vista Copertine e nell'ingrandimento.
-  Per i libri gia' inseriti: Opzioni > "Cerca copertine piu' grandi".
+  Per i libri gia' inseriti: Opzioni > Sistema l'elenco > "Cerca copertine piu'
+  grandi".
   Molti libri italiani non hanno una versione grande: in quel caso...
 - ...usa una TUA FOTO: tocca la copertina e poi "Usa una mia foto" (per i
   libri senza copertina c'e' il riquadro tratteggiato con la fotocamera
@@ -178,7 +194,7 @@ COPERTINE
   copertina scaricata, la tua foto diventa la copertina.
 - Con le foto il backup e' piu' pesante (circa 0,1 MB a foto) e richiede un
   attimo per essere preparato quando apri Esporta.
-Preferisci vedere sempre tutto? Opzioni > "Mostra le schede sempre aperte"
+Preferisci vedere sempre tutto? Opzioni > Schede e prezzo > "Mostra le schede sempre aperte"
 (sullo schermo largo torna la vista a tabella).
 
 LIBRERIA E DESIDERI
@@ -241,10 +257,10 @@ ignorato (niente "Gia' in elenco"); un codice diverso e' il libro dopo.
 
 SCAFFALE, GENERE, PAGINE, NOTE
 ------------------------------
-Ogni scheda ha questi campi in piu' (si nascondono in Opzioni). Genere e
+Ogni scheda ha questi campi in piu' (si nascondono in Opzioni > Schede e prezzo). Genere e
 pagine si compilano da soli quando Google Libri o Open Library li conoscono
 (il genere arriva in inglese e lo traduco quando posso). Per i libri gia'
-inseriti: Opzioni > "Completa genere, pagine e copertine" (una ricerca per
+inseriti: Opzioni > Sistema l'elenco > "Completa genere, pagine e copertine" (una ricerca per
 libro: con molti libri serve la chiave Google). Lo scaffale lo scrivi tu e
 l'app ti propone quelli gia' usati. La ricerca in alto cerca anche in
 scaffale, genere, note e nome di chi ha il libro; l'elenco si puo' ordinare
@@ -293,7 +309,7 @@ giorno, ne usi due per libro). Si fa una volta sola, da computer o tablet:
    contenuto del file cloudflare-sbn-worker.js (e' nella cartella
    dell'app e nel repository GitHub). Premi "Deploy".
 4. Copia l'indirizzo del worker, tipo https://sbn-libri.TUONOME.workers.dev
-5. Nell'app: Opzioni > "Catalogo SBN" > incolla l'indirizzo. Poi
+5. Nell'app: Opzioni > Ricerca dei libri > "Catalogo SBN" > incolla l'indirizzo. Poi
    "Prova la ricerca ISBN": deve comparire "✓ Catalogo SBN".
 Prova anche a mano: apri nel browser l'indirizzo con ?isbn=9788806219352
 alla fine; deve comparire un testo con "briefRecords".
@@ -309,8 +325,8 @@ Nella scheda Desideri, "Condividi la lista" manda a WhatsApp, SMS o email
 l'elenco con titolo, autore, editore, prezzo, ISBN e totale (utile per i
 regali). Se il telefono non condivide, la lista viene copiata.
 
-SISTEMARE L'ELENCO (Opzioni)
-----------------------------
+SISTEMARE L'ELENCO (Opzioni > Sistema l'elenco)
+-----------------------------------------------
 - "Segna tutto come verificato": toglie in un colpo l'etichetta "Da
   verificare" da tutti i libri (subito dopo c'e' "Annulla").
 - "Uniforma le case editrici": trova i nomi scritti in modi diversi (es.
@@ -344,7 +360,7 @@ limite diventa tuo e il problema sparisce. Si crea una volta sola:
    dovrebbero esserci addebiti, ma controlla le condizioni mostrate.
 3. Vai in https://console.cloud.google.com/apis/credentials > "Crea
    credenziali" > "Chiave API" e copia la chiave.
-4. Nell'app: Opzioni > "Chiave Google Libri" e incollala.
+4. Nell'app: Opzioni > Ricerca dei libri > "Chiave Google Libri" e incollala.
 Poi premi "Riprova" sui libri in errore (o il pulsante "Completa n libri").
 
 DOVE CERCA L'APP I LIBRI E IN CHE ORDINE
@@ -371,7 +387,7 @@ LIMITI GIORNALIERI (Google Libri e Cloudflare)
   se cerchi la copertina grande: per 200 libri circa 400 ricerche in tutto.
 - Cloudflare (catalogo SBN), piano gratuito: 100.000 richieste al giorno;
   1 per libro, e le risposte restano in memoria un giorno.
-- Opzioni mostra quante ricerche hai fatto oggi. Arrivata a 950, l'app
+- Opzioni > Ricerca dei libri mostra quante ricerche hai fatto oggi. Arrivata a 950, l'app
   smette di chiamare Google fino al giorno dopo (i libri restano "in
   attesa" e usano le altre banche dati); le copertine grandi si fermano gia'
   a 700, per lasciare posto ai libri nuovi.
@@ -395,7 +411,8 @@ condividono le prime cifre (per esempio 978-88-502-... = TEA).
   verificare". Se viene dalla tabella generica, o i tuoi libri con quel
   codice hanno editori diversi (es. "Mondadori" e "Oscar Mondadori"),
   resta segnato "Da verificare". Funziona solo per ISBN italiani.
-- Su un elenco gia' fatto: Opzioni > "Deduci le case editrici mancanti"
+- Su un elenco gia' fatto: Opzioni > Sistema l'elenco > "Deduci le case
+  editrici mancanti"
   (c'e' "Annulla" subito dopo).
 Se le fonti dicono "non trovato" la scheda resta con l'ISBN: tocca la lente
 per cercarlo sul web e scrivi i dati a mano (o rifai una Foto).
@@ -408,7 +425,7 @@ SE L'APP NON SI INSTALLA DA CHROME
   Gmail o altre app: copia l'indirizzo e incollalo in Chrome.
 - Su Android: Menu (tre puntini) > "Installa app". Se vedi solo "Aggiungi a
   schermata Home" e non "Installa app", Chrome non la ritiene installabile.
-- Opzioni > "Perche' non si installa?" controlla da solo https, Chrome,
+- Opzioni > App > "Perche' non si installa?" controlla da solo https, Chrome,
   funzionamento offline e scheda dell'app, e dice cosa manca.
 - Se "Perche' non si installa?" dice "errore 401" sulla scheda dell'app: il
   sito su Netlify e' protetto (password o accesso riservato) e Chrome, e

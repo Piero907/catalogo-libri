@@ -21,6 +21,7 @@
       <p class="summary" id="summary" aria-live="polite"></p>
     </div>
     <div class="sync" id="sync" role="status"><span class="dot"></span><span id="syncTxt">Salvato su questo telefono</span></div>
+    <button class="ico gear" id="btnOpts" aria-label="Opzioni" title="Opzioni"></button>
   </header>
 
   <div class="notice" id="notice" hidden><span id="noticeTxt"></span><button id="noticeBtn" hidden></button><button class="x" id="noticeX" aria-label="Chiudi l'avviso">×</button></div>
@@ -50,65 +51,6 @@
     <button class="chip share" id="btnShareWish" hidden>Condividi la lista</button>
   </div>
 
-  <details class="opts">
-    <summary>Opzioni</summary>
-    <div class="opts-body">
-      <div class="opts-row">
-        <button class="btn" id="btnGallery">Scegli foto dalla galleria</button>
-        <button class="btn" id="btnInstall" hidden>Installa l'app</button>
-      </div>
-      <p class="hint quota" id="quotaInfo"></p>
-      <label class="field">
-        <span>Catalogo SBN (facoltativo)</span>
-        <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://sbn-libri.tuonome.workers.dev">
-        <p class="hint">Il catalogo delle biblioteche italiane ha i dati più precisi su editore, anno e pagine. Serve un piccolo intermediario gratuito su Cloudflare: le istruzioni sono nel LEGGIMI, sezione «Catalogo SBN».</p>
-      </label>
-      <label class="field">
-        <span>Chiave Google Libri (facoltativa)</span>
-        <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla qui la chiave, se Google limita le ricerche">
-        <p class="hint">Serve se compare «limite di richieste». È gratis e si crea una volta sola:</p>
-        <ol class="hint keysteps">
-          <li>Apri <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> con il tuo account Google e crea un progetto.</li>
-          <li>Apri <a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Books API</a> e premi «Abilita».</li>
-          <li>Vai in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credenziali</a> › «Crea credenziali» › «Chiave API».</li>
-          <li>Copia la chiave e incollala qui sopra.</li>
-        </ol>
-      </label>
-      <label class="check">
-        <input type="checkbox" id="optOpenAll">
-        <span>Mostra le schede sempre aperte<small>Di solito ogni libro mostra solo titolo e autore e si apre con la freccetta. Con questa opzione vedi subito tutti i campi (sullo schermo largo, come una tabella).</small></span>
-      </label>
-      <label class="check">
-        <input type="checkbox" id="optExtra" checked>
-        <span>Mostra scaffale, genere, pagine e note<small>Campi in più sulla scheda di ogni libro. Genere e pagine si compilano da soli quando Google Libri o Open Library li conoscono; finiscono anche nel file Excel.</small></span>
-      </label>
-      <label class="check">
-        <input type="checkbox" id="optPrice" checked>
-        <span>Chiedi il prezzo dopo ogni libro<small>Dopo la foto di un libro ti chiedo una seconda foto, facoltativa, del prezzo stampato; con Scansiona compare il pulsante «Leggi il prezzo». Spegni se il prezzo non ti interessa.</small></span>
-      </label>
-      <div class="opts-row">
-        <button class="btn" id="btnDiag">Prova la ricerca ISBN</button>
-        <button class="btn" id="btnInstDiag">Perché non si installa?</button>
-      </div>
-      <div class="diag" id="diagOut" hidden aria-live="polite"></div>
-      <div class="diag" id="instOut" hidden aria-live="polite"></div>
-      <p class="opts-h">Sistema l'elenco</p>
-      <div class="opts-row">
-        <button class="btn" id="btnVerifyAll">Segna tutto come verificato</button>
-        <button class="btn" id="btnPubs">Uniforma le case editrici</button>
-        <button class="btn" id="btnGuessPub">Deduci le case editrici mancanti</button>
-        <button class="btn" id="btnFill">Completa genere, pagine e copertine</button>
-        <button class="btn" id="btnCovers">Cerca copertine più grandi</button>
-        <button class="btn" id="btnMergeDups">Unisci i doppioni</button>
-        <button class="btn" id="btnClearGuess">Svuota le ipotesi</button>
-      </div>
-      <p class="opts-h">Backup</p>
-      <div class="opts-row">
-        <button class="btn" id="btnBackupOpen">Backup ed esportazione</button>
-      </div>
-      <p class="hint">I libri sono salvati solo su questo telefono: fai ogni tanto un backup e tienilo su Drive o nella mail.</p>
-    </div>
-  </details>
 
   <div class="thead" id="thead" aria-hidden="true"><span></span><span>Titolo</span><span>Autore</span><span>Casa editrice</span><span>Anno</span><span>Costo €</span><span>ISBN</span><span></span></div>
   <div id="list"></div>
@@ -191,6 +133,71 @@
   <div class="lb-acts"><button class="btn" id="lbPhoto">Usa una mia foto</button><button class="btn" id="lbReset" hidden>Togli la mia foto</button></div>
 </div>
 
+<div class="sheet opts-sheet" id="optSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="optH">
+    <div class="opt-head">
+      <button class="ico" id="optBack" aria-label="Torna al menu"></button>
+      <h2 id="optH">Opzioni</h2>
+      <button class="ico" id="optClose" aria-label="Chiudi">×</button>
+    </div>
+    <section class="opt-sec" data-sec="search" data-title="Ricerca dei libri">
+      <p class="hint quota" id="quotaInfo"></p>
+      <label class="field">
+        <span>Catalogo SBN (facoltativo)</span>
+        <input type="url" id="sbnUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://sbn-libri.tuonome.workers.dev">
+        <p class="hint">Il catalogo delle biblioteche italiane ha i dati più precisi su editore, anno e pagine. Serve un piccolo intermediario gratuito su Cloudflare: le istruzioni sono nel LEGGIMI, sezione «Catalogo SBN».</p>
+      </label>
+      <label class="field">
+        <span>Chiave Google Libri (facoltativa)</span>
+        <input type="text" id="gbKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Incolla qui la chiave, se Google limita le ricerche">
+        <p class="hint">Serve se compare «limite di richieste». È gratis e si crea una volta sola:</p>
+        <ol class="hint keysteps">
+          <li>Apri <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> con il tuo account Google e crea un progetto.</li>
+          <li>Apri <a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Books API</a> e premi «Abilita».</li>
+          <li>Vai in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credenziali</a> › «Crea credenziali» › «Chiave API».</li>
+          <li>Copia la chiave e incollala qui sopra.</li>
+        </ol>
+      </label>
+      <div class="opts-row"><button class="btn" id="btnDiag">Prova la ricerca ISBN</button></div>
+      <div class="diag" id="diagOut" hidden aria-live="polite"></div>
+    </section>
+    <section class="opt-sec" data-sec="cards" data-title="Schede e prezzo">
+      <label class="check">
+        <input type="checkbox" id="optOpenAll">
+        <span>Mostra le schede sempre aperte<small>Di solito ogni libro mostra solo titolo e autore e si apre con la freccetta. Con questa opzione vedi subito tutti i campi (sullo schermo largo, come una tabella).</small></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optExtra" checked>
+        <span>Mostra scaffale, genere, pagine e note<small>Campi in più sulla scheda di ogni libro. Genere e pagine si compilano da soli quando Google Libri o Open Library li conoscono; finiscono anche nel file Excel.</small></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optPrice" checked>
+        <span>Chiedi il prezzo dopo ogni libro<small>Dopo la foto di un libro ti chiedo il prezzo (foto o scritto a mano); con Scansiona compare la barra «Leggi il prezzo / Scrivi». Spegni se il prezzo non ti interessa.</small></span>
+      </label>
+    </section>
+    <section class="opt-sec" data-sec="fix" data-title="Sistema l'elenco">
+      <div class="menu fixlist">
+        <button class="btn mitem" id="btnVerifyAll"><b>Segna tutto come verificato</b><small>Toglie «Da verificare» da tutti i libri.</small></button>
+        <button class="btn mitem" id="btnPubs"><b>Uniforma le case editrici</b><small>Stesso editore scritto in modi diversi: scegli il nome da usare.</small></button>
+        <button class="btn mitem" id="btnGuessPub"><b>Deduci le case editrici mancanti</b><small>Dal codice dell'editore contenuto nell'ISBN.</small></button>
+        <button class="btn mitem" id="btnFill"><b>Completa genere, pagine e copertine</b><small>Cerca di nuovo i dati che mancano.</small></button>
+        <button class="btn mitem" id="btnCovers"><b>Cerca copertine più grandi</b><small>Per vederle meglio quando le ingrandisci.</small></button>
+        <button class="btn mitem" id="btnMergeDups"><b>Unisci i doppioni</b><small>Stesso libro inserito più volte; non tocca le copie segnate.</small></button>
+        <button class="btn mitem" id="btnClearGuess"><b>Svuota le ipotesi</b><small>Cancella i dati segnati «Da verificare».</small></button>
+      </div>
+      <p class="hint">Dopo ognuna c'è «Annulla».</p>
+    </section>
+    <section class="opt-sec" data-sec="app" data-title="App">
+      <div class="menu">
+        <button class="btn primary" id="btnInstall" hidden>Installa l'app</button>
+        <button class="btn" id="btnInstDiag">Perché non si installa?</button>
+      </div>
+      <div class="diag" id="instOut" hidden aria-live="polite"></div>
+      <p class="hint">I libri sono salvati solo su questo telefono: fai ogni tanto un backup (Menu › Opzioni › Backup ed esportazione) e tienilo su Drive o nella mail.</p>
+    </section>
+  </div>
+</div>
+
 <div class="sheet" id="photoSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="photoH">
     <h2 id="photoH">Foto del libro</h2>
@@ -219,7 +226,7 @@
       <button class="btn" type="submit">OK</button>
     </form>
     <p class="msg bad" id="priceAskErr" hidden>Scrivi un prezzo, per esempio 14,50.</p>
-    <p class="hint">Puoi non farti più chiedere il prezzo: Opzioni › «Chiedi il prezzo dopo ogni libro».</p>
+    <p class="hint">Puoi non farti più chiedere il prezzo: Menu › Opzioni › Schede e prezzo.</p>
   </div>
 </div>
 
@@ -227,10 +234,24 @@
 <div class="drawer-scrim" id="drawerScrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerH" hidden inert>
   <div class="drawer-head">
-    <h2 id="drawerH">Filtri</h2>
-    <button class="ico" id="drawerX" aria-label="Chiudi i filtri">×</button>
+    <h2 id="drawerH" class="sr">Menu</h2>
+    <div class="dtabs" role="tablist" aria-label="Menu">
+      <button role="tab" id="dtFlt" aria-selected="true" aria-controls="drawerFilters">Filtri</button><button role="tab" id="dtOpt" aria-selected="false" aria-controls="drawerOpts">Opzioni</button>
+    </div>
+    <button class="ico" id="drawerX" aria-label="Chiudi il menu">×</button>
   </div>
   <div class="drawer-body" id="drawerBody">
+    <div id="drawerOpts" role="tabpanel" aria-labelledby="dtOpt" hidden>
+      <div class="dlist dmenu">
+        <button type="button" class="dopt" data-sec="search"><span><b>Ricerca dei libri</b><small>Chiave Google, catalogo SBN, richieste di oggi</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="cards"><span><b>Schede e prezzo</b><small>Campi in più, schede aperte, prezzo</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="fix"><span><b>Sistema l'elenco</b><small>Doppioni, case editrici, copertine</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="export"><span><b>Backup ed esportazione</b><small>Backup, Excel, PDF</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="app"><span><b>App</b><small>Installazione</small></span><span class="n" aria-hidden="true">›</span></button>
+      </div>
+      <p class="dhint" id="optBackupHint"></p>
+    </div>
+    <div id="drawerFilters" role="tabpanel" aria-labelledby="dtFlt">
     <p class="dq" id="drawerQ" hidden><span id="drawerQTxt"></span><button type="button" class="ico" id="drawerQX" aria-label="Cancella la ricerca">×</button></p>
     <h3 id="hSort">Ordina per</h3>
     <select id="sort" class="dsel" aria-labelledby="hSort">
@@ -245,8 +266,9 @@
     </select>
     <div id="drawerFlt"></div>
     <p class="dhint" id="drawerHint" hidden>Si apre anche trascinando il pollice dal bordo sinistro verso destra.</p>
+    </div>
   </div>
-  <div class="drawer-foot">
+  <div class="drawer-foot" id="drawerFoot">
     <button class="btn" id="drawerReset">Azzera</button>
     <button class="btn primary" id="drawerShow">Mostra</button>
   </div>

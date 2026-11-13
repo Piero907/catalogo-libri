@@ -27,12 +27,16 @@ var ICON = {
   bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M9.5 14l2 2 3.5-3.5"/>',
   chev: '<path d="M6 9l6 6 6-6"/>',
   right: '<path d="M9 5l7 7-7 7"/>',
-  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>'
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  left: '<path d="M15 5l-7 7 7 7"/>'
 };
 function icon(n) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
 $('#btnScan').innerHTML = icon('scan') + 'Scansiona';
 $('#icoFilt').innerHTML = icon('filt');
 $('#edgeTab').innerHTML = icon('right');
+$('#btnOpts').innerHTML = icon('gear');
+$('#optBack').innerHTML = icon('left');
 $('#photoCam').innerHTML = icon('cam') + 'Scatta una foto';
 $('#photoGal').innerHTML = icon('img') + 'Scegli dalla galleria';
 $('#scanPriceType').innerHTML = icon('key') + 'Scrivi';
@@ -76,7 +80,7 @@ var quota = { d: '', g: 0, s: 0 };
 function pacificDay() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); } }
 function loadQuota() { try { var q = JSON.parse(ls.get('catalogo-libri-quota') || '{}'); if (q && q.d) quota = { d: q.d, g: q.g | 0, s: q.s | 0 }; } catch (e) {} }
 function rollQuota() { var d = pacificDay(); if (quota.d !== d) quota = { d: d, g: 0, s: 0 }; }
-function countCall(k) { rollQuota(); quota[k]++; ls.set('catalogo-libri-quota', JSON.stringify(quota)); if (!$('#quotaInfo').closest('details').open) return; updateQuotaInfo(); }
+function countCall(k) { rollQuota(); quota[k]++; ls.set('catalogo-libri-quota', JSON.stringify(quota)); if ($('#optSheet').hidden) return; updateQuotaInfo(); }
 function googleLeft(extra) { rollQuota(); return !settings.gbKey || quota.g < (extra ? G_EXTRA : G_STOP); }
 function updateQuotaInfo() {
   rollQuota();
@@ -372,7 +376,7 @@ async function doLookup(id) {
       if (rate && s.tries > waits.length) {
         s.st = 'error';
         s.err = settings.gbKey ? 'Google Libri ha raggiunto il limite di richieste della tua chiave. Riprova più tardi.'
-          : 'Google Libri rifiuta le richieste senza chiave (limite raggiunto). Soluzione stabile: inserisci la tua chiave gratuita in Opzioni. Intanto puoi premere Riprova.';
+          : 'Google Libri rifiuta le richieste senza chiave (limite raggiunto). Soluzione stabile: inserisci la tua chiave gratuita in Menu › Opzioni › Ricerca dei libri. Intanto puoi premere Riprova.';
       } else {
         s.st = 'wait';
         s.err = (rate ? (settings.gbKey && !googleLeft(false) ? 'Ricerche di oggi su Google quasi finite (' + quota.g + ' su 1.000): riprovo con le altre banche dati tra ' + when + ' (Google riparte verso le 9 del mattino)' : 'Google Libri è al limite di richieste' + (settings.gbKey ? '' : ' (senza chiave)')) : (navigator.onLine === false ? 'Senza connessione' : 'Connessione debole')) + (rate && settings.gbKey && !googleLeft(false) ? '.' : ': riprovo da solo tra ' + when + '.');
@@ -1864,7 +1868,25 @@ function releaseDrawerStyles() {
   drawerEl.style.transition = ''; scrimEl.style.transition = '';
   drawerEl.style.transform = ''; scrimEl.style.opacity = '';
 }
-function openDrawer() {
+var drawerTab = 'flt';
+function setDrawerTab(t) {
+  drawerTab = t === 'opt' ? 'opt' : 'flt';
+  $('#dtFlt').setAttribute('aria-selected', drawerTab === 'flt' ? 'true' : 'false');
+  $('#dtOpt').setAttribute('aria-selected', drawerTab === 'opt' ? 'true' : 'false');
+  $('#drawerFilters').hidden = drawerTab !== 'flt';
+  $('#drawerOpts').hidden = drawerTab !== 'opt';
+  $('#drawerFoot').hidden = drawerTab !== 'flt';
+  if (drawerTab === 'opt') $('#optBackupHint').textContent = backupHint();
+  $('#drawerBody').scrollTop = 0;
+}
+function backupHint() {
+  var last = settings.lastBackup;
+  return last ? 'Ultimo backup: ' + new Date(last).toLocaleDateString('it-IT') + '.' : 'Non hai ancora fatto un backup: i libri sono solo su questo telefono.';
+}
+function openDrawer(t, reuse) {
+  if (t === 'opt' || t === 'flt') setDrawerTab(t);
+  else if (!drawerOpen) setDrawerTab('flt');
+  if (reuse) { try { history.replaceState({ drawer: 1 }, ''); drawerPushed = true; } catch (e) {} }
   if (!drawerOpen) { renderDrawer(); drawerReturn = document.activeElement; }
   showDrawerEls();
   void drawerEl.offsetWidth;                         // parte dalla posizione attuale
@@ -1890,8 +1912,48 @@ function closeDrawer(fromPop) {
   if (drawerPushed && !fromPop) { drawerPushed = false; try { history.back(); } catch (e) {} }
   if (was && drawerReturn && drawerReturn.focus && drawerEl.contains(document.activeElement)) { try { drawerReturn.focus({ preventScroll: true }); } catch (e) {} }
 }
-$('#btnFilters').addEventListener('click', function () { drawerOpen ? closeDrawer() : openDrawer(); });
-$('#edgeTab').addEventListener('click', function () { openDrawer(); });
+$('#btnFilters').addEventListener('click', function () { drawerOpen ? closeDrawer() : openDrawer('flt'); });
+$('#edgeTab').addEventListener('click', function () { openDrawer('flt'); });
+$('#btnOpts').addEventListener('click', function () { openDrawer('opt'); });
+$('#dtFlt').addEventListener('click', function () { setDrawerTab('flt'); renderDrawer(); });
+$('#dtOpt').addEventListener('click', function () { setDrawerTab('opt'); });
+$('#drawerOpts').addEventListener('click', function (e) {
+  var x = e.target.closest('[data-sec]');
+  if (!x) return;
+  if (x.dataset.sec === 'export') { closeDrawer(); openExport(); return; }
+  var had = drawerPushed; drawerPushed = false;
+  closeDrawer(true);
+  openOptions(x.dataset.sec, had);
+});
+
+/* Pagina delle opzioni: una sezione alla volta, con «‹» per tornare al menu e il tasto Indietro del telefono per chiudere */
+var optOpen = false, optPushed = false;
+function openOptions(sec, reuse) {
+  var found = false;
+  Array.prototype.forEach.call(document.querySelectorAll('#optSheet .opt-sec'), function (s) {
+    var on = s.dataset.sec === sec; s.hidden = !on;
+    if (on) { found = true; $('#optH').textContent = s.dataset.title; }
+  });
+  if (!found) return;
+  $('#optSheet').hidden = false; optOpen = true;
+  $('#optSheet .sheet-in').scrollTop = 0;
+  if (reuse) { try { history.replaceState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
+  else if (!optPushed) { try { history.pushState({ opt: 1 }, ''); optPushed = true; } catch (e) {} }
+  if (sec === 'search') updateQuotaInfo();
+}
+function closeOptions(fromPop) {
+  if (!optOpen) return;
+  $('#optSheet').hidden = true; optOpen = false;
+  if (optPushed && !fromPop) { optPushed = false; try { history.back(); } catch (e) {} }
+  else optPushed = false;
+}
+$('#optClose').addEventListener('click', function () { closeOptions(); });
+$('#optBack').addEventListener('click', function () {
+  var had = optPushed; optPushed = false;
+  $('#optSheet').hidden = true; optOpen = false;
+  openDrawer('opt', had);
+});
+window.addEventListener('popstate', function () { if (optOpen) { optPushed = false; closeOptions(true); } });
 $('#drawerX').addEventListener('click', function () { closeDrawer(); });
 $('#drawerShow').addEventListener('click', function () { closeDrawer(); window.scrollTo({ top: 0 }); });
 $('#drawerReset').addEventListener('click', clearFilters);
@@ -2454,7 +2516,6 @@ $('#photoCam').addEventListener('click', function () { $('#photoSheet').hidden =
 $('#photoGal').addEventListener('click', function () { $('#photoSheet').hidden = true; $('#fileGal').click(); });
 $('#photoClose').addEventListener('click', function () { $('#photoSheet').hidden = true; });
 $('#btnType').addEventListener('click', openIsbnSheet);
-$('#btnGallery').addEventListener('click', function () { $('#fileGal').click(); });
 $('#scanClose').addEventListener('click', function () { stopScan(false); });
 $('#scanTorch').addEventListener('click', toggleTorch);
 window.addEventListener('popstate', function () { if (scanning) { pushed = false; stopScan(true); } });
@@ -2474,6 +2535,7 @@ $('#copyClose').addEventListener('click', function () { $('#copySheet').hidden =
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
   if (drawerOpen) { closeDrawer(); return; }
+  if (optOpen) { closeOptions(); return; }
   if (!$('#lightbox').hidden) { closeCover(false); return; }
   ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
@@ -2516,7 +2578,6 @@ function openExport() {
   $('#exportSheet').hidden = false;
 }
 $('#btnExport').addEventListener('click', openExport);
-$('#btnBackupOpen').addEventListener('click', openExport);
 $('#exportClose').addEventListener('click', function () { $('#exportSheet').hidden = true; });
 $('#btnXlsx').addEventListener('click', saveXLSX);
 $('#btnShareBackup').addEventListener('click', shareBackup);
@@ -2556,7 +2617,6 @@ $('#btnCopy').addEventListener('click', copyTSV);
 $('#btnCsv').addEventListener('click', saveCSV);
 $('#btnBackup').addEventListener('click', backup);
 $('#btnRestore').addEventListener('click', function () { $('#fileBackup').click(); });
-document.querySelector('details.opts, details').addEventListener('toggle', function (e) { if (e.target.open) updateQuotaInfo(); });
 $('#btnDiag').addEventListener('click', async function () {
   var out = $('#diagOut'), btn = $('#btnDiag');
   btn.disabled = true; out.hidden = false; out.textContent = 'Provo le banche dati…';
@@ -2721,6 +2781,6 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__app = { openDrawer: openDrawer, closeDrawer: closeDrawer, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();
