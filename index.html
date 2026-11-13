@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>Next Libris</title>
 <meta name="application-name" content="Next Libris">
 <meta name="apple-mobile-web-app-title" content="Next Libris">
@@ -105,11 +105,11 @@
   <div class="scan-res" id="scanRes" hidden aria-live="polite"></div>
   <div class="scan-price" id="scanPrice" hidden>
     <span id="scanPriceTxt" aria-live="polite"></span>
-    <div class="sp-btns" id="scanPriceBtns"><button class="btn" id="scanPriceType"></button><button class="btn primary" id="scanPriceBtn">Leggi il prezzo</button></div>
-    <form class="sp-type" id="scanPriceForm" hidden>
-      <input id="scanPriceIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="es. 14,50" aria-label="Prezzo in euro">
-      <span class="eur" aria-hidden="true">€</span>
-      <button class="btn primary" type="submit">OK</button>
+    <!-- il campo è sempre visibile: toccandolo Android apre subito la tastiera (un focus dato dal codice a volte non la apre) -->
+    <form class="sp-row" id="scanPriceForm">
+      <label class="sp-field" id="scanPriceType"><span class="sp-ico" id="scanPriceIco" aria-hidden="true"></span><input id="scanPriceIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="Scrivi" aria-label="Scrivi il prezzo in euro"><span class="eur" aria-hidden="true">€</span></label>
+      <button class="btn primary" id="scanPriceBtn" type="button">Leggi il prezzo</button>
+      <button class="btn primary" id="scanPriceOk" type="submit">OK</button>
       <button class="btn" type="button" id="scanPriceCancel" aria-label="Annulla">×</button>
     </form>
   </div>

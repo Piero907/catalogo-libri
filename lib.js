@@ -558,6 +558,32 @@
     var best = ranked[0], second = ranked[1];
     return best.score >= 0.7 && (!second || best.score - second.score >= 0.15);
   }
+  /* Prezzo nel testo letto dall'OCR, tollerante: cifre confuse (O->0, l/I->1, S->5, B->8), «€» prima o dopo, «Euro», «EUR»,
+     «€» letto come E o C, prezzo intero dopo «€». Restituisce { v, sure } (sure: c'e' un simbolo di valuta) oppure null.
+     Senza valuta accetta solo un importo con la virgola (14,00) se e' l'unico. */
+  function findPrice(text) {
+    var t = ' ' + String(text || '').replace(/[\r\n]+/g, ' | ').replace(/[ \t]+/g, ' ') + ' ';
+    var D = '[0-9OoQDIl|SB]', amt = '(' + D + '{1,3})\\s?[.,]\\s?(' + D + '{2})(?![0-9])';
+    var fix = function (x) { return x.replace(/[OoQD]/g, '0').replace(/[Il|]/g, '1').replace(/S/g, '5').replace(/B/g, '8'); };
+    var cands = [], re, m;
+    function add(mm, score, iA, iB) {
+      var a = mm[iA], b2 = iB ? mm[iB] : '00';
+      if (!/\d/.test(a + b2)) return;
+      var v = parseFloat(fix(a) + '.' + fix(b2));
+      if (v >= 1 && v < 300) cands.push({ v: Math.round(v * 100) / 100, s: score });
+    }
+    re = new RegExp('(?:€|EUR|Eur|Euro|euro)\\s?' + amt, 'g'); while ((m = re.exec(t))) add(m, 3, 1, 2);
+    re = new RegExp('(?:^|[^0-9])' + amt + '\\s?(?:€|EUR|Eur|euro|Euro)', 'g'); while ((m = re.exec(t))) add(m, 3, 1, 2);
+    re = new RegExp('(?:^|[\\s|(])[EC]\\s?' + amt, 'g'); while ((m = re.exec(t))) add(m, 2, 1, 2);
+    re = /(?:€|EUR|Euro)\s?([0-9]{1,3})(?![0-9.,])/g; while ((m = re.exec(t))) add(m, 2, 1, 0);
+    re = /(?:^|[\s|(])([0-9]{1,3}),([0-9]{2})(?![0-9])/g; while ((m = re.exec(t))) add(m, 1, 1, 2);
+    if (!cands.length) return null;
+    var best = Math.max.apply(null, cands.map(function (c) { return c.s; }));
+    var top = cands.filter(function (c) { return c.s === best; });
+    var vals = top.map(function (c) { return c.v; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    if (vals.length > 1 && best < 3) return null;          // due importi diversi e nessun «€» sicuro: meglio non indovinare
+    return { v: top[0].v, sure: best >= 2 };
+  }
   function extractPrice(text) {
     var t = String(text || '').replace(/\s+/g, ' ');
     var m = t.match(/(?:€|EUR|Euro)\s*(\d{1,3}[.,]\d{2})\b/i) || t.match(/\b(\d{1,3}[.,]\d{2})\s*(?:€|EUR|euro)/i) || t.match(/(?:^|\s)E\s?(\d{1,3},\d{2})\b/);
@@ -853,7 +879,7 @@
     toIsbn13: toIsbn13, fmtIsbn: fmtIsbn, extractIsbns: extractIsbns, ocrIsbns: ocrIsbns, parseIsbnList: parseIsbnList,
     parseGoogle: parseGoogle, parseOpenLibrary: parseOpenLibrary, lookupIsbn: lookupIsbn, parseCrossref: parseCrossref, isbnPrefix: isbnPrefix, guessPublisher: guessPublisher, diagnose: diagnose, openLibrarySearch: openLibrarySearch, searchText: searchText,
     tokens: tokens, fuzzyHas: fuzzyHas, splitTitleAuthor: splitTitleAuthor, ocrLines: ocrLines, goodLines: goodLines, topLines: topLines, buildQueries: buildQueries,
-    scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice,
+    scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice, findPrice: findPrice,
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
     computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,

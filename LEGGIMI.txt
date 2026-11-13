@@ -91,6 +91,12 @@ COME SI USA
   "Desideri" o "Libreria" per spostare il libro), a destra la x (elimina)
   e la freccetta (chiude). Sotto, le etichette del libro. In fondo
   "Prezzo da foto" e "Prezzo dal web" se il prezzo manca.
+- Prezzo con la fotocamera: dopo ogni libro "Leggi il prezzo" legge il
+  prezzo inquadrato. Legge anche i prezzi stampati in verticale accanto al
+  codice a barre, su fondi colorati e con luce non uniforme. Se non vede il
+  simbolo dell'euro te lo dice: controllalo. Per scriverlo, tocca il campo
+  "Scrivi" nella stessa barra: si apre subito la tastiera, la scansione si
+  ferma finche' non premi OK o la x.
 - Libro senza copertina: il riquadro "Copertina" accanto al titolo prima
   la cerca online (stesso ISBN su Open Library e Google Libri; altrimenti
   una copertina di un'altra edizione, da controllare: "Non e' questa" la

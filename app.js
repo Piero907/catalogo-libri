@@ -52,7 +52,7 @@ $('#btnOpts').innerHTML = icon('gear');
 $('#optBack').innerHTML = icon('left');
 $('#photoCam').innerHTML = icon('cam') + 'Scatta una foto';
 $('#photoGal').innerHTML = icon('img') + 'Scegli dalla galleria';
-$('#scanPriceType').innerHTML = icon('key') + 'Scrivi';
+$('#scanPriceIco').innerHTML = icon('key');
 $('#btnPhoto').innerHTML = icon('cam') + 'Foto';
 $('#btnType').innerHTML = icon('key') + 'Digita';
 $('#btnCheck').innerHTML = icon('check') + 'Ce l\'ho già?';
@@ -77,7 +77,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 41, date: '2026-11-13', note: 'Copertina mancante: prima la cerco online; pulsanti della scheda con icona e scritta' };
+var APP_VERSION = { v: 42, date: '2026-11-13', note: 'Prezzo dalla fotocamera più preciso (anche in verticale) e veloce; «Scrivi» apre subito la tastiera' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -570,27 +570,94 @@ function applyOcrText(id) {
   if (!hasData(b)) { s.st = 'error'; s.err = 'Non ho letto nulla di utile. Scrivi i dati a mano o prova con il codice a barre.'; }
   touch(); refreshRow(id); updateSummary();
 }
-/* Lettore leggero solo per il prezzo: lingua inglese soltanto (cifre e «€» bastano), si avvia ~3 volte più in fretta di quello
-   per le copertine e si può preparare in anticipo, mentre scatti la foto. */
-var priceOcrP = null;
+/* Lettori leggeri solo per il prezzo: lingua inglese (cifre e «€» bastano) e solo i caratteri di un prezzo, si avviano
+   in fretta e si preparano in anticipo. Due in parallelo sui telefoni con piu' processori: a ogni giro ciascuno legge
+   una versione diversa della stessa immagine, e il primo che trova un prezzo con «€» chiude la lettura. */
+var priceOcrP = null, PRICE_CHARS = '0123456789.,€EeUuRrOo ';
 function getPriceOcr() {
   if (priceOcrP) return priceOcrP;
   priceOcrP = (async function () {
     if (!window.Tesseract) throw { code: 'ocr' };
     var abs = function (p) { return new URL(p, location.href).href; };
-    var w = await window.Tesseract.createWorker('eng', 1, { workerPath: abs('vendor/worker.min.js'), corePath: abs('vendor/core'), langPath: abs('vendor/lang') });
-    await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) });
-    return w;
+    var n = (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1;
+    return Promise.all(Array.apply(null, Array(n)).map(async function () {
+      var w = await window.Tesseract.createWorker('eng', 1, { workerPath: abs('vendor/worker.min.js'), corePath: abs('vendor/core'), langPath: abs('vendor/lang') });
+      await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) });
+      w._chars = ''; w._chain = Promise.resolve();
+      return w;
+    }));
   })();
   priceOcrP.catch(function () { priceOcrP = null; });
   return priceOcrP;
 }
-function warmPriceOcr() { setTimeout(function () { getPriceOcr().catch(function () {}); }, 300); }
-async function readPriceFromCanvas(canvas) {
-  var worker = await getPriceOcr();
-  var res = await worker.recognize(canvas);
-  return L.extractPrice((res.data || {}).text || '');
+/* Una lettura su un lettore, con i suoi caratteri ammessi ('' = tutti): i lavori sullo stesso lettore vanno in fila,
+   cosi' prezzo e ISBN scritto non si scambiano le impostazioni. Restituisce solo il testo (piu' veloce). */
+function ocrText(w, chars, img) {
+  var job = w._chain.then(async function () {
+    if (w._chars !== chars) { await w.setParameters({ tessedit_char_whitelist: chars }); w._chars = chars; }
+    var o = await w.recognize(img, {}, { text: true, blocks: false, hocr: false, tsv: false });
+    return (o.data || {}).text || '';
+  });
+  w._chain = job.catch(function () {});
+  return job;
 }
+function warmPriceOcr() { setTimeout(function () { getPriceOcr().catch(function () {}); }, 300); }
+/* Immagine ripulita per l'OCR: grigi, luce uniformata (divisa per lo sfondo locale), testo scuro su fondo chiaro, contrasto pieno */
+function prepPrice(src, k) {
+  var w = Math.max(1, Math.round(src.width * k)), h = Math.max(1, Math.round(src.height * k));
+  var c = document.createElement('canvas'); c.width = w; c.height = h;
+  var x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0, w, h);
+  var id = x.getImageData(0, 0, w, h), d = id.data, n = w * h, g = new Float32Array(n), i, j;
+  for (i = 0, j = 0; i < n; i++, j += 4) g[i] = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
+  var hist = new Uint32Array(256), acc = 0, med = 0;
+  for (i = 0; i < n; i++) hist[g[i] | 0]++;
+  for (i = 0; i < 256; i++) { acc += hist[i]; if (acc >= n / 2) { med = i; break; } }
+  if (med < 128) for (i = 0; i < n; i++) g[i] = 255 - g[i];                 // fondo scuro: testo chiaro -> lo rendo scuro
+  var r = Math.max(8, Math.round(Math.min(w, h) / 6)), W1 = w + 1, I = new Float64Array(W1 * (h + 1)), out = new Float32Array(n), yy, xx;
+  for (yy = 0; yy < h; yy++) { var row = 0; for (xx = 0; xx < w; xx++) { row += g[yy * w + xx]; I[(yy + 1) * W1 + xx + 1] = I[yy * W1 + xx + 1] + row; } }
+  for (yy = 0; yy < h; yy++) {
+    var y0 = Math.max(0, yy - r), y1 = Math.min(h, yy + r + 1);
+    for (xx = 0; xx < w; xx++) {
+      var x0 = Math.max(0, xx - r), x1 = Math.min(w, xx + r + 1);
+      var bg = (I[y1 * W1 + x1] - I[y0 * W1 + x1] - I[y1 * W1 + x0] + I[y0 * W1 + x0]) / ((y1 - y0) * (x1 - x0));
+      out[yy * w + xx] = Math.min(255, g[yy * w + xx] / Math.max(1, bg) * 212);
+    }
+  }
+  var hs = new Uint32Array(256), lo = 0, hi = 255;
+  for (i = 0; i < n; i++) hs[out[i] | 0]++;
+  for (i = 0, acc = 0; i < 256; i++) { acc += hs[i]; if (acc >= n * 0.01) { lo = i; break; } }
+  for (i = 255, acc = 0; i >= 0; i--) { acc += hs[i]; if (acc >= n * 0.01) { hi = i; break; } }
+  var span = Math.max(1, hi - lo);
+  for (i = 0, j = 0; i < n; i++, j += 4) { var v = (out[i] - lo) * 255 / span; v = v < 0 ? 0 : v > 255 ? 255 : v; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+function scaledBy(src, k) { var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(src.width * k)); c.height = Math.max(1, Math.round(src.height * k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c; }
+function rotated(src, dir) { var c = document.createElement('canvas'); c.width = src.height; c.height = src.width; var x = c.getContext('2d'); x.translate(dir > 0 ? c.width : 0, dir > 0 ? 0 : c.height); x.rotate(dir * Math.PI / 2); x.drawImage(src, 0, 0); return c; }
+/* Legge il prezzo: 1) immagine ripulita e originale, 2) le stesse girate (prezzi stampati in verticale accanto al codice a barre).
+   Restituisce { v, sure } (sure: c'era il simbolo €) oppure null. rounds: quanti giri al massimo. */
+async function readPrice(base, rounds) {
+  var workers = await getPriceOcr();
+  var k = Math.min(2.5, Math.max(1, 900 / base.width));
+  if (base.width * k > 1400) k = 1400 / base.width;
+  if (base.height * k > 1400) k = Math.min(k, 1400 / base.height);
+  var pre = prepPrice(base, k), raw = scaledBy(base, k);
+  var plan = [[pre, raw], [rotated(pre, -1), rotated(pre, 1)], [rotated(raw, -1), rotated(raw, 1)]].slice(0, rounds || 3), weak = null;
+  for (var r = 0; r < plan.length; r++) {
+    var got = await new Promise(function (done) {
+      var list = plan[r], res = [], left = list.length, fin = false;
+      list.forEach(function (cv, i) {
+        ocrText(workers[i % workers.length], PRICE_CHARS, cv)
+          .then(function (text) { return L.findPrice(text); }, function () { return null; })
+          .then(function (g) { res[i] = g; left--; if (!fin && ((g && g.sure) || left === 0)) { fin = true; done(res.slice()); } });
+      });
+    });
+    for (var q = 0; q < got.length; q++) if (got[q] && got[q].sure) return got[q];
+    for (q = 0; q < got.length; q++) if (got[q] && !weak) weak = got[q];
+  }
+  return weak;
+}
+async function readPriceFromCanvas(canvas, rounds) { var r = await readPrice(canvas, rounds); return r ? r.v : null; }
 async function processPhoto(id, file) {
   var b = get(id);
   if (!b) return;
@@ -721,23 +788,24 @@ function guideCanvas(full) {
    successivo non arriva mentre scrivi. */
 var typingPrice = false, priceTxtBefore = '';
 function openPriceType() {
-  var b = priceTarget && get(priceTarget);
-  if (!b || !scanning) return;
+  var b = priceTarget && get(priceTarget), inp = $('#scanPriceIn');
+  if (!b || !scanning) { inp.blur(); return; }
+  if (typingPrice) return;
   typingPrice = true; scanPaused = true;
   priceTxtBefore = $('#scanPriceTxt').textContent;
   $('#scanPriceTxt').textContent = 'Scrivi il prezzo' + (b.t ? ' di «' + b.t + '»' : '') + ' e tocca OK.';
-  $('#scanPriceBtns').hidden = true; $('#scanPriceForm').hidden = false;
-  var inp = $('#scanPriceIn');
-  inp.classList.remove('bad');
-  inp.value = b.c != null ? String(b.c.toFixed(2)).replace('.', ',') : '';
-  inp.focus();
+  $('#scanPrice').classList.add('typing');
+  inp.placeholder = 'es. 14,50'; inp.classList.remove('bad');
+  if (!inp.value && b.c != null) inp.value = String(b.c.toFixed(2)).replace('.', ',');
+  if (document.activeElement !== inp) { try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } }
 }
 function closePriceType() {
   if (!typingPrice) return;
   typingPrice = false; scanPaused = false;
   if (priceTxtBefore) $('#scanPriceTxt').textContent = priceTxtBefore;
-  $('#scanPriceForm').hidden = true; $('#scanPriceBtns').hidden = false;
-  try { $('#scanPriceIn').blur(); } catch (e) {}
+  $('#scanPrice').classList.remove('typing');
+  var inp = $('#scanPriceIn'); inp.value = ''; inp.placeholder = 'Scrivi'; inp.classList.remove('bad');
+  try { inp.blur(); } catch (e) {}
 }
 function savePriceType(e) {
   if (e) e.preventDefault();
@@ -749,7 +817,7 @@ function savePriceType(e) {
   beep(true); vibrate(40);
   priceBar('✓ ' + eur(b.c) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
 }
-$('#scanPriceType').addEventListener('click', openPriceType);
+$('#scanPriceIn').addEventListener('focus', openPriceType);              // il tocco sul campo apre la tastiera e ferma la scansione
 $('#scanPriceForm').addEventListener('submit', savePriceType);
 $('#scanPriceCancel').addEventListener('click', closePriceType);
 $('#scanPriceIn').addEventListener('input', function (e) { e.target.classList.remove('bad'); });
@@ -758,12 +826,13 @@ async function readLivePrice() {
   if (!b || scanPaused) return;
   scanPaused = true;
   priceBar('Leggo il prezzo…', 'Leggo…', true);
-  var pr = null;
+  var got = null;
   try {
     var c = guideCanvas(false);
-    pr = c ? await readPriceFromCanvas(c) : null;
-    if (pr == null && scanning) { c = guideCanvas(true); pr = c ? await readPriceFromCanvas(c) : null; }   // prezzo fuori dal riquadro
-  } catch (e) { pr = null; }
+    got = c ? await readPrice(c, 3) : null;
+    if (!got && scanning && priceTarget === id) { c = guideCanvas(true); got = c ? await readPrice(c, 1) : null; }   // prezzo fuori dal riquadro
+  } catch (e) { got = null; }
+  var pr = got ? got.v : null;
   scanPaused = false;
   if (!scanning) return;
   b = get(id);
@@ -771,7 +840,7 @@ async function readLivePrice() {
   if (pr == null) { beep(false); priceBar('Non trovo il prezzo. Avvicinati al «€» stampato e riprova, oppure tocca «Scrivi». O passa al libro successivo.', 'Riprova'); return; }
   b.c = pr; touch();
   beep(true); vibrate(40);
-  priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
+  priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + (got.sure ? '. Inquadra il prossimo codice a barre.' : '. Controllalo: non ho visto il simbolo €. Se è sbagliato scrivilo qui.'), 'Rileggi');
 }
 function scanMsg(t) { $('#scanMsg').textContent = t; }
 
@@ -808,9 +877,8 @@ function setScanKind(k) {
 async function readLiveIsbn() {
   var c = guideCanvas(false);
   if (!c) return '';
-  var w = await getPriceOcr();
-  var res = await w.recognize(c);
-  return L.ocrIsbns((res.data || {}).text || '', true)[0] || '';
+  var ws = await getPriceOcr();
+  return L.ocrIsbns(await ocrText(ws[0], '', c), true)[0] || '';
 }
 function textTick() {
   clearTimeout(textTimer);
@@ -2954,7 +3022,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'zoom') openCover(id);
   else if (act === 'coverphoto') coverTap(id);
   else if (act === 'bought') moveToLib(id);
-  else if (act === 'pricephoto') { priceId = id; $('#filePrice').click(); }
+  else if (act === 'pricephoto') { priceId = id; warmPriceOcr(); $('#filePrice').click(); }
   else if (act === 'priceweb') {
     var pw = get(id);
     if (pw) window.open('https://www.google.com/search?q=' + encodeURIComponent((L.toIsbn13(pw.i) || [pw.t, pw.a].filter(Boolean).join(' ')) + ' prezzo di copertina libro'), '_blank', 'noopener');
@@ -2985,6 +3053,16 @@ function bindFile(sel, fn) {
   });
 }
 var priceId = null;
+/* apre la scheda e mette il cursore nel campo Costo (dal tocco su «Scrivilo»: la tastiera si apre) */
+function typeCost(id) {
+  var b = get(id);
+  if (!b) return;
+  if (!isOpen(b)) { openState[id] = true; refreshRow(id); }
+  var inp = document.getElementById('c-' + id);
+  if (!inp) return;
+  try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
+  inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
 bindFile('#filePrice', async function (f) {
   var id = priceId; priceId = null;
   var b = id && bookFor(id);
@@ -2992,15 +3070,15 @@ bindFile('#filePrice', async function (f) {
   toast('Leggo il prezzo…');
   try {
     var canvas = await loadCanvas(f[0], 1280);
-    var pr = await readPriceFromCanvas(canvas);
+    var got = await readPrice(canvas, 3), pr = got ? got.v : null;
     b = bookFor(id);
     if (!b) return;
     id = b.id;
-    if (pr == null) { toast('Non trovo il prezzo in questa foto: avvicinati al «€» stampato oppure scrivilo a mano.'); return; }
+    if (pr == null) { toast('Non trovo il prezzo in questa foto: avvicinati al «€» stampato, oppure scrivilo.', { label: 'Scrivilo', fn: function () { typeCost(id); } }); return; }
     var old = b.c;
     b.c = pr; touch(); refreshRow(id); updateSummary();
     toast('Prezzo letto: ' + eur(pr) + '. Controllalo.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.c = old; touch(); refreshRow(id); updateSummary(); } } });
-  } catch (e) { toast('Non riesco a leggere la foto. Scrivi il prezzo a mano.'); }
+  } catch (e) { toast('Non riesco a leggere la foto.', { label: 'Scrivilo', fn: function () { typeCost(id); } }); }
 });
 bindFile('#fileCam', function (f) { addPhotos(f, true); });
 bindFile('#fileGal', function (f) {
@@ -3450,6 +3528,6 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__app = { filtersAll: function () { return { autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { readPrice: function (c, r) { return readPrice(c, r); }, filtersAll: function () { return { autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();

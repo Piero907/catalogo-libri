@@ -968,3 +968,22 @@ body.welcome-on .tip{display:none}
   body:not(.thumbs) .row.open.has-top .head .thumb.add{grid-row:1;grid-column:1;align-self:start;position:relative;z-index:1}
   body:not(.thumbs) .row.open.has-top:has(.head .thumb.add) .card-top{grid-row:1;padding-left:62px}
 }
+
+/* ---- prezzo nella fotocamera: campo «Scrivi il prezzo» sempre visibile + «Leggi il prezzo»; scrivendo: OK e × ---- */
+.sp-row{display:flex;align-items:center;gap:8px;width:100%}
+.sp-field{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px;min-height:48px;padding:0 10px;border-radius:12px;border:1px solid #ffffff45;background:#ffffff1f;color:#fff;cursor:text}
+.sp-field .sp-ico{display:grid;place-items:center;flex:none}
+.sp-field .sp-ico svg{width:20px;height:20px}
+.sp-field input{flex:1 1 auto;min-width:0;height:44px;border:0;background:transparent;color:inherit;font:600 16px var(--font-body);font-variant-numeric:tabular-nums;outline:none;padding:0}
+.sp-field input::placeholder{color:#ffffffd9;font-weight:600}
+.sp-field .eur{display:none;font-weight:700}
+.sp-row #scanPriceBtn{flex:1.3 1 0}
+.sp-row #scanPriceOk,.sp-row #scanPriceCancel{display:none}
+.scan-price.typing .sp-field{background:#fff;border-color:#fff;color:#16262A}
+.scan-price.typing .sp-field input{font-size:20px}
+.scan-price.typing .sp-field input::placeholder{color:#7a868a;font-weight:400}
+.scan-price.typing .sp-field .sp-ico{display:none}
+.scan-price.typing .sp-field .eur{display:inline}
+.scan-price.typing .sp-field:has(input.bad){border-color:#F08A7E;box-shadow:0 0 0 2px #F08A7E}
+.scan-price.typing #scanPriceBtn{display:none}
+.scan-price.typing #scanPriceOk,.scan-price.typing #scanPriceCancel{display:inline-flex}
