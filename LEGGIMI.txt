@@ -82,6 +82,18 @@ COME SI USA
   riconosciuto viene aggiunto e il telefono fa un "bip"; poi passi al
   successivo senza toccare nulla. Titolo, autore, editore e anno arrivano
   da Google Libri / Open Library: e' il metodo piu' preciso.
+  In basso nella schermata della fotocamera scegli cosa inquadri:
+  * Codice a barre (normale);
+  * ISBN scritto: per i libri senza codice a barre. Inquadra il numero
+    stampato dopo la parola "ISBN" (sul retro o nella pagina del copyright)
+    dentro la striscia: l'app lo legge da sola e aggiunge il libro. Accetta
+    solo numeri con la cifra di controllo giusta, quindi non sbaglia libro;
+    se non legge, avvicinati e tieni fermo (con poca luce, Torcia);
+  * Copertina: inquadra la copertina nel riquadro e tocca il pulsante
+    bianco. Il libro viene riconosciuto come con Foto mentre passi al
+    successivo; se ci sono piu' possibilita', alla fine scegli dall'elenco.
+  Anche "Ce l'ho gia'?" accetta l'ISBN scritto. La modalita' scelta resta
+  finche' non chiudi l'app.
 - Foto: fotografa la copertina (o il codice). L'app legge il testo sul
   telefono, cerca il libro e, se e' certa, lo compila da sola; se ci sono
   piu' possibilita' ti fa scegliere. I dati ricavati dalla copertina hanno

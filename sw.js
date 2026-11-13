@@ -1,5 +1,5 @@
 /* Catalogo libri: funziona anche senza rete. Le ricerche (Google Libri, Open Library) passano sempre dalla rete. */
-const CACHE = 'catalogo-libri-v17';
+const CACHE = 'catalogo-libri-v18';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'lib.js', 'manifest.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'vendor/zxing.min.js', 'vendor/tesseract.min.js', 'vendor/worker.min.js'];
 

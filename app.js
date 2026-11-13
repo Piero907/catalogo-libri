@@ -512,6 +512,7 @@ async function processPhoto(id, file) {
     var lines = L.ocrLines(data);
     var price = L.extractPrice(data.text || '');
     var written = L.extractIsbns(data.text || '');
+    if (!written.length) written = L.ocrIsbns(data.text || '', true);
     if (written.length) { await fromIsbn(id, written[0], price); return; }
     var qs = L.buildQueries(lines);
     s.lines = lines; s.price = price;
@@ -619,6 +620,107 @@ async function readLivePrice() {
   priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
 }
 function scanMsg(t) { $('#scanMsg').textContent = t; }
+
+/* Tre modi di inquadrare: codice a barre (sempre attivo), numero ISBN stampato (letto di continuo con l'OCR leggero),
+   copertina (si scatta; poi la riconosce come una Foto, mentre continui). In «Ce l'ho già?» niente copertina. */
+var scanKind = 'bar', textTimer = null, textBusy = false, textSince = 0, textHinted = false, shootBusy = false;
+function kindMsg() {
+  var check = scanMode === 'check', wish = tab === 'wish';
+  if (scanKind === 'text') return check ? 'Inquadra il numero ISBN stampato (sul retro o nella pagina del copyright) dentro la striscia: ti dico se ce l\'hai.'
+    : 'Inquadra il numero ISBN stampato dentro la striscia: di solito è sul retro o nella pagina del copyright, dopo la parola «ISBN». Lo leggo da solo.';
+  if (scanKind === 'cover') return 'Inquadra tutta la copertina nel riquadro e tocca il pulsante bianco. La riconosco mentre passi alla prossima' + (wish ? ' (va nei Desideri).' : '.');
+  if (check) return 'Inquadra il codice a barre: ti dico se il libro è già in libreria. Non aggiungo niente da solo.';
+  return wish ? 'Inquadra il codice a barre: ogni libro finisce nella lista dei Desideri.' : 'Inquadra il codice a barre, di solito sul retro. Ogni libro viene aggiunto da solo.';
+}
+function setScanKind(k) {
+  if (k !== 'text' && k !== 'cover') k = 'bar';
+  if (scanMode === 'check' && k === 'cover') k = 'bar';
+  scanKind = k;
+  var sc = $('#scan');
+  sc.classList.toggle('k-text', k === 'text'); sc.classList.toggle('k-cover', k === 'cover');
+  Array.prototype.forEach.call($('#scanKinds').querySelectorAll('[data-k]'), function (b) { b.setAttribute('aria-checked', b.dataset.k === k ? 'true' : 'false'); });
+  $('#scanShootBox').hidden = k !== 'cover';
+  clearTimeout(textTimer);
+  $('#scanGuide').classList.remove('reading');
+  scanMsg(kindMsg());
+  if (k === 'text') {
+    textSince = Date.now(); textHinted = false;
+    var ready = false;
+    getPriceOcr().then(function () { ready = true; }, function () { if (scanning && scanKind === 'text') scanMsg('La lettura del testo non è disponibile: usa il codice a barre o Digita.'); });
+    setTimeout(function () { if (!ready && scanning && scanKind === 'text') scanMsg('Preparo la lettura del testo (solo la prima volta)…'); }, 400);
+    textTimer = setTimeout(textTick, 300);
+  }
+}
+async function readLiveIsbn() {
+  var c = guideCanvas(false);
+  if (!c) return '';
+  var w = await getPriceOcr();
+  var res = await w.recognize(c);
+  return L.ocrIsbns((res.data || {}).text || '', true)[0] || '';
+}
+function textTick() {
+  clearTimeout(textTimer);
+  if (!scanning || scanKind !== 'text') return;
+  if (textBusy || scanPaused || !$('#scanVideo').videoWidth) { textTimer = setTimeout(textTick, 250); return; }
+  textBusy = true;
+  $('#scanGuide').classList.add('reading');
+  readLiveIsbn().catch(function () { return ''; }).then(function (code) {
+    textBusy = false;
+    $('#scanGuide').classList.remove('reading');
+    if (!scanning || scanKind !== 'text') return;
+    if (code) { textSince = Date.now(); textHinted = false; onScanned(code); }
+    else if (!textHinted && Date.now() - textSince > 12000) {
+      textHinted = true;
+      scanMsg('Non leggo ancora un ISBN valido: avvicinati finché il numero riempie la striscia, tieni fermo il telefono' + ($('#scanTorch').hidden ? '' : ' e, se c\'è poca luce, accendi la torcia') + '.');
+    }
+    textTimer = setTimeout(textTick, 350);
+  });
+}
+/* Ritaglio della copertina: il riquadro con un piccolo margine, lato lungo fino a 2000 punti. */
+function coverCanvas() {
+  var v = $('#scanVideo'), vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return null;
+  var x = 0, y = 0, w = vw, h = vh;
+  try {
+    var r = v.getBoundingClientRect(), g = $('#scanGuide').getBoundingClientRect();
+    var sc = Math.max(r.width / vw, r.height / vh), ox = (r.width - vw * sc) / 2, oy = (r.height - vh * sc) / 2;
+    var gw = g.width / sc, gh = g.height / sc;
+    x = (g.left - r.left - ox) / sc - gw * 0.06; y = (g.top - r.top - oy) / sc - gh * 0.06; w = gw * 1.12; h = gh * 1.12;
+    x = Math.max(0, x); y = Math.max(0, y); w = Math.min(vw - x, w); h = Math.min(vh - y, h);
+    if (!(w > 80 && h > 80)) throw 0;
+  } catch (e) { x = 0; y = 0; w = vw; h = vh; }
+  var k = Math.min(1, 2000 / Math.max(w, h));
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  c.getContext('2d').drawImage(v, x, y, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+async function shootCover() {
+  if (!scanning || shootBusy || scanMode === 'check') return;
+  var c = coverCanvas();
+  if (!c) return;
+  shootBusy = true; $('#scanShoot').disabled = true;
+  var sc = $('#scan');
+  sc.classList.add('flash'); setTimeout(function () { sc.classList.remove('flash'); }, 140);
+  beep(true); vibrate(40);
+  var blob = null;
+  try { blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.9); }); } catch (e) {}
+  shootBusy = false; $('#scanShoot').disabled = false;
+  if (!blob || !scanning) return;
+  var id = newId();
+  state.books.push(blankBook({ id: id }));
+  S[id] = { st: 'queued', file: blob };
+  photoPool(function () { return processPhoto(id, blob); });
+  touch();
+  scanCtx.count++; scanCtx.added++;
+  $('#scanCount').textContent = scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti');
+  $('#scanRes').hidden = true; resCode = '';
+  scanMsg('Copertina presa: la riconosco mentre continui. Se ci sono più libri possibili, alla fine scegli tu dall\'elenco.');
+  if (settings.price) { priceTarget = id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo». Oppure passa alla prossima copertina.'); }
+  else { $('#scanPrice').hidden = true; priceTarget = null; }
+}
+$('#scanKinds').addEventListener('click', function (e) { var b = e.target.closest('[data-k]'); if (b && scanning) setScanKind(b.dataset.k); });
+$('#scanShoot').addEventListener('click', shootCover);
 async function startScan(mode) {
   scanMode = mode === 'check' ? 'check' : 'add';
   try { beep.ctx = beep.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (beep.ctx.resume) beep.ctx.resume(); } catch (e) {}
@@ -646,22 +748,17 @@ async function startScan(mode) {
   $('#scanPrice').hidden = true; priceTarget = null; scanPaused = false;
   if (scanMode === 'add' && settings.price) warmPriceOcr();
   $('#scan').classList.toggle('checking', scanMode === 'check');
-  if (scanMode === 'check') {
-    $('#scanCount').textContent = 'Ce l\'ho già?';
-    scanMsg('Inquadra il codice a barre: ti dico se il libro è già in libreria. Non aggiungo niente da solo.');
-  } else {
-    $('#scanCount').textContent = '0 aggiunti';
-    scanMsg(tab === 'wish' ? 'Inquadra il codice a barre: ogni libro finisce nella lista dei Desideri.' : 'Inquadra il codice a barre, di solito sul retro. Ogni libro viene aggiunto da solo.');
-  }
+  $('#scanCount').textContent = scanMode === 'check' ? 'Ce l\'ho già?' : '0 aggiunti';
   $('#scan').hidden = false;
   scanning = true;
+  setScanKind(scanKind);
   try { history.pushState({ scan: 1 }, ''); pushed = true; } catch (e) {}
   scanTick();
 }
 function stopScan(fromPop) {
   if (!scanning) return;
   scanning = false;
-  clearTimeout(scanTimer);
+  clearTimeout(scanTimer); clearTimeout(textTimer);
   if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
   $('#scanVideo').srcObject = null;
   $('#scan').hidden = true;
@@ -2521,5 +2618,5 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 window.__app = { openDrawer: openDrawer, closeDrawer: closeDrawer, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
-  get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; } };
+  get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();

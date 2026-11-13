@@ -75,6 +75,41 @@
     }
     return out;
   }
+  /* ISBN letti dalla fotocamera (testo stampato, non codice a barre). L'OCR scambia spesso lettere e cifre
+     (O/0, I/1, S/5, B/8...): provo le sostituzioni, ma accetto solo codici con la cifra di controllo giusta,
+     al massimo 2 sostituzioni su 13 cifre (1 su 10), e un ISBN-13 deve iniziare con 978 o 979.
+     strict: un ISBN a 10 cifre vale solo se poco prima c'e' la parola «ISBN» (evita numeri di telefono). */
+  var OCR_DIGIT = { O: '0', o: '0', D: '0', Q: '0', I: '1', l: '1', '|': '1', i: '1', Z: '2', z: '2', S: '5', s: '5', B: '8', G: '6' };
+  function ocrIsbns(text, strict) {
+    var t = String(text || ''), out = [], seen = {}, m;
+    var re = /[0-9OoDQIl|iZzSsBGXx][0-9OoDQIl|iZzSsBGXx \t\-–‐.]{8,44}/g;
+    function push(v, rank) { if (v && !seen[v]) { seen[v] = 1; out.push({ v: v, r: rank }); } }
+    while ((m = re.exec(t))) {
+      var run = m[0], ch = [];
+      for (var k = 0; k < run.length; k++) {
+        var c = run.charAt(k);
+        if (c >= '0' && c <= '9') ch.push({ d: c, real: 1 });
+        else if (c === 'X' || c === 'x') ch.push({ d: 'X', real: 1 });
+        else if (OCR_DIGIT[c]) ch.push({ d: OCR_DIGIT[c], real: 0 });
+      }
+      var kw = /[il1|]\s?[s5]\s?[b8]\s?[nm]/i.test(t.slice(Math.max(0, m.index - 14), m.index + 4));
+      var found13 = false, s, w, fake, digits;
+      for (s = 0; s + 13 <= ch.length; s++) {
+        w = ch.slice(s, s + 13); fake = 0; digits = '';
+        for (k = 0; k < 13; k++) { fake += w[k].real ? 0 : 1; digits += w[k].d; }
+        if (fake > 2 || digits.indexOf('X') >= 0 || !/^97[89]/.test(digits) || !isbn13Valid(digits)) continue;
+        push(digits, fake); found13 = true;
+      }
+      if (found13 || (strict && !kw)) continue;
+      for (s = 0; s + 10 <= ch.length; s++) {
+        w = ch.slice(s, s + 10); fake = 0; digits = '';
+        for (k = 0; k < 10; k++) { fake += w[k].real ? 0 : 1; digits += w[k].d; }
+        if (fake > 1 || digits.slice(0, 9).indexOf('X') >= 0 || !isbn10Valid(digits)) continue;
+        push(isbn10to13(digits), 3 + fake);
+      }
+    }
+    return out.sort(function (x, y) { return x.r - y.r; }).map(function (x) { return x.v; });
+  }
   /* Da un testo incollato (uno o più codici) ricava ISBN validi e frammenti da segnalare. */
   function parseIsbnList(text) {
     var valid = [], invalid = [], seen = {};
@@ -813,7 +848,7 @@
     str: str, norm: norm, parseNum: parseNum, fmtNum: fmtNum, yearOf: yearOf,
     sortKeyTitle: sortKeyTitle, sortKeyAuthor: sortKeyAuthor,
     isbnClean: isbnClean, isbn13Valid: isbn13Valid, isbn10Valid: isbn10Valid, isbn10to13: isbn10to13, isbn13to10: isbn13to10,
-    toIsbn13: toIsbn13, fmtIsbn: fmtIsbn, extractIsbns: extractIsbns, parseIsbnList: parseIsbnList,
+    toIsbn13: toIsbn13, fmtIsbn: fmtIsbn, extractIsbns: extractIsbns, ocrIsbns: ocrIsbns, parseIsbnList: parseIsbnList,
     parseGoogle: parseGoogle, parseOpenLibrary: parseOpenLibrary, lookupIsbn: lookupIsbn, parseCrossref: parseCrossref, isbnPrefix: isbnPrefix, guessPublisher: guessPublisher, diagnose: diagnose, openLibrarySearch: openLibrarySearch, searchText: searchText,
     tokens: tokens, fuzzyHas: fuzzyHas, splitTitleAuthor: splitTitleAuthor, ocrLines: ocrLines, goodLines: goodLines, topLines: topLines, buildQueries: buildQueries,
     scoreCandidate: scoreCandidate, rankCandidates: rankCandidates, strongMatch: strongMatch, extractPrice: extractPrice,
