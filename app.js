@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 46, date: '2026-11-13', note: 'Condivisione con prezzo, copertina, genere e pagine; segnalibro giallo sui preferiti nella vista Copertine' };
+var APP_VERSION = { v: 47, date: '2026-11-13', note: 'All\'apertura dall\'icona compare la scritta Next Libris' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -3752,6 +3752,16 @@ try { if (navigator.storage && navigator.storage.persisted) navigator.storage.pe
 updateSummary();
 persist();
 checkIncoming();
+/* schermata d'apertura (solo app installata): resta almeno ~0,7 s dall'avvio, poi sfuma */
+(function () {
+  var el = document.getElementById('splash');
+  if (!el || !document.documentElement.hasAttribute('data-splash')) { if (el) el.remove(); return; }
+  var since = (window.performance && performance.now) ? performance.now() : 0;
+  setTimeout(function () {
+    el.classList.add('out');
+    setTimeout(function () { el.remove(); document.documentElement.removeAttribute('data-splash'); }, 350);
+  }, Math.max(0, 700 - since));
+})();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(function () {});

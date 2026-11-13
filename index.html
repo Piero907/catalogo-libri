@@ -23,11 +23,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');var th0=s0.themeV2?s0.theme:(s0.theme==='dark'?'dark':'light');if(th0==='light'||th0==='dark')document.documentElement.setAttribute('data-theme',th0);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');document.documentElement.setAttribute('data-theme','light');}</script>
+<script>/* aspetto e tema prima di disegnare la pagina, senza lampi; app aperta dall'icona: schermata d'apertura con il nome */try{if((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true)document.documentElement.setAttribute('data-splash','');}catch(e){}try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');var th0=s0.themeV2?s0.theme:(s0.theme==='dark'?'dark':'light');if(th0==='light'||th0==='dark')document.documentElement.setAttribute('data-theme',th0);document.documentElement.setAttribute('data-pal',s0.palV2&&s0.pal?s0.pal:'bosco');if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');document.documentElement.setAttribute('data-theme','light');}</script>
 <link rel="preload" href="vendor/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="splash" aria-hidden="true"><img src="icons/next-libris-192.png" alt="" width="120" height="120"><b>Next Libris</b></div>
 <main>
   <header class="top">
     <div>

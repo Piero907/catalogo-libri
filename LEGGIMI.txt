@@ -86,6 +86,9 @@ personale il passo 2 e' piu' semplice e da' lo stesso risultato.
 
 COME SI USA
 -----------
+- Apertura: aprendo l'app dall'icona, dopo la schermata di Android (che da
+  Android 12 mostra solo l'icona, senza nome) compare per mezzo secondo
+  l'icona con la scritta "Next Libris", poi l'elenco.
 - Scheda aperta: in alto i pulsanti con la scritta ("Presta", che mostra
   anche lo stato: Prestato, Venduto, Regalato, Smarrito; "Desideri" o
   "Libreria" per spostare il libro; "Elimina", in rosso), a destra da sola
