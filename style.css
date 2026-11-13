@@ -574,3 +574,139 @@ body.drawer-open .edge-tab,body.gridview.drawer-open .edge-tab{visibility:hidden
 .sugg button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font:500 15px/1.2 var(--font-body);text-align:left;cursor:pointer}
 .sugg button:hover,.sugg button[aria-selected="true"]{background:var(--surface2)}
 .sugg .n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* Literata (SIL Open Font License, vendor/fonts): carattere variabile con dimensione ottica, ospitato qui per funzionare anche offline */
+@font-face{font-family:"Literata";font-style:normal;font-display:swap;font-weight:200 900;src:url(vendor/fonts/literata-latin.woff2) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Literata";font-style:normal;font-display:swap;font-weight:200 900;src:url(vendor/fonts/literata-latin-ext.woff2) format("woff2");
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+/* ======================================================================================
+   ASPETTO «NUOVO» — legatoria: carta da registro, tela blu inchiostro, iniziali in ottone.
+   Vale solo con html[data-look="nuovo"]: con «Classico» (Opzioni › Aspetto) resta tutto com'era.
+   ====================================================================================== */
+html[data-look="nuovo"]{
+  --bg:#EDF0F5; --surface:#FFFFFF; --surface2:#F3F5F9; --ink:#18202F; --muted:#5A6477; --line:#D7DCE6;
+  --accent:#2C47A3; --accent-ink:#FFFFFF; --accent-soft:#E3E8F7;
+  --brass:#A77A1E; --gilt:#EBD9A6;
+  --warn:#86500A; --warn-bg:#FFF1D9; --warn-line:#DDA13C;
+  --bad:#B02F28; --bad-bg:#FBE7E5;
+  --info:#17675F; --info-bg:#DDF1ED; --info-line:#86C6BB;
+  --font-display:"Literata",Georgia,"Times New Roman",serif;
+  --cloth-l:34%; --cloth-s:30%;
+  --lift:0 1px 2px rgba(24,32,47,.06),0 10px 28px rgba(24,32,47,.10);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  html[data-look="nuovo"]:not([data-theme="light"]){
+    --bg:#10141D; --surface:#171D29; --surface2:#1E2534; --ink:#E7EAF1; --muted:#9BA4B7; --line:#2A3245;
+    --accent:#A3B5FF; --accent-ink:#0F1733; --accent-soft:#232D4E;
+    --brass:#E1B65A; --gilt:#E6CF8F;
+    --warn:#F1C064; --warn-bg:#382A12; --warn-line:#B88A2E;
+    --bad:#FF958B; --bad-bg:#3D1E1C;
+    --info:#83D3C6; --info-bg:#132F2B; --info-line:#2F6B62;
+    --cloth-l:30%; --cloth-s:26%;
+    --lift:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+html[data-look="nuovo"][data-theme="dark"]{
+  --bg:#10141D; --surface:#171D29; --surface2:#1E2534; --ink:#E7EAF1; --muted:#9BA4B7; --line:#2A3245;
+  --accent:#A3B5FF; --accent-ink:#0F1733; --accent-soft:#232D4E;
+  --brass:#E1B65A; --gilt:#E6CF8F;
+  --warn:#F1C064; --warn-bg:#382A12; --warn-line:#B88A2E;
+  --bad:#FF958B; --bad-bg:#3D1E1C;
+  --info:#83D3C6; --info-bg:#132F2B; --info-line:#2F6B62;
+  --cloth-l:30%; --cloth-s:26%;
+  --lift:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+
+/* caratteri: Literata (nata per leggere libri) per l'intestazione e i titoli; Plex per il resto */
+html[data-look="nuovo"] body{-webkit-font-smoothing:antialiased}
+html[data-look="nuovo"] h1{font:600 clamp(31px,7.6vw,42px)/1.04 var(--font-display);letter-spacing:-.012em}
+html[data-look="nuovo"] h2{font-weight:600;letter-spacing:-.005em}
+html[data-look="nuovo"] .sum-t{font:600 17px/1.28 var(--font-display);letter-spacing:-.003em}
+html[data-look="nuovo"] .f-t textarea{font:600 19px/1.25 var(--font-display)}
+html[data-look="nuovo"] .tile b,html[data-look="nuovo"] .res-h,html[data-look="nuovo"] .sheet h3{font-family:var(--font-display);font-weight:600}
+/* etichette in scrittura normale, non TUTTO MAIUSCOLO */
+html[data-look="nuovo"] .lbl{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:500}
+html[data-look="nuovo"] .drawer h3,html[data-look="nuovo"] .facets-h,html[data-look="nuovo"] .ex-label,html[data-look="nuovo"] .opts-h,html[data-look="nuovo"] .thead{text-transform:none;letter-spacing:0;font-size:13px}
+html[data-look="nuovo"] svg{stroke-width:1.75}
+html[data-look="nuovo"] .edge-tab svg{stroke-width:2.6}
+
+/* schede Libreria / Desideri come linguette di un raccoglitore */
+html[data-look="nuovo"] .tabbar{align-items:center;gap:14px}
+html[data-look="nuovo"] .tabs{background:none;border:0;padding:0;gap:20px;border-radius:0}
+html[data-look="nuovo"] .tabs button{min-height:46px;padding:6px 1px 4px;border-radius:0;border-bottom:2.5px solid transparent;font-size:16.5px;color:var(--muted)}
+html[data-look="nuovo"] .tabs button[aria-selected="true"]{background:none;box-shadow:none;color:var(--ink);border-bottom-color:var(--accent)}
+html[data-look="nuovo"] .quick{min-height:42px;border-radius:999px;margin-left:auto}
+
+/* pulsanti, campi, etichette */
+html[data-look="nuovo"] .btn,html[data-look="nuovo"] .tools input[type="search"]{border-radius:10px}
+html[data-look="nuovo"] .btn.primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 2px 8px color-mix(in srgb,var(--accent) 28%,transparent)}
+html[data-look="nuovo"] .tag{border-radius:6px;padding:3px 8px}
+html[data-look="nuovo"] .seg button[aria-pressed="true"]{color:var(--accent-ink)}
+html[data-look="nuovo"] .star.on{color:var(--brass)}
+html[data-look="nuovo"] .dock{background:color-mix(in srgb,var(--bg) 96%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+html[data-look="nuovo"] .f textarea:focus,html[data-look="nuovo"] .f input:focus{background:var(--accent-soft)}
+
+/* l'elenco chiuso e' un indice continuo, come uno schedario; il libro aperto si solleva */
+html[data-look="nuovo"] #list>.row.closed{margin:0;border-radius:0;border-bottom-width:0}
+html[data-look="nuovo"] #list>.row.closed .sum{border-radius:inherit;min-height:84px}
+html[data-look="nuovo"] #list>.row.closed:first-child,
+html[data-look="nuovo"] #list>.row:not(.closed)+.row.closed{border-top-left-radius:14px;border-top-right-radius:14px}
+html[data-look="nuovo"] #list>.row.closed:last-child,
+html[data-look="nuovo"] #list>.row.closed:has(+ .row:not(.closed)){border-bottom-left-radius:14px;border-bottom-right-radius:14px;border-bottom-width:1px;margin-bottom:12px}
+html[data-look="nuovo"] #list>.row:not(.closed){margin:0 0 12px;border-radius:16px;border-color:color-mix(in srgb,var(--line) 70%,transparent);box-shadow:var(--lift)}
+html[data-look="nuovo"] #list>.row.bad{border-color:var(--bad)}
+
+/* copertine come piccoli volumi: dorso in ombra a sinistra */
+html[data-look="nuovo"] .sum-img,html[data-look="nuovo"] .thumb:has(img),html[data-look="nuovo"] .cover .art{position:relative;border:0;border-radius:2px 5px 5px 2px;box-shadow:0 1px 1px rgba(16,22,40,.25),0 3px 9px rgba(16,22,40,.14)}
+html[data-look="nuovo"] .sum-img::after,html[data-look="nuovo"] .thumb:has(img)::after,html[data-look="nuovo"] .cover .art::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.32) 0,rgba(0,0,0,.10) 2px,rgba(255,255,255,.24) 3.5px,rgba(255,255,255,0) 9px),linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.07))}
+html[data-look="nuovo"] .thumb:has(img){overflow:hidden}
+/* senza copertina: rilegato in tela, iniziale in ottone */
+html[data-look="nuovo"] .sum-img.ph,html[data-look="nuovo"]:not([data-theme="light"]) .sum-img.ph{background:hsl(var(--h) var(--cloth-s) var(--cloth-l));color:var(--gilt);font:600 22px/1 var(--font-display)}
+html[data-look="nuovo"] .cover .ph,html[data-look="nuovo"]:not([data-theme="light"]) .cover .ph{background:hsl(var(--h) var(--cloth-s) var(--cloth-l));color:var(--gilt);padding:16px 10px 12px}
+html[data-look="nuovo"] .cover .ph::before,html[data-look="nuovo"] .cover .ph::after{content:"";position:absolute;left:10px;right:10px;border-top:1px solid color-mix(in srgb,var(--gilt) 55%,transparent)}
+html[data-look="nuovo"] .cover .ph::before{top:9px}
+html[data-look="nuovo"] .cover .ph::after{bottom:9px}
+html[data-look="nuovo"] .cover .ph b{font:600 15px/1.22 var(--font-display)}
+html[data-look="nuovo"] .cover .ph small{opacity:.8}
+html[data-look="nuovo"] .cover .cap{font-family:var(--font-display);font-size:13.5px}
+
+/* finestre e menu */
+html[data-look="nuovo"] .sheet{background:rgba(10,14,24,.5)}
+html[data-look="nuovo"] .sheet-in{border-radius:20px}
+html[data-look="nuovo"] .drawer{border-radius:0 20px 20px 0}
+html[data-look="nuovo"] .toast{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+
+/* fotocamera: scheda «Ce l'ho già?» con i colori nuovi */
+html[data-look="nuovo"] .res-h.ok{color:#17675F}
+html[data-look="nuovo"] .res-h.wish{color:#2C47A3}
+html[data-look="nuovo"] .res-b .btn.primary{background:#2C47A3;border-color:#2C47A3}
+html[data-look="nuovo"] .scan-kinds button[aria-checked="true"]{color:#18202F}
+
+/* ---- Opzioni › Aspetto ---- */
+.choice{border:0;margin:0;padding:0;display:grid;gap:8px}
+.choice legend{padding:0;margin:0 0 6px;font-weight:600;font-size:15px}
+.opt-card{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+.opt-card:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--accent-soft)}
+.opt-card input{width:20px;height:20px;flex:none;accent-color:var(--accent);margin:0}
+.oc-t{display:grid;gap:2px;min-width:0}
+.oc-t small{font-size:13px;line-height:1.35;color:var(--muted)}
+.sw{flex:none;display:flex;width:54px;height:40px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.sw i{flex:1 1 0}
+.sw-nuovo i:nth-child(1){background:#EDF0F5}.sw-nuovo i:nth-child(2){background:#2C47A3}.sw-nuovo i:nth-child(3){background:#A77A1E}
+.sw-classico i:nth-child(1){background:#EDF1EE}.sw-classico i:nth-child(2){background:#1B6A4F}.sw-classico i:nth-child(3){background:#FFEFCF}
+.seg-theme{display:flex;width:100%}
+.seg-theme label{flex:1 1 0;display:flex;cursor:pointer}
+.seg-theme input{position:absolute;opacity:0;pointer-events:none}
+.seg-theme span{flex:1;display:grid;place-items:center;min-height:44px;padding:6px 8px;border-right:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:14.5px;font-weight:600}
+.seg-theme label:last-child span{border-right:0}
+.seg-theme input:checked+span{background:var(--accent);color:var(--accent-ink)}
+.seg-theme input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-3px}
+/* la riga in cima non deve allargare la scheda oltre lo schermo: le etichette lunghe vanno a capo */
+@media (max-width:879px){ .row.has-top{grid-template-columns:minmax(0,1fr)} }
+.card-top .flags{min-width:0}
+.card-top .tag{white-space:normal;text-align:left}

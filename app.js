@@ -35,7 +35,12 @@ var ICON = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   left: '<path d="M15 5l-7 7 7 7"/>'
 };
-function icon(n) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
+/* qualche icona disegnata apposta per l'aspetto «Nuovo» */
+var ICON_NEW = {
+  loan: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M7 8h1.5"/><path d="M14 12h7M18 8.5l3.5 3.5-3.5 3.5"/>',
+  bag: '<path d="M5 8h14l-1.2 11.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>'
+};
+function icon(n) { var p = (document.documentElement.getAttribute('data-look') === 'nuovo' && ICON_NEW[n]) || ICON[n]; return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; }
 $('#btnScan').innerHTML = icon('scan') + 'Scansiona';
 $('#icoFilt').innerHTML = icon('filt');
 $('#edgeTab').innerHTML = icon('right');
@@ -69,7 +74,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
-var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0 };
+var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto' };
 var openState = {};   // schede aperte/chiuse in questa sessione (true/false); se manca vale la regola di isOpen
 var q = '', sortBy = 'recent', flt = '', tab = 'lib', readFlt = '', shFlt = '', genFlt = '', autFlt = '', autName = '', edFlt = '';   // shFlt, genFlt: chiave normalizzata, NONE = senza   // flt: '' | 'guess' | 'loan'; tab: 'lib' (Libreria) | 'wish' (Desideri)
 var tSave = null, toastTimer = null, scanning = false, offlineNoted = false;
@@ -178,6 +183,8 @@ function loadAll() {
     settings.loanSnooze = Number(s.loanSnooze) || 0;
     settings.swiped = s.swiped === true;
     settings.pubFix = s.pubFix === true;
+    settings.look = s.look === 'classico' ? 'classico' : 'nuovo';
+    settings.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -1977,6 +1984,27 @@ $('#drawerOpts').addEventListener('click', function (e) {
   openOptions(x.dataset.sec, had);
 });
 
+/* ---------- Aspetto: stile «Nuovo» o «Classico», tema automatico / chiaro / scuro ---------- */
+var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function applyLook(rerender) {
+  var root = document.documentElement;
+  root.setAttribute('data-look', settings.look);
+  if (settings.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', settings.theme);
+  var dark = settings.theme === 'dark' || (settings.theme === 'auto' && darkMQ && darkMQ.matches);
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', settings.look === 'classico' ? '#1B6A4F' : (dark ? '#10141D' : '#EDF0F5'));
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="look"]'), function (r) { r.checked = r.value === settings.look; });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="theme"]'), function (r) { r.checked = r.value === settings.theme; });
+  $('#icoLoan').innerHTML = icon('loan');
+  if (rerender) { renderList(); updateSummary(); }
+}
+if (darkMQ) { var onDark = function () { if (settings.theme === 'auto') applyLook(false); }; if (darkMQ.addEventListener) darkMQ.addEventListener('change', onDark); else if (darkMQ.addListener) darkMQ.addListener(onDark); }
+document.addEventListener('change', function (e) {
+  var t = e.target;
+  if (t.name === 'look') { settings.look = t.value === 'classico' ? 'classico' : 'nuovo'; saveSettings(); applyLook(true); toast(settings.look === 'classico' ? 'Aspetto classico, come prima.' : 'Nuovo aspetto.'); }
+  else if (t.name === 'theme') { settings.theme = t.value === 'light' || t.value === 'dark' ? t.value : 'auto'; saveSettings(); applyLook(true); }
+});
+
 /* Pagina delle opzioni: una sezione alla volta, con «‹» per tornare al menu e il tasto Indietro del telefono per chiudere */
 var optOpen = false, optPushed = false;
 function openOptions(sec, reuse) {
@@ -2880,6 +2908,7 @@ $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
 loadQuota();
+applyLook(false);
 confirmLearnedPublishers();
 if (!settings.swiped) setTimeout(function () { var t = $('#edgeTab'); t.classList.add('nudge'); setTimeout(function () { t.classList.remove('nudge'); }, 3000); }, 1500);
 setTab('lib');

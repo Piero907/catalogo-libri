@@ -125,6 +125,23 @@ COME SI USA
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
 
+ASPETTO: STILE E TEMA
+---------------------
+Opzioni > Aspetto (o l'ingranaggio in alto a destra > Aspetto):
+- Stile "Nuovo": carta chiara e inchiostro blu, titoli in Literata (un
+  carattere nato per leggere libri), copertine disegnate come piccoli
+  volumi con il dorso in ombra; i libri senza copertina sembrano rilegati
+  in tela con l'iniziale dorata; l'elenco e' un indice continuo e il libro
+  aperto si solleva come una scheda.
+- Stile "Classico": l'aspetto di prima, verde, identico.
+- Tema: Automatico (segue il telefono), Chiaro o Scuro, per entrambi gli
+  stili.
+La scelta resta salvata sul telefono. Se lo stile nuovo non piace basta
+scegliere "Classico". Il codice dell'app com'era prima del nuovo aspetto e'
+salvato anche su GitHub nel ramo "aspetto-classico".
+Il carattere Literata e' incluso nell'app (cartella vendor/fonts, licenza
+SIL Open Font License), cosi' funziona anche senza rete.
+
 OPZIONI
 -------
 Le Opzioni stanno nel menu laterale, scheda "Opzioni". Ci arrivi toccando
