@@ -74,7 +74,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 31, date: '2026-11-13', note: 'la barra in alto (schede, ricerca, filtri, Copertine…) resta ferma mentre scorri l\'elenco compatto.' };
+var APP_VERSION = { v: 32, date: '2026-11-13', note: 'Aspetto semplificato: niente più stile Classico, restano tema, colori e caratteri.' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'auto', pal: 'inchiostro', ft: 'literata', fb: 'plex' };
@@ -188,7 +188,7 @@ function loadAll() {
     settings.loanSnooze = Number(s.loanSnooze) || 0;
     settings.swiped = s.swiped === true;
     settings.pubFix = s.pubFix === true;
-    settings.look = s.look === 'classico' ? 'classico' : 'nuovo';
+    settings.look = 'nuovo';                       // lo stile «Classico» non c'e' piu': resta solo il nuovo, con palette e caratteri
     settings.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
     settings.pal = PALS[s.pal] ? s.pal : 'inchiostro';
     settings.ft = FONTS_T.indexOf(s.ft) >= 0 ? s.ft : 'literata';
@@ -2014,7 +2014,7 @@ $('#drawerOpts').addEventListener('click', function (e) {
   openOptions(x.dataset.sec, had);
 });
 
-/* ---------- Aspetto: stile «Nuovo» o «Classico», tema automatico / chiaro / scuro ---------- */
+/* ---------- Aspetto: tema automatico / chiaro / scuro, colori e caratteri ---------- */
 var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 function applyLook(rerender) {
   var root = document.documentElement;
@@ -2023,20 +2023,17 @@ function applyLook(rerender) {
   root.setAttribute('data-pal', settings.pal); root.setAttribute('data-ft', settings.ft); root.setAttribute('data-fb', settings.fb);
   var dark = settings.theme === 'dark' || (settings.theme === 'auto' && darkMQ && darkMQ.matches);
   var m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.setAttribute('content', settings.look === 'classico' ? '#1B6A4F' : PALS[settings.pal][dark ? 1 : 0]);
-  ['look', 'theme', 'pal', 'ft', 'fb'].forEach(function (k) {
+  if (m) m.setAttribute('content', PALS[settings.pal][dark ? 1 : 0]);
+  ['theme', 'pal', 'ft', 'fb'].forEach(function (k) {
     Array.prototype.forEach.call(document.querySelectorAll('input[name="' + k + '"]'), function (r) { r.checked = r.value === settings[k]; });
   });
-  $('#lookNew').hidden = settings.look !== 'nuovo';
-  $('#lookClassicNote').hidden = settings.look === 'nuovo';
   $('#icoLoan').innerHTML = icon('loan');
   if (rerender) { renderList(); updateSummary(); }
 }
 if (darkMQ) { var onDark = function () { if (settings.theme === 'auto') applyLook(false); }; if (darkMQ.addEventListener) darkMQ.addEventListener('change', onDark); else if (darkMQ.addListener) darkMQ.addListener(onDark); }
 document.addEventListener('change', function (e) {
   var t = e.target;
-  if (t.name === 'look') { settings.look = t.value === 'classico' ? 'classico' : 'nuovo'; saveSettings(); applyLook(true); toast(settings.look === 'classico' ? 'Aspetto classico, come prima.' : 'Nuovo aspetto.'); }
-  else if (t.name === 'theme') { settings.theme = t.value === 'light' || t.value === 'dark' ? t.value : 'auto'; saveSettings(); applyLook(true); }
+  if (t.name === 'theme') { settings.theme = t.value === 'light' || t.value === 'dark' ? t.value : 'auto'; saveSettings(); applyLook(true); }
   else if (t.name === 'pal' && PALS[t.value]) { settings.pal = t.value; saveSettings(); applyLook(false); }
   else if (t.name === 'ft' && FONTS_T.indexOf(t.value) >= 0) { settings.ft = t.value; saveSettings(); applyLook(false); }
   else if (t.name === 'fb' && FONTS_B.indexOf(t.value) >= 0) { settings.fb = t.value; saveSettings(); applyLook(false); }

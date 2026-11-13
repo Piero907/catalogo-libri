@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look',s0.look==='classico'?'classico':'nuovo');if(s0.theme==='light'||s0.theme==='dark')document.documentElement.setAttribute('data-theme',s0.theme);if(s0.pal)document.documentElement.setAttribute('data-pal',s0.pal);if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');}</script>
+<script>/* aspetto e tema prima di disegnare la pagina, senza lampi */try{var s0=JSON.parse(localStorage.getItem('catalogo-libri-set')||'{}');document.documentElement.setAttribute('data-look','nuovo');if(s0.theme==='light'||s0.theme==='dark')document.documentElement.setAttribute('data-theme',s0.theme);if(s0.pal)document.documentElement.setAttribute('data-pal',s0.pal);if(s0.ft)document.documentElement.setAttribute('data-ft',s0.ft);if(s0.fb)document.documentElement.setAttribute('data-fb',s0.fb);}catch(e){document.documentElement.setAttribute('data-look','nuovo');}</script>
 <link rel="preload" href="vendor/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -147,11 +147,6 @@
     </div>
     <section class="opt-sec" data-sec="look" data-title="Aspetto">
       <fieldset class="choice">
-        <legend>Stile</legend>
-        <label class="opt-card"><input type="radio" name="look" value="nuovo"><span class="sw sw-nuovo" aria-hidden="true"><i></i><i></i><i></i></span><span class="oc-t"><b>Nuovo</b><small>Carta e inchiostro blu, titoli in carattere da libro, copertine come piccoli volumi.</small></span></label>
-        <label class="opt-card"><input type="radio" name="look" value="classico"><span class="sw sw-classico" aria-hidden="true"><i></i><i></i><i></i></span><span class="oc-t"><b>Classico</b><small>L'aspetto di prima, verde.</small></span></label>
-      </fieldset>
-      <fieldset class="choice">
         <legend>Tema</legend>
         <div class="seg seg-theme">
           <label><input type="radio" name="theme" value="auto"><span>Automatico</span></label><label><input type="radio" name="theme" value="light"><span>Chiaro</span></label><label><input type="radio" name="theme" value="dark"><span>Scuro</span></label>
@@ -177,7 +172,6 @@
         </fieldset>
         <button class="btn" id="lookReset" type="button">Torna all'aspetto predefinito</button>
       </div>
-      <p class="hint" id="lookClassicNote" hidden>Colori e caratteri si scelgono con lo stile Nuovo.</p>
     </section>
     <section class="opt-sec" data-sec="search" data-title="Ricerca dei libri">
       <p class="hint quota" id="quotaInfo"></p>
@@ -283,7 +277,7 @@
   <div class="drawer-body" id="drawerBody">
     <div id="drawerOpts" role="tabpanel" aria-labelledby="dtOpt" hidden>
       <div class="dlist dmenu">
-        <button type="button" class="dopt" data-sec="look"><span><b>Aspetto</b><small>Tema chiaro o scuro, stile</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt" data-sec="look"><span><b>Aspetto</b><small>Tema chiaro o scuro, colori, caratteri</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="search"><span><b>Ricerca dei libri</b><small>Chiave Google, catalogo SBN, richieste di oggi</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="cards"><span><b>Schede e prezzo</b><small>Campi in più, schede aperte, prezzo</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="fix"><span><b>Sistema l'elenco</b><small>Doppioni, case editrici, copertine</small></span><span class="n" aria-hidden="true">›</span></button>

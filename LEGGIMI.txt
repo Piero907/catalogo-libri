@@ -125,29 +125,24 @@ COME SI USA
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
 
-ASPETTO: STILE E TEMA
----------------------
+ASPETTO: TEMA, COLORI E CARATTERI
+---------------------------------
 Opzioni > Aspetto (o l'ingranaggio in alto a destra > Aspetto):
-- Stile "Nuovo": carta chiara e inchiostro blu, titoli in Literata (un
-  carattere nato per leggere libri), copertine disegnate come piccoli
-  volumi con il dorso in ombra; i libri senza copertina sembrano rilegati
-  in tela con l'iniziale dorata; l'elenco e' un indice continuo e il libro
-  aperto si solleva come una scheda.
-- Stile "Classico": l'aspetto di prima, verde, identico.
-- Tema: Automatico (segue il telefono), Chiaro o Scuro, per entrambi gli
-  stili.
-- Solo con lo stile Nuovo:
-  * Colori: Inchiostro (blu), Bordeaux (rosso vino) o Bosco (verde
-    bottiglia), ognuno con la sua versione scura;
-  * Carattere dei titoli: Literata (predefinito), EB Garamond, Playfair
-    Display, Lora, Merriweather, Montserrat, Roboto;
-  * Carattere del testo: IBM Plex Sans (predefinito), Roboto, Lato,
-    Atkinson Hyperlegible (molto leggibile), Lora.
-  Ogni carattere si vede scritto con se stesso; la scelta vale subito.
-  "Torna all'aspetto predefinito" rimette colori e caratteri iniziali.
-La scelta resta salvata sul telefono. Se lo stile nuovo non piace basta
-scegliere "Classico". Il codice dell'app com'era prima del nuovo aspetto e'
-salvato anche su GitHub nel ramo "aspetto-classico".
+- Tema: Automatico (segue il telefono), Chiaro o Scuro.
+- Colori: Inchiostro (blu), Bordeaux (rosso vino) o Bosco (verde
+  bottiglia), ognuno con la sua versione scura.
+- Carattere dei titoli: Literata (predefinito), EB Garamond, Playfair
+  Display, Lora, Merriweather, Montserrat, Roboto.
+- Carattere del testo: IBM Plex Sans (predefinito), Roboto, Lato,
+  Atkinson Hyperlegible (molto leggibile), Lora.
+Ogni carattere si vede scritto con se stesso; la scelta vale subito e
+resta salvata sul telefono. "Torna all'aspetto predefinito" rimette colori
+e caratteri iniziali.
+Le copertine sono disegnate come piccoli volumi con il dorso in ombra; i
+libri senza copertina sembrano rilegati in tela con l'iniziale dorata;
+l'elenco e' un indice continuo e il libro aperto si solleva come una scheda.
+(Il vecchio aspetto verde non c'e' piu' nell'app; il codice di allora e'
+comunque conservato su GitHub nel ramo "aspetto-classico".)
 I caratteri sono inclusi nell'app (cartella vendor/fonts, tutti con licenza
 SIL Open Font License), cosi' funzionano anche senza rete; ognuno si scarica
 solo la prima volta che lo usi o lo vedi nell'elenco.
