@@ -1559,7 +1559,7 @@ function setRead(id, what, v) {
   if (f) f.focus({ preventScroll: true });
 }
 
-/* ---------- pannello Filtri e ordine: si apre dal pulsante o trascinando il pollice da destra verso sinistra ---------- */
+/* ---------- pannello Filtri (a sinistra): si apre dal pulsante o trascinando il pollice dal bordo sinistro verso destra ---------- */
 var NONE = '\u0001';
 var READ_TXT = { da: 'Da leggere', in: 'In lettura', ok: 'Letti', no: 'Non indicato' };
 var FLT_TXT = { loan: 'In prestito', gone: 'Venduti, regalati, smarriti', guess: 'Da verificare', dup: 'Copie e doppioni' };
@@ -1669,7 +1669,7 @@ function dragDrawer(px) {
   var w = drawerWidth();
   px = Math.max(0, Math.min(w, px));
   drawerEl.style.transition = 'none'; scrimEl.style.transition = 'none';
-  drawerEl.style.transform = 'translateX(' + (w - px) + 'px)';
+  drawerEl.style.transform = 'translateX(' + (px - w) + 'px)';
   scrimEl.style.opacity = String(px / w);
 }
 function releaseDrawerStyles() {
@@ -1709,8 +1709,9 @@ $('#drawerReset').addEventListener('click', clearFilters);
 scrimEl.addEventListener('click', function () { closeDrawer(); });
 window.addEventListener('popstate', function () { if (drawerOpen) { drawerPushed = false; closeDrawer(true); } });
 
-/* Il gesto: si parte dalla meta' destra dello schermo (non dal bordo, che su Android e' il gesto Indietro)
-   e si trascina verso sinistra; il pannello segue il pollice. Per chiudere: trascina verso destra o tocca fuori. */
+/* Il gesto: dal bordo sinistro (o da un punto qualsiasi della meta' sinistra, perche' con la navigazione a gesti
+   di Android il bordo e' riservato a Indietro) si trascina verso destra; il pannello segue il pollice.
+   Per chiudere: trascina verso sinistra, tocca fuori o usa Indietro. */
 var swipe = null;
 function swipeBlocked(target) {
   if (scanning || !$('#lightbox').hidden || document.querySelector('.sheet:not([hidden])')) return true;
@@ -1724,13 +1725,13 @@ document.addEventListener('touchstart', function (e) {
     if (e.target.closest('#drawer, #drawerScrim') && !e.target.closest('select')) swipe = { mode: 'close', x0: t.clientX, y0: t.clientY, dir: 0, px: drawerWidth() };
     return;
   }
-  if (t.clientX < window.innerWidth * 0.4 || swipeBlocked(e.target)) return;
+  if (t.clientX > window.innerWidth * 0.5 || swipeBlocked(e.target)) return;
   swipe = { mode: 'open', x0: t.clientX, y0: t.clientY, dir: 0, px: 0 };
 }, { passive: true });
 document.addEventListener('touchmove', function (e) {
   if (!swipe || e.touches.length !== 1) return;
   var t = e.touches[0], now = Date.now();
-  var dx = swipe.mode === 'open' ? swipe.x0 - t.clientX : t.clientX - swipe.x0, dy = t.clientY - swipe.y0;
+  var dx = swipe.mode === 'open' ? t.clientX - swipe.x0 : swipe.x0 - t.clientX, dy = t.clientY - swipe.y0;
   if (!swipe.dir) {
     if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
     if (dx > 0 && dx > Math.abs(dy) * 1.5) {

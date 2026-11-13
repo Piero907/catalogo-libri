@@ -34,8 +34,8 @@
   </div>
 
   <section class="tools" aria-label="Strumenti">
-    <input id="q" type="search" placeholder="Cerca nell'elenco" aria-label="Cerca nell'elenco" autocomplete="off">
     <button class="btn filt" id="btnFilters" aria-expanded="false" aria-controls="drawer"><span id="icoFilt" aria-hidden="true"></span>Filtri<span class="badge" id="fltBadge" hidden></span></button>
+    <input id="q" type="search" placeholder="Cerca nell'elenco" aria-label="Cerca nell'elenco" autocomplete="off">
     <div class="acts">
       <button class="btn sm" id="btnView"></button>
       <button class="btn sm" id="btnCheck"></button>
@@ -193,7 +193,7 @@
 <div class="drawer-scrim" id="drawerScrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerH" hidden inert>
   <div class="drawer-head">
-    <h2 id="drawerH">Filtri e ordine</h2>
+    <h2 id="drawerH">Filtri</h2>
     <button class="ico" id="drawerX" aria-label="Chiudi i filtri">×</button>
   </div>
   <div class="drawer-body" id="drawerBody">
@@ -209,7 +209,7 @@
       <option value="letti">Letti di recente</option>
     </select>
     <div id="drawerFlt"></div>
-    <p class="dhint" id="drawerHint" hidden>Puoi aprire questo pannello anche trascinando il pollice da destra verso sinistra sull'elenco.</p>
+    <p class="dhint" id="drawerHint" hidden>Si apre anche trascinando il pollice dal bordo sinistro verso destra.</p>
   </div>
   <div class="drawer-foot">
     <button class="btn" id="drawerReset">Azzera</button>

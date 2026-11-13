@@ -110,20 +110,24 @@ COME SI USA
   che hai aperta (Libreria o Desideri); le colonne in piu' (scaffale,
   genere, pagine, note, prestito) compaiono solo se almeno un libro le ha.
 
-FILTRI E ORDINE (pannello laterale)
------------------------------------
+FILTRI E ORDINE (pannello laterale a sinistra)
+----------------------------------------------
 Si apre in due modi:
-- trascinando il pollice da destra verso sinistra sull'elenco. Parti dalla
-  meta' destra dello schermo, NON dal bordo: su Android il bordo e' il gesto
-  "Indietro" del telefono;
+- trascinando il pollice dal bordo sinistro verso destra (il pannello segue
+  il dito). Se Android usa la navigazione a gesti, il bordo sinistro e' il
+  gesto "Indietro" del telefono e l'app non lo riceve: in quel caso parti
+  un dito piu' all'interno (va bene ovunque nella meta' sinistra dello
+  schermo). In alternativa, nelle impostazioni di Android si puo' ridurre
+  la sensibilita' del gesto Indietro;
 - toccando "Filtri" accanto alla ricerca.
-Dentro trovi: Ordina per; Mostra (tutti, in prestito, venduti/regalati/
-smarriti, da verificare, copie e doppioni); Lettura (da leggere, in
-lettura, letti, non indicato); Scaffale; Genere. Ogni voce ha il numero
-dei libri. I filtri si sommano (es. "Da leggere" + scaffale "Studio") e
-l'elenco dietro cambia subito; in fondo "Mostra N libri" chiude il
-pannello, "Azzera" toglie tutti i filtri.
-Per chiuderlo: trascina verso destra, tocca fuori, la X o il gesto
+Il pannello occupa meno di meta' schermo, cosi' l'elenco resta visibile
+accanto e cambia subito. Dentro trovi: Ordina per; Mostra (tutti, in
+prestito, venduti/regalati/smarriti, da verificare, copie e doppioni);
+Lettura (da leggere, in lettura, letti, non indicato); Scaffale; Genere.
+Ogni voce ha il numero dei libri. I filtri si sommano (es. "Da leggere" +
+scaffale "Studio"); "Mostra N libri" chiude il pannello, "Azzera" toglie
+tutti i filtri.
+Per chiuderlo: trascina verso sinistra, tocca fuori, la X o il gesto
 Indietro del telefono. Con il pannello chiuso, i filtri attivi restano
 visibili sotto la ricerca: tocca la x di uno per toglierlo. Il numerino
 su "Filtri" dice quanti sono attivi.
