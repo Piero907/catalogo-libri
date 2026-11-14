@@ -3,6 +3,9 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 72 · 14/11/2026
+- Messaggi in basso più brevi: senza tasti restano da 2,5 a 5 secondi secondo la lunghezza; con «Annulla» 6 secondi (prima sempre 6,5).
+
 ## Versione 71 · 14/11/2026
 - Selezione di più libri, numerazione dei volumi: la prima scelta ora dice «Nell'ordine in cui li hai selezionati».
 - Nuovo questo registro delle modifiche nel repository, raggiungibile anche da Opzioni › App › «Novità delle versioni».

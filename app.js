@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 71, date: '2026-11-14', note: 'Registro delle modifiche; «li hai selezionati»' };
+var APP_VERSION = { v: 72, date: '2026-11-14', note: 'Messaggi in basso più brevi' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -279,7 +279,9 @@ function toast(msg, action, ms) {
   if (action) { btn.textContent = action.label; btn.onclick = function () { t.hidden = true; action.fn(); }; }
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { t.hidden = true; }, ms || 6500);
+  // quanto resta: con un tasto (Annulla...) 6 secondi; senza, secondo la lunghezza del testo, da 2,5 a 5 secondi
+  if (!ms) ms = action ? 6000 : Math.min(5000, Math.max(2500, 1800 + String(msg).length * 45));
+  toastTimer = setTimeout(function () { t.hidden = true; }, ms);
 }
 var noticeKind = '';
 function notice(msg, label, fn, onClose, kind) {
