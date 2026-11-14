@@ -107,7 +107,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
     <button class="btn" id="btnPhoto"></button>
     <button class="btn" id="btnType"></button>
   </div>
-  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere il titolo o l'ISBN.</p>
+  <p class="tip" id="tipTxt">Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi scrivere il prezzo (facoltativo). Digita per scrivere il titolo o l'ISBN.</p>
 </div>
 
 <div class="scan" id="scan" hidden>
@@ -314,10 +314,10 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   <form class="sheet-in" id="quoteForm" role="dialog" aria-modal="true" aria-labelledby="quoteH">
     <h2 id="quoteH">Citazione o appunto</h2>
     <p class="msg" id="quoteBook"></p>
-    <label class="field"><span>Testo</span><textarea id="quoteText" rows="6" maxlength="1500" placeholder="Scrivi il passaggio, oppure aggiungi una foto della pagina: provo a leggerlo io"></textarea></label>
+    <label class="field"><span>Testo</span><textarea id="quoteText" rows="6" maxlength="1500" placeholder="Scrivi il passaggio, oppure aggiungi una o più foto della pagina"></textarea></label>
     <div class="q-ph" id="quotePh" hidden>
-      <button type="button" class="q-ph-img" id="quotePhOpen" aria-label="Ingrandisci la foto"><img id="quotePhImg" alt="Foto della pagina"></button>
-      <div class="q-ph-acts"><button type="button" class="link" id="quoteOcr">Leggi il testo dalla foto</button><button type="button" class="link quiet" id="quotePhDel">Togli la foto</button></div>
+      <ul class="q-thumbs" id="quoteThumbs" aria-label="Foto della citazione"></ul>
+      <button type="button" class="link q-ocr" id="quoteOcr">Leggi il testo</button>
     </div>
     <button class="btn" type="button" id="quotePhoto">Aggiungi una foto della pagina</button>
     <p class="msg" id="quoteMsg" aria-live="polite"></p>
@@ -476,6 +476,10 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <label class="check">
         <input type="checkbox" id="optPrice" checked>
         <span>Chiedi il prezzo dopo ogni libro<small>Dopo ogni libro aggiunto (scansione, foto o ISBN scritto) compare un riquadro con titolo e autore dove scrivere il prezzo, facoltativo. Spegni se il prezzo non ti interessa.</small></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="optQuoteOcr">
+        <span>Leggi subito il testo delle foto delle citazioni<small>Spenta: il testo si legge solo quando tocchi «Leggi il testo». Accesa: ogni foto aggiunta a una citazione viene letta da sola.</small></span>
       </label>
     </section>
     <section class="opt-sec" data-sec="fix" data-title="Sistema l'elenco">
@@ -706,6 +710,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 <div class="lightbox phview" id="phView" hidden role="dialog" aria-modal="true" aria-label="Foto della pagina">
   <button class="lb-x" id="phClose" aria-label="Chiudi">×</button>
   <div class="ph-scroll" id="phScroll"><img id="phImg" alt="Foto della pagina"></div>
+  <div class="ph-nav" id="phNav" hidden><button type="button" class="btn" id="phPrev" aria-label="Foto precedente">‹</button><span id="phPos"></span><button type="button" class="btn" id="phNext" aria-label="Foto successiva">›</button></div>
   <p class="lb-cap" id="phCap"></p>
 </div>
 <input class="sr" id="fileCover" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">

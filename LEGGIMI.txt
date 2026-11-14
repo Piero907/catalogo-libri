@@ -456,16 +456,21 @@ Nella scheda aperta (con i campi in piu' attivi): "Serie o collana",
 CITAZIONI E APPUNTI
 -------------------
 Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
-- Scrivi il testo, oppure "Aggiungi una foto della pagina": la foto
-  resta salvata con la citazione e, se il testo e' vuoto, l'app prova a
-  leggerlo (tu tieni il passaggio che ti interessa e correggi).
-- Si puo' salvare anche solo la foto, senza testo. "Togli la foto" se
-  ti basta il testo; tocca la miniatura per ingrandirla, e tocca la foto
-  ingrandita per leggerla piu' da vicino.
+- Scrivi il testo, oppure "Aggiungi una foto della pagina": fino a 10
+  foto per citazione (per un passaggio su piu' pagine), salvate con la
+  citazione. Ogni miniatura ha la sua X rossa per toglierla; toccala
+  per ingrandirla (con piu' foto, frecce per passare dall'una all'altra).
+- Il testo dalle foto si legge quando tocchi "Leggi il testo": legge le
+  foto in ordine e aggiunge il testo in fondo (tu tieni il passaggio
+  che ti interessa e correggi). Per farlo leggere subito a ogni foto:
+  Opzioni > Schede e prezzo > "Leggi subito il testo delle foto delle
+  citazioni".
+- Si puo' salvare anche solo con le foto, senza testo.
 - Le foto delle citazioni sono nel backup, come le tue copertine.
 - In ogni citazione, in basso a destra: "Condividi" e la X rossa per
-  eliminarla (con "Annulla"). Mentre l'app legge il testo da una foto,
-  accanto alla foto compare "Leggo il testo..." con la rotellina.
+  eliminarla (con "Annulla"). Mentre l'app legge il testo, al posto di
+  "Leggi il testo" compare "Leggo il testo..." (o "Leggo la foto 1 di
+  3...") con la rotellina.
 - Condividere: "Condividi" in basso a destra in ogni citazione, senza
   aprirla, e nella finestra della citazione (manda anche la foto); "Condividi tutte" nel riquadro della scheda e
   nell'elenco di tutte le citazioni manda in un messaggio solo tutte

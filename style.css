@@ -1246,3 +1246,27 @@ body.selecting .cover.sel[data-ord]::after{content:attr(data-ord);display:grid;p
 .bk-prev b{font-variant-numeric:tabular-nums;color:var(--accent);text-align:right}
 .bk-prev span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bk-prev small{color:var(--muted)}
+
+/* ---- piu' foto per citazione ---- */
+.q-ph{display:grid;grid-template-columns:none;gap:8px;align-items:start}
+.q-thumbs{list-style:none;margin:0;padding:2px 0 4px;display:flex;gap:10px;overflow-x:auto}
+.q-thumbs li{position:relative;flex:none}
+.q-th{display:block;position:relative;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface2);cursor:zoom-in;overflow:hidden}
+.q-th img{display:block;width:84px;height:112px;object-fit:cover}
+.q-th-n{position:absolute;left:4px;bottom:4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#000a;color:#fff;font:700 12px/20px var(--font-body);text-align:center}
+.q-th-x{position:absolute;right:-6px;top:-6px;width:28px;height:28px;display:grid;place-items:center;padding:0;border-radius:50%;border:2px solid var(--surface);background:var(--bad);color:#fff;cursor:pointer;box-shadow:0 1px 4px #0004}
+.q-th-x svg{width:14px;height:14px}
+.q-th-x:focus-visible{outline:2px solid var(--bad);outline-offset:2px}
+.q-ocr{justify-self:start}
+#quoteOcr.busy{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);opacity:1;cursor:progress}
+.q-ph.reading .q-th{position:relative}
+.q-ph.reading .q-th::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 0,color-mix(in srgb,var(--accent) 35%,transparent) 50%,transparent 100%) 0 -112px/100% 112px no-repeat;animation:qscan2 1.4s ease-in-out infinite}
+@keyframes qscan2{to{background-position:0 112px}}
+@media (prefers-reduced-motion:reduce){.q-ph.reading .q-th::after{animation:none;background:color-mix(in srgb,var(--accent) 18%,transparent)}}
+.qimg-w{position:relative;display:block}
+.qitem.has-ph .qimg-w,.qitem.has-ph .qimg-btn{grid-column:2;grid-row:1 / span 2}
+.qitem.only-ph .qimg-w,.qitem.only-ph .qimg-btn{grid-column:1;grid-row:1 / span 2}
+.qimg-n{position:absolute;right:-6px;bottom:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--accent);color:var(--accent-ink);font:700 12px/22px var(--font-body);text-align:center;border:2px solid var(--surface)}
+.ph-nav{display:flex;align-items:center;gap:14px;font-size:15px}
+.ph-nav .btn{min-width:52px;font-size:24px;background:#ffffff1f;border-color:#ffffff45;color:#fff}
+.ph-nav .btn:disabled{opacity:.35}

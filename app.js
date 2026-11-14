@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 63, date: '2026-11-14', note: 'Numerazione dei volumi nell\'ordine dei tocchi, con anteprima' };
+var APP_VERSION = { v: 64, date: '2026-11-14', note: 'Più foto per citazione, lettura del testo a richiesta' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -210,8 +210,8 @@ function cleanBook(x) {
     ds: L.str(x.ds).slice(0, L.DESC_MAX + 1), dsf: x.dsf === 'g' || x.dsf === 'o' ? x.dsf : '',   // descrizione e fonte (Google, Open Library)
     dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0,                     // lingua; quando non e' stata trovata
     se: L.str(x.se).slice(0, 80), sn: L.str(x.sn).replace(/\D/g, '').slice(0, 3), sq: L.str(x.sq).replace(/\D/g, '').slice(0, 3),   // serie, volume, di quanti
-    qs: (Array.isArray(x.qs) ? x.qs : []).map(function (c) { return c && typeof c === 'object' ? { x: L.str(c.x).slice(0, 1500).trim(), pg: L.str(c.pg).replace(/\D/g, '').slice(0, 5), d: Number(c.d) || 0, ph: /^q:[\w-]{4,40}$/.test(L.str(c.ph)) ? c.ph : '' } : null; })
-      .filter(function (c) { return c && (c.x || c.ph); }).slice(0, 200)                                      // citazioni e appunti
+    qs: (Array.isArray(x.qs) ? x.qs : []).map(function (c) { return c && typeof c === 'object' ? { x: L.str(c.x).slice(0, 1500).trim(), pg: L.str(c.pg).replace(/\D/g, '').slice(0, 5), d: Number(c.d) || 0, phs: (Array.isArray(c.phs) ? c.phs : c.ph ? [c.ph] : []).map(L.str).filter(function (k) { return /^q:[\w-]{4,40}$/.test(k); }).slice(0, 10) } : null; })
+      .filter(function (c) { return c && (c.x || c.phs.length); }).slice(0, 200)                                      // citazioni e appunti
   };
 }
 function storable() {
@@ -260,6 +260,10 @@ function loadAll() {
     settings.instScope = settings.installed ? s.instScope : '';
     settings.name = L.str(s.name).replace(/\s+/g, ' ').trim().slice(0, 30);
     settings.instSnooze = Number(s.instSnooze) || 0;
+    settings.goal = Math.max(0, Math.min(999, parseInt(s.goal, 10) || 0));          // obiettivo di lettura
+    settings.newsAuto = s.newsAuto !== false;                                       // novita' degli autori: controllo automatico
+    settings.selTip = s.selTip ? 1 : 0;
+    settings.quoteOcrAuto = s.quoteOcrAuto === true;                                // citazioni: leggi subito il testo delle foto
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -1763,8 +1767,9 @@ function seriesStatsHTML() {
 
 /* ---- foto delle citazioni: salvate sul telefono (come le tue copertine), chiave «q:…» ---- */
 var qphURL = {};
-function quotePhKeys() { var out = []; state.books.forEach(function (b) { (b.qs || []).forEach(function (c) { if (c.ph) out.push(c.ph); }); }); return out; }
-function qThumb(c) { return c.ph ? (qphURL[c.ph] ? '<img class="qimg" src="' + qphURL[c.ph] + '" alt="">' : '<span class="qimg none" aria-hidden="true"></span>') : ''; }
+function qPhs(c) { return (c && c.phs) || []; }
+function quotePhKeys() { var out = []; state.books.forEach(function (b) { (b.qs || []).forEach(function (c) { qPhs(c).forEach(function (k) { out.push(k); }); }); }); return out; }
+function qThumb(c) { var k = qPhs(c)[0], n = qPhs(c).length; return k ? '<span class="qimg-w">' + (qphURL[k] ? '<img class="qimg" src="' + qphURL[k] + '" alt="">' : '<span class="qimg none" aria-hidden="true"></span>') + (n > 1 ? '<span class="qimg-n" aria-label="' + n + ' foto">' + n + '</span>' : '') + '</span>' : ''; }
 async function saveQuotePh(key, blob) {
   await idbDo('readwrite', function (st) { st.put(blob, key); });
   if (qphURL[key]) URL.revokeObjectURL(qphURL[key]);
@@ -1776,9 +1781,19 @@ function paintQuotesAll() {
   if (!$('#allqSheet').hidden) renderAllQuotes();
 }
 var phPushed = false;
-function openPh(src, cap) {
+var phList = [], phAt = 0;
+function phShow() {
+  $('#phImg').src = phList[phAt]; $('#phView').classList.remove('zoom');
+  $('#phNav').hidden = phList.length < 2; $('#phPos').textContent = (phAt + 1) + ' di ' + phList.length;
+  $('#phPrev').disabled = phAt === 0; $('#phNext').disabled = phAt === phList.length - 1;
+}
+function openPhs(list, at, cap) { if (!list || !list.length) return; phList = list; phAt = Math.max(0, Math.min(list.length - 1, at || 0)); openPh(list[phAt], cap, true); }
+$('#phPrev').addEventListener('click', function (e) { e.stopPropagation(); if (phAt > 0) { phAt--; phShow(); } });
+$('#phNext').addEventListener('click', function (e) { e.stopPropagation(); if (phAt < phList.length - 1) { phAt++; phShow(); } });
+function openPh(src, cap, many) {
   if (!src) return;
-  $('#phImg').src = src; $('#phCap').textContent = cap || '';
+  if (!many) phList = [src], phAt = 0;
+  phShow(); $('#phCap').textContent = cap || '';
   $('#phView').classList.remove('zoom'); $('#phView').hidden = false;
   if (!phPushed) { try { history.pushState({ ph: 1 }, ''); phPushed = true; } catch (e) {} }
 }
@@ -1798,7 +1813,7 @@ var quoteOpen = {}, quoteEdit = null;
 function quotesBody(b) {
   var qs = b.qs || [];
   return (qs.length ? '<ul class="qlist">' + qs.map(function (c, i) {
-    return '<li class="qcard"><button type="button" class="qitem' + (c.ph ? ' has-ph' + (c.x ? '' : ' only-ph') : '') + '" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare">' + qThumb(c) +
+    return '<li class="qcard"><button type="button" class="qitem' + (qPhs(c).length ? ' has-ph' + (c.x ? '' : ' only-ph') : '') + '" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare">' + qThumb(c) +
       (c.x ? '<span class="qt">' + esc(c.x) + '</span>' : '<span class="qt q-only">Foto della pagina</span>') + (c.pg ? '<span class="qp">p. ' + esc(c.pg) + '</span>' : '') + '</button>' +
       '<span class="qbtns"><button type="button" class="qshare" data-act="quoteshare" data-i="' + i + '" aria-label="Condividi questa citazione">' + icon('share') + 'Condividi</button>' +
       '<button type="button" class="qdel" data-act="quotedel" data-i="' + i + '" aria-label="Elimina questa citazione" title="Elimina">' + icon('x') + '</button></span></li>';
@@ -1817,45 +1832,52 @@ function paintQuotes(id) {
   d.querySelector('.desc-b').innerHTML = quotesBody(b);
   d.querySelector('.qn').textContent = (b.qs || []).length || '';
 }
+var QPH_MAX = 10;
 function openQuote(id, i) {
   var b = get(id); if (!b) return;
   var c = i == null ? null : (b.qs || [])[i];
-  quoteEdit = { id: id, i: c ? i : null, ph: c ? c.ph || '' : '', blob: null, url: '', canvas: null };
+  quoteEdit = { id: id, i: c ? i : null, phs: qPhs(c).map(function (k) { return { key: k, blob: null, url: qphURL[k] || '', canvas: null, read: false }; }) };
   $('#quoteH').textContent = c ? 'Modifica' : 'Citazione o appunto';
   $('#quoteBook').textContent = [b.t || 'Senza titolo', b.a].filter(Boolean).join(' — ');
   $('#quoteText').value = c ? c.x : ''; $('#quotePage').value = c ? c.pg : '';
   $('#quoteMsg').textContent = ''; $('#quoteDel').hidden = !c;
+  ocrIdle();
   paintQuotePh();
-  var ob = $('#quoteOcr'); ob.disabled = false; ob.classList.remove('busy'); ob.textContent = 'Leggi il testo dalla foto'; $('#quotePh').classList.remove('reading');
   $('#quoteSheet').hidden = false;
   if (!c) setTimeout(function () { try { $('#quoteText').focus(); } catch (e) {} }, 60);
 }
-function closeQuote() { if (quoteEdit && quoteEdit.url) URL.revokeObjectURL(quoteEdit.url); $('#quoteSheet').hidden = true; quoteEdit = null; }
-function quotePhSrc() { return !quoteEdit ? '' : quoteEdit.url || (quoteEdit.ph && qphURL[quoteEdit.ph]) || ''; }
+function closeQuote() { if (quoteEdit) quoteEdit.phs.forEach(function (p) { if (p.blob && p.url) URL.revokeObjectURL(p.url); }); $('#quoteSheet').hidden = true; quoteEdit = null; }
 function paintQuotePh() {
-  var src = quotePhSrc();
-  $('#quotePh').hidden = !src;
-  if (src) $('#quotePhImg').src = src; else $('#quotePhImg').removeAttribute('src');
-  $('#quotePhoto').textContent = src ? 'Cambia la foto' : 'Aggiungi una foto della pagina';
+  var phs = quoteEdit ? quoteEdit.phs : [], n = phs.length;
+  $('#quotePh').hidden = !n;
+  $('#quoteThumbs').innerHTML = phs.map(function (p, k) {
+    return '<li><button type="button" class="q-th" data-k="' + k + '" aria-label="Ingrandisci la foto ' + (k + 1) + '">' + (p.url ? '<img src="' + p.url + '" alt="">' : '') + (n > 1 ? '<span class="q-th-n">' + (k + 1) + '</span>' : '') + '</button>' +
+      '<button type="button" class="q-th-x" data-del="' + k + '" aria-label="Togli la foto ' + (k + 1) + '">' + icon('x') + '</button></li>';
+  }).join('');
+  if (!$('#quoteOcr').classList.contains('busy')) $('#quoteOcr').textContent = n > 1 ? 'Leggi il testo dalle foto' : 'Leggi il testo dalla foto';
+  $('#quotePhoto').textContent = n ? 'Aggiungi un\'altra foto' : 'Aggiungi una foto della pagina';
+  $('#quotePhoto').hidden = n >= QPH_MAX;
 }
 async function saveQuote() {
   if (!quoteEdit) return;
   var b = get(quoteEdit.id), x = $('#quoteText').value.replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim().slice(0, 1500);
   if (!b) { closeQuote(); return; }
-  if (!x && !quotePhSrc()) { $('#quoteMsg').textContent = 'Scrivi il testo oppure aggiungi una foto della pagina.'; $('#quoteText').focus(); return; }
-  var ph = quoteEdit.ph;
-  if (quoteEdit.blob) {
-    ph = 'q:' + newId();
-    try { await saveQuotePh(ph, quoteEdit.blob); }
-    catch (e) { $('#quoteMsg').textContent = 'Non riesco a salvare la foto su questo telefono: salvo solo il testo.'; ph = ''; if (!x) return; }
+  if (!x && !quoteEdit.phs.length) { $('#quoteMsg').textContent = 'Scrivi il testo oppure aggiungi una foto della pagina.'; $('#quoteText').focus(); return; }
+  var keys = [], lost = 0;
+  for (var k = 0; k < quoteEdit.phs.length; k++) {
+    var p = quoteEdit.phs[k];
+    if (p.key && !p.blob) { keys.push(p.key); continue; }
+    var key = 'q:' + newId();
+    try { await saveQuotePh(key, p.blob); keys.push(key); } catch (e) { lost++; }
   }
-  var c = { x: x, pg: $('#quotePage').value.replace(/\D/g, '').slice(0, 5), d: Date.now(), ph: ph || '' };
+  if (lost && !x && !keys.length) { $('#quoteMsg').textContent = 'Non riesco a salvare le foto su questo telefono.'; return; }
+  var c = { x: x, pg: $('#quotePage').value.replace(/\D/g, '').slice(0, 5), d: Date.now(), phs: keys };
   if (!Array.isArray(b.qs)) b.qs = [];
   if (quoteEdit.i != null) { c.d = b.qs[quoteEdit.i].d || c.d; b.qs[quoteEdit.i] = c; }
   else if (b.qs.length >= 200) { $('#quoteMsg').textContent = 'Per questo libro ci sono già 200 citazioni.'; return; }
   else b.qs.push(c);
   var id = b.id; quoteOpen[id] = true;
-  touch(); closeQuote(); paintQuotes(id); toast('Salvata.');
+  touch(); closeQuote(); paintQuotes(id); toast(lost ? 'Salvata, ma ' + lost + ' foto non si sono potute salvare.' : 'Salvata.');
 }
 function delQuote() {
   if (!quoteEdit || quoteEdit.i == null) return;
@@ -1865,57 +1887,83 @@ function delQuote() {
   touch(); closeQuote(); paintQuotes(id);
   toast('Citazione eliminata.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.qs.splice(Math.min(i, x.qs.length), 0, old); touch(); paintQuotes(id); } } });
 }
-/* foto scelta: la tengo (JPEG di al massimo 1600 px) e, se il testo e' vuoto, provo a leggerla */
+/* foto aggiunta: la tengo (JPEG di al massimo 1600 px); il testo si legge solo su richiesta, o subito se l'opzione e' accesa */
 async function quotePickPhoto(file) {
   if (!quoteEdit) return;
   var msg = $('#quoteMsg');
+  if (quoteEdit.phs.length >= QPH_MAX) { msg.textContent = 'Al massimo ' + QPH_MAX + ' foto per citazione.'; return; }
+  var ph;
   try {
     var canvas = await loadCanvas(file, 2200), small = scaled(canvas, 1600);
     var blob = await new Promise(function (res) { small.toBlob(res, 'image/jpeg', 0.8); });
     if (!blob || !quoteEdit) throw new Error('jpeg');
-    if (quoteEdit.url) URL.revokeObjectURL(quoteEdit.url);
-    quoteEdit.blob = blob; quoteEdit.url = URL.createObjectURL(blob); quoteEdit.canvas = canvas;
+    ph = { key: '', blob: blob, url: URL.createObjectURL(blob), canvas: canvas, read: false };
+    quoteEdit.phs.push(ph);
     paintQuotePh();
   } catch (e) { msg.textContent = 'Non riesco ad aprire questa foto: riprova.'; return; }
-  if (!$('#quoteText').value.trim()) quoteOcr(true);
-  else msg.textContent = 'Foto aggiunta. «Leggi il testo dalla foto» aggiunge il testo letto a quello che hai scritto.';
+  if (settings.quoteOcrAuto) quoteOcr([ph]);
+  else msg.textContent = (quoteEdit.phs.length > 1 ? 'Foto aggiunta (' + quoteEdit.phs.length + ').' : 'Foto aggiunta.') + ' Se vuoi il testo scritto, tocca «Leggi il testo».';
 }
-async function quoteOcr(auto) {
-  if (!quoteEdit) return;
-  var msg = $('#quoteMsg'), btn = $('#quoteOcr'), ed = quoteEdit;
-  btn.disabled = true; btn.classList.add('busy'); btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Leggo il testo…';
-  $('#quotePh').classList.add('reading');
+function ocrIdle() { var ob = $('#quoteOcr'); ob.disabled = false; ob.classList.remove('busy'); $('#quotePh').classList.remove('reading'); }
+/* legge le foto indicate (o quelle non ancora lette, o tutte) e aggiunge il testo in fondo */
+async function quoteOcr(list) {
+  if (!quoteEdit || $('#quoteOcr').classList.contains('busy')) return;
+  var ed = quoteEdit, msg = $('#quoteMsg'), btn = $('#quoteOcr');
+  var todo = list || ed.phs.filter(function (p) { return !p.read; });
+  if (!todo.length) todo = ed.phs.slice();
+  if (!todo.length) return;
+  btn.disabled = true; btn.classList.add('busy'); $('#quotePh').classList.add('reading');
+  btn.innerHTML = '<span class="spin" aria-hidden="true"></span>' + (todo.length > 1 ? 'Leggo la foto 1 di ' + todo.length + '…' : 'Leggo il testo…');
+  var found = 0;
   try {
     msg.textContent = 'Preparo il riconoscimento del testo (la prima volta ci vuole un po\')…';
-    var canvas = ed.canvas;
-    if (!canvas) { var src = quotePhSrc(); var bl = await (await fetch(src)).blob(); canvas = await loadCanvas(bl, 2200); }
     var w = await getOcr();
-    msg.textContent = 'Leggo la pagina…';
-    var res;
-    await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.AUTO) });
-    try { res = await w.recognize(canvas); }
-    finally { await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) }); }
-    var text = L.ocrParagraph((res.data || {}).text || '');
+    for (var k = 0; k < todo.length; k++) {
+      if (quoteEdit !== ed) return;
+      var p = todo[k];
+      btn.innerHTML = '<span class="spin" aria-hidden="true"></span>' + (todo.length > 1 ? 'Leggo la foto ' + (k + 1) + ' di ' + todo.length + '…' : 'Leggo il testo…');
+      msg.textContent = 'Leggo la pagina…';
+      var canvas = p.canvas;
+      if (!canvas) { var bl = p.blob || await (await fetch(p.url)).blob(); canvas = await loadCanvas(bl, 2200); }
+      var res;
+      await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.AUTO) });
+      try { res = await w.recognize(canvas); }
+      finally { await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) }); }
+      var text = L.ocrParagraph((res.data || {}).text || '');
+      p.read = true;
+      if (quoteEdit !== ed) return;
+      if (!text) continue;
+      found++;
+      var ta = $('#quoteText');
+      ta.value = ((ta.value.trim() ? ta.value.trim() + '\n' : '') + text).slice(0, 1500);
+    }
     if (quoteEdit !== ed) return;
-    if (!text) { msg.textContent = 'Non ho trovato del testo da leggere: puoi salvare solo la foto, oppure scrivere tu il passaggio.'; return; }
-    var ta = $('#quoteText');
-    ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + text;
-    ta.value = ta.value.slice(0, 1500);
-    msg.textContent = 'Ho letto la pagina: tieni solo il passaggio che ti interessa e correggi gli errori. La foto resta salvata con il testo' + (auto ? '; se non ti serve, «Togli la foto».' : '.');
-    ta.focus();
+    msg.textContent = found ? 'Ho letto ' + (todo.length > 1 ? 'le pagine' : 'la pagina') + ': tieni solo il passaggio che ti interessa e correggi gli errori. Le foto restano salvate con il testo.'
+      : 'Non ho trovato del testo da leggere: puoi salvare solo le foto, oppure scrivere tu il passaggio.';
+    if (found) $('#quoteText').focus();
   } catch (e) {
-    if (quoteEdit === ed) msg.textContent = 'Lettura non riuscita' + (navigator.onLine === false ? ' (la prima volta serve la connessione)' : '') + ': la foto resta, e puoi scrivere tu il testo.';
-  } finally { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = 'Leggi il testo dalla foto'; $('#quotePh').classList.remove('reading'); }
+    if (quoteEdit === ed) msg.textContent = 'Lettura non riuscita' + (navigator.onLine === false ? ' (la prima volta serve la connessione)' : '') + ': le foto restano, e puoi scrivere tu il testo.';
+  } finally { ocrIdle(); if (quoteEdit === ed) paintQuotePh(); }
 }
 $('#quoteForm').addEventListener('submit', function (e) { e.preventDefault(); saveQuote(); });
 $('#quoteCancel').addEventListener('click', closeQuote);
 $('#quoteDel').addEventListener('click', delQuote);
 $('#quotePhoto').addEventListener('click', function () { snapPhoto('Foto della pagina', '#fileQuote').then(function (f) { if (f) quotePickPhoto(f); }); });
 $('#fileQuote').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) quotePickPhoto(f); });
-$('#quoteOcr').addEventListener('click', function () { quoteOcr(false); });
+$('#quoteOcr').addEventListener('click', function () { quoteOcr(null); });
 $('#quoteShare').addEventListener('click', shareQuoteForm);
-$('#quotePhDel').addEventListener('click', function () { if (!quoteEdit) return; if (quoteEdit.url) URL.revokeObjectURL(quoteEdit.url); quoteEdit.blob = null; quoteEdit.url = ''; quoteEdit.canvas = null; quoteEdit.ph = ''; paintQuotePh(); $('#quoteMsg').textContent = 'Foto tolta (salva per confermare).'; });
-$('#quotePhOpen').addEventListener('click', function () { openPh(quotePhSrc(), $('#quoteBook').textContent); });
+$('#quoteThumbs').addEventListener('click', function (e) {
+  if (!quoteEdit) return;
+  var del = e.target.closest('[data-del]');
+  if (del) {
+    var k = +del.dataset.del, p = quoteEdit.phs[k];
+    if (!p || $('#quoteOcr').classList.contains('busy')) return;
+    quoteEdit.phs.splice(k, 1); if (p.blob && p.url) URL.revokeObjectURL(p.url);
+    paintQuotePh(); $('#quoteMsg').textContent = 'Foto tolta (salva per confermare).'; return;
+  }
+  var th = e.target.closest('[data-k]');
+  if (th) openPhs(quoteEdit.phs.map(function (p) { return p.url; }).filter(Boolean), +th.dataset.k, $('#quoteBook').textContent);
+});
 $('#quoteSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeQuote(); });
 
 /* ---- novità dei tuoi autori: libri recenti che non hai, da mettere nei Desideri ---- */
@@ -2032,7 +2080,7 @@ function renderAllQuotes() {
   $('#allqList').innerHTML = order.map(function (b) {
     return '<li class="aq-book"><button type="button" class="aq-h" data-open="' + b.id + '"><b>' + esc(b.t || 'Senza titolo') + '</b>' + (b.a ? '<span>' + esc(b.a) + '</span>' : '') + (b.w ? '<span class="tag">Desideri</span>' : '') + '</button>' + (groups[b.id].length > 1 && !nq ? '<button type="button" class="link aq-all" data-all="' + b.id + '">Condividi tutte (' + groups[b.id].length + ')</button>' : '') +
       '<ul class="qlist">' + groups[b.id].map(function (x) {
-        return '<li><div class="qitem aq-q' + (x.c.ph ? ' has-ph' + (x.c.x ? '' : ' only-ph') : '') + '">' + (x.c.ph ? '<button type="button" class="qimg-btn" data-ph="' + esc(x.c.ph) + '" data-cap="' + esc(b.t || '') + '" aria-label="Ingrandisci la foto">' + qThumb(x.c) + '</button>' : '') +
+        return '<li><div class="qitem aq-q' + (qPhs(x.c).length ? ' has-ph' + (x.c.x ? '' : ' only-ph') : '') + '">' + (qPhs(x.c).length ? '<button type="button" class="qimg-btn" data-ph="' + esc(qPhs(x.c).join(' ')) + '" data-cap="' + esc(b.t || '') + '" aria-label="Ingrandisci le foto">' + qThumb(x.c) + '</button>' : '') +
           (x.c.x ? '<span class="qt">' + esc(x.c.x) + '</span>' : '<span class="qt q-only">Foto della pagina</span>') + '<span class="qp">' + (x.c.pg ? 'p. ' + esc(x.c.pg) : '') +
           '<button type="button" class="link" data-copy="' + b.id + '" data-i="' + x.i + '">Condividi</button></span></div></li>';
       }).join('') + '</ul></li>';
@@ -2057,7 +2105,7 @@ function goToQuotes(id) {
   if (el) { (d || el).scrollIntoView({ block: 'start' }); window.scrollBy(0, -80); el.classList.add('flash'); setTimeout(function () { el.classList.remove('flash'); }, 1600); }
 }
 /* condivisione delle citazioni: testo (e foto, se il telefono le accetta); senza condivisione, copia */
-function quoteLine(c, withPg) { return (c.x ? '«' + c.x + '»' : '[foto della pagina]') + (withPg && c.pg ? ' (p. ' + c.pg + ')' : ''); }
+function quoteLine(c, withPg) { return (c.x ? '«' + c.x + '»' : '[' + (qPhs(c).length > 1 ? 'foto delle pagine' : 'foto della pagina') + ']') + (withPg && c.pg ? ' (p. ' + c.pg + ')' : ''); }
 async function sendQuotes(text, blobs, what) {
   text += '\n\nInviato con Next Libris, l\'app per catalogare la propria libreria: ' + APP_URL;
   if (blobs.length && navigator.share && navigator.canShare) {
@@ -2070,11 +2118,11 @@ async function sendQuotes(text, blobs, what) {
   toast(await copyText(text) ? what + ' copiat' + (what === 'Citazione' ? 'a' : 'e') + ': incolla' + (what === 'Citazione' ? 'la' : 'le') + ' dove vuoi.' : 'Non sono riuscito a copiarle.');
 }
 async function phBlob(key) { try { return qphURL[key] ? await (await fetch(qphURL[key])).blob() : null; } catch (e) { return null; } }
-async function shareQuoteObj(b, c, blob) {
+async function shareQuoteObj(b, c, blobs) {
   var src = [b.t, b.a].filter(Boolean).join(', ') + (c.pg ? ', p. ' + c.pg : '');
   var text = c.x ? '«' + c.x + '»\n— ' + src : src;
-  if (!blob && c.ph) blob = await phBlob(c.ph);
-  await sendQuotes(text, blob ? [blob] : [], 'Citazione');
+  if (!blobs) { blobs = []; var ks = qPhs(c); for (var k = 0; k < ks.length; k++) { var bl = await phBlob(ks[k]); if (bl) blobs.push(bl); } }
+  await sendQuotes(text, blobs, 'Citazione');
 }
 async function shareQuote(id, i) {
   var b = get(id), c = b && (b.qs || [])[i];
@@ -2087,7 +2135,7 @@ async function shareAllQuotes(id) {
   var head = (b.t ? '«' + b.t + '»' : 'Senza titolo') + (b.a ? ' di ' + b.a : '');
   var text = 'Citazioni da ' + head + '\n\n' + qs.map(function (c) { return quoteLine(c, true); }).join('\n\n') + (settings.name ? '\n\n— scelte da ' + settings.name : '');
   var blobs = [];
-  for (var k = 0; k < qs.length; k++) if (qs[k].ph) { var bl = await phBlob(qs[k].ph); if (bl) blobs.push(bl); }
+  for (var k = 0; k < qs.length; k++) { var ks = qPhs(qs[k]); for (var j = 0; j < ks.length; j++) { var bl = await phBlob(ks[j]); if (bl) blobs.push(bl); } }
   await sendQuotes(text, blobs, 'Citazioni');
 }
 /* dalla finestra della citazione: quello che c'e' scritto ora, anche se non ancora salvato */
@@ -2095,15 +2143,17 @@ async function shareQuoteForm() {
   if (!quoteEdit) return;
   var b = get(quoteEdit.id), x = $('#quoteText').value.replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
   if (!b) return;
-  if (!x && !quotePhSrc()) { $('#quoteMsg').textContent = 'Scrivi il testo o aggiungi una foto, poi condividi.'; return; }
-  await shareQuoteObj(b, { x: x, pg: $('#quotePage').value.replace(/\D/g, ''), ph: quoteEdit.blob ? '' : quoteEdit.ph }, quoteEdit.blob);
+  if (!x && !quoteEdit.phs.length) { $('#quoteMsg').textContent = 'Scrivi il testo o aggiungi una foto, poi condividi.'; return; }
+  var blobs = [];
+  for (var k = 0; k < quoteEdit.phs.length; k++) { var p = quoteEdit.phs[k], bl = p.blob || await phBlob(p.key); if (bl) blobs.push(bl); }
+  await shareQuoteObj(b, { x: x, pg: $('#quotePage').value.replace(/\D/g, '') }, blobs);
 }
 $('#allqQ').addEventListener('input', renderAllQuotes);
 $('#allqClose').addEventListener('click', closeAllQuotes);
 $('#allqSheet').addEventListener('click', function (e) {
   if (e.target === e.currentTarget) { closeAllQuotes(); return; }
   var o = e.target.closest('[data-open]'); if (o) { goToQuotes(o.dataset.open); return; }
-  var ph = e.target.closest('[data-ph]'); if (ph) { openPh(qphURL[ph.dataset.ph], ph.dataset.cap); return; }
+  var ph = e.target.closest('[data-ph]'); if (ph) { openPhs(ph.dataset.ph.split(' ').map(function (k) { return qphURL[k]; }).filter(Boolean), 0, ph.dataset.cap); return; }
   var al = e.target.closest('[data-all]'); if (al) { shareAllQuotes(al.dataset.all); return; }
   var c = e.target.closest('[data-copy]'); if (c) shareQuote(c.dataset.copy, +c.dataset.i);
 });
@@ -3995,7 +4045,7 @@ function setTab(t) {
   flt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = ''; frFlt = '';
   $('#tipTxt').textContent = tab === 'wish'
     ? 'Sei nei Desideri: Scansiona, Foto e Digita aggiungono qui i libri da comprare. Un amico ti consiglia un libro? Digita e scrivi il titolo.'
-    : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi leggere il prezzo (o saltarlo). Digita per scrivere il titolo o l\'ISBN.';
+    : 'Scansiona il codice a barre: è il modo più preciso. Dopo ogni libro puoi scrivere il prezzo (facoltativo). Digita per scrivere il titolo o l\'ISBN.';
   document.body.classList.toggle('wishtab', tab === 'wish');
   renderList(); updateSummary();
 }
@@ -4533,6 +4583,7 @@ $('#btnInstDiag').addEventListener('click', async function () {
   btn.disabled = false;
 });
 $('#gbKey').value = '';
+$('#optQuoteOcr').addEventListener('change', function (e) { settings.quoteOcrAuto = e.target.checked; saveSettings(); toast(e.target.checked ? 'Le foto delle citazioni verranno lette subito.' : 'Il testo delle foto si leggerà solo quando tocchi «Leggi il testo».'); });
 $('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: puoi scriverlo quando vuoi nel campo «Costo» della scheda.'); });
 /* l'indirizzo del worker si puo' incollare anche senza https:// o con ?isbn=... della prova a mano */
 function cleanWorker(v) {
@@ -4747,6 +4798,7 @@ renderSvc();
 $('#optName').value = settings.name || '';
 renderOwner();
 $('#optPrice').checked = settings.price;
+$('#optQuoteOcr').checked = !!settings.quoteOcrAuto;
 $('#optExtra').checked = settings.extra;
 $('#optOpenAll').checked = settings.openAll;
 setView(settings.view);
