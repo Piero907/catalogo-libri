@@ -252,8 +252,12 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   <form class="sheet-in" id="quoteForm" role="dialog" aria-modal="true" aria-labelledby="quoteH">
     <h2 id="quoteH">Citazione o appunto</h2>
     <p class="msg" id="quoteBook"></p>
-    <label class="field"><span>Testo</span><textarea id="quoteText" rows="6" maxlength="1500" placeholder="Scrivi il passaggio, oppure leggilo da una foto della pagina"></textarea></label>
-    <button class="btn" type="button" id="quotePhoto">Leggi da una foto della pagina</button>
+    <label class="field"><span>Testo</span><textarea id="quoteText" rows="6" maxlength="1500" placeholder="Scrivi il passaggio, oppure aggiungi una foto della pagina: provo a leggerlo io"></textarea></label>
+    <div class="q-ph" id="quotePh" hidden>
+      <button type="button" class="q-ph-img" id="quotePhOpen" aria-label="Ingrandisci la foto"><img id="quotePhImg" alt="Foto della pagina"></button>
+      <div class="q-ph-acts"><button type="button" class="link" id="quoteOcr">Leggi il testo dalla foto</button><button type="button" class="link quiet" id="quotePhDel">Togli la foto</button></div>
+    </div>
+    <button class="btn" type="button" id="quotePhoto">Aggiungi una foto della pagina</button>
     <p class="msg" id="quoteMsg" aria-live="polite"></p>
     <label class="field q-pg"><span>Pagina (se vuoi)</span><input id="quotePage" type="text" inputmode="numeric" maxlength="5" autocomplete="off"></label>
     <div class="row-btns">
@@ -624,6 +628,11 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileQuote" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<div class="lightbox phview" id="phView" hidden role="dialog" aria-modal="true" aria-label="Foto della pagina">
+  <button class="lb-x" id="phClose" aria-label="Chiudi">×</button>
+  <div class="ph-scroll" id="phScroll"><img id="phImg" alt="Foto della pagina"></div>
+  <p class="lb-cap" id="phCap"></p>
+</div>
 <input class="sr" id="fileCover" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="filePrice" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileGal" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true">
