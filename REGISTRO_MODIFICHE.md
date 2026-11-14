@@ -3,6 +3,11 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 74 · 14/11/2026
+- Editor delle foto delle citazioni: gomma (cancella i segni dove passi, non la foto; toglie gli adesivi con un tocco).
+- Emoticon e adesivi con la scritta («Importante», «Da rileggere», «Bellissima», «Da ricordare», «Non sono d'accordo»): si mettono con un tocco, si spostano trascinandoli, si ingrandiscono o rimpiccioliscono.
+- «↶» annulla anche spostamenti e rimozioni, una alla volta.
+
 ## Versione 73 · 14/11/2026
 - «Elimina» su un singolo libro chiede conferma (come per più libri insieme); subito dopo resta «Annulla».
 - I messaggi con «Annulla» restano 4 secondi.

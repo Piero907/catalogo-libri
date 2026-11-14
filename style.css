@@ -1321,3 +1321,16 @@ body.selecting .cover.sel[data-ord]::after{content:attr(data-ord);display:grid;p
 .bk-prev.cust .bk-drag{width:30px}
 .bk-prev.cust .bk-n{width:46px}
 .bk-prev.cust .bk-mv{width:34px}
+
+/* editor: gomma, emoticon e adesivi */
+.ped-t.er,.ped-t.stk{color:#fff}
+.ped-t.stk b{font-size:22px;line-height:1}
+.ped-stk{display:grid;gap:8px;padding:8px 2px 2px}
+.ped-emo{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.ped-emo button{flex:none;width:42px;height:42px;border-radius:10px;border:2px solid transparent;background:#ffffff14;font-size:24px;line-height:1;cursor:pointer;padding:0}
+.ped-labs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.ped-labs button{flex:none;min-height:36px;padding:4px 12px;border-radius:9px;border:2px solid transparent;color:#fff;font:700 13.5px var(--font-body);cursor:pointer;white-space:nowrap}
+.ped-emo button[aria-pressed="true"],.ped-labs button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px #0008 inset}
+.ped-size{display:flex;align-items:center;gap:8px;justify-content:center;font-size:13.5px;color:#ffffffcc}
+.ped-size .btn{min-width:46px;min-height:38px;font-size:20px;padding:4px 10px}
+.ped-area.stk-mode #pedCanvas{cursor:copy}

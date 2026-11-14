@@ -724,6 +724,18 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#E5322D" aria-checked="false" aria-label="Penna rossa"><span style="background:#E5322D"></span></button>
       <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#2457D6" aria-checked="false" aria-label="Penna blu"><span style="background:#2457D6"></span></button>
       <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#111111" aria-checked="false" aria-label="Penna nera"><span style="background:#111111"></span></button>
+      <i class="ped-sep" aria-hidden="true"></i>
+      <button type="button" role="radio" class="ped-t er" data-tool="er" aria-checked="false" aria-label="Gomma"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h10"/><path d="M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H9l-3.5-3.5z"/><path d="M9.5 10.5l4.5 4.5"/></svg></button>
+      <button type="button" role="radio" class="ped-t stk" data-tool="stk" aria-checked="false" aria-label="Adesivi ed emoticon"><b aria-hidden="true">😊</b></button>
+    </div>
+    <div class="ped-stk" id="pedStk" hidden>
+      <div class="ped-emo" role="radiogroup" aria-label="Emoticon">
+        <button type="button" data-s="⭐" aria-pressed="true">⭐</button><button type="button" data-s="❤️">❤️</button><button type="button" data-s="👍">👍</button><button type="button" data-s="👎">👎</button><button type="button" data-s="😍">😍</button><button type="button" data-s="😂">😂</button><button type="button" data-s="😮">😮</button><button type="button" data-s="😢">😢</button><button type="button" data-s="🤔">🤔</button><button type="button" data-s="💡">💡</button><button type="button" data-s="🔥">🔥</button><button type="button" data-s="👀">👀</button><button type="button" data-s="📌">📌</button><button type="button" data-s="✅">✅</button><button type="button" data-s="❗">❗</button><button type="button" data-s="❓">❓</button>
+      </div>
+      <div class="ped-labs" role="radiogroup" aria-label="Adesivi">
+        <button type="button" data-l="Importante" data-c="#D7263D" style="background:#D7263D">Importante</button><button type="button" data-l="Da rileggere" data-c="#2457D6" style="background:#2457D6">Da rileggere</button><button type="button" data-l="Bellissima" data-c="#1B8A5A" style="background:#1B8A5A">Bellissima</button><button type="button" data-l="Da ricordare" data-c="#6D28D9" style="background:#6D28D9">Da ricordare</button><button type="button" data-l="Non sono d'accordo" data-c="#C2410C" style="background:#C2410C">Non sono d'accordo</button>
+      </div>
+      <div class="ped-size"><span>Grandezza</span><button type="button" class="btn" id="pedSmaller" aria-label="Più piccolo">−</button><button type="button" class="btn" id="pedBigger" aria-label="Più grande">+</button></div>
     </div>
     <div class="ped-acts">
       <span class="ped-hint" id="pedHint">Evidenziatore: un dito passa sulle righe, due dita ingrandiscono</span>

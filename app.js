@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 73, date: '2026-11-14', note: 'Conferma prima di eliminare un libro; Annulla per 4 secondi' };
+var APP_VERSION = { v: 74, date: '2026-11-14', note: 'Gomma, emoticon e adesivi nell\'editor delle foto' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1682,36 +1682,89 @@ $('#snapTorch').addEventListener('click', function () {
   $('#snapTorch').setAttribute('aria-pressed', snap.torch ? 'true' : 'false');
 });
 window.addEventListener('popstate', function () { if (!$('#snap').hidden) { snap.pushed = false; closeSnap(null, true); } });
-/* ---- editor della foto: evidenziatore e penna, tratti in coordinate dell'immagine.
-   Un dito disegna; due dita ingrandiscono e spostano. Sotto: foto + segni salvati; sopra: il segno che stai facendo. ---- */
-var ped = { img: null, strokes: [], cur: null, tool: 'hl', color: '#FFE14D', done: null, pushed: false, k: 1, view: { z: 1, x: 0, y: 0 }, fit: { w: 0, h: 0, l: 0, t: 0 }, ptr: {}, pinch: null, drawId: null };
-function pedWidth(tool) { var w = ped.img ? Math.max(ped.img.width, ped.img.height) : 1000; return tool === 'hl' ? Math.max(16, w * 0.032) : Math.max(3, w * 0.005); }
-function pedDrawStroke(ctx, st, k, live) {
-  if (!st.pts.length) return;
-  ctx.save();
-  ctx.lineCap = st.tool === 'hl' ? 'butt' : 'round'; ctx.lineJoin = 'round';
-  ctx.strokeStyle = st.color; ctx.lineWidth = st.w * k;
-  if (st.tool === 'hl' && !live) { ctx.globalAlpha = 0.6; ctx.globalCompositeOperation = 'multiply'; }   // dal vivo la trasparenza la fa il livello sopra
-  ctx.beginPath();
-  ctx.moveTo(st.pts[0][0] * k, st.pts[0][1] * k);
+/* ---- editor della foto: evidenziatore, penna, gomma, emoticon e adesivi; tutto in coordinate dell'immagine.
+   Un dito disegna (o mette/sposta un adesivo); due dita ingrandiscono e spostano.
+   Composizione: foto, poi i segni (con la gomma che li cancella) in «moltiplica», poi gli adesivi sopra. ---- */
+var ped = { img: null, items: [], cur: null, tool: 'hl', color: '#FFE14D', stk: { s: '⭐' }, stkScale: 1, done: null, pushed: false, k: 1,
+  view: { z: 1, x: 0, y: 0 }, fit: { w: 0, h: 0, l: 0, t: 0 }, ptr: {}, pinch: null, drawId: null, drag: null, raf: 0, mk: null, last: null };
+function pedMax() { return ped.img ? Math.max(ped.img.width, ped.img.height) : 1000; }
+function pedWidth(tool) { var w = pedMax(); return tool === 'hl' ? Math.max(16, w * 0.032) : tool === 'er' ? Math.max(20, w * 0.04) : Math.max(3, w * 0.005); }
+function pedStrokePath(ctx, st, k) {
+  ctx.lineCap = st.k === 'hl' ? 'butt' : 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = st.w * k;
+  ctx.beginPath(); ctx.moveTo(st.pts[0][0] * k, st.pts[0][1] * k);
   if (st.pts.length === 1) ctx.lineTo(st.pts[0][0] * k + 0.1, st.pts[0][1] * k);
   for (var i = 1; i < st.pts.length; i++) ctx.lineTo(st.pts[i][0] * k, st.pts[i][1] * k);
-  ctx.stroke(); ctx.restore();
 }
-function pedRenderBase() {
-  var c = $('#pedCanvas'), ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, c.width, c.height);
-  ctx.drawImage(ped.img, 0, 0, c.width, c.height);
-  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, ped.k); });
-  $('#pedUndo').disabled = $('#pedClear').disabled = !ped.strokes.length;
+/* adesivi vivi: tolti con la gomma o spostati (le mosse restano nell'elenco, cosi' «↶» le annulla una alla volta) */
+function pedStickers() {
+  var out = [];
+  ped.items.forEach(function (it) {
+    if (it.k === 'stk') out.push({ it: it, x: it.x, y: it.y, size: it.size });
+    else if (it.k === 'rm') out = out.filter(function (o) { return o.it !== it.t; });
+    else if (it.k === 'mv') out.forEach(function (o) { if (o.it === it.t) { o.x = it.x; o.y = it.y; } });
+    else if (it.k === 'sz') out.forEach(function (o) { if (o.it === it.t) o.size = it.size; });
+  });
+  return out;
+}
+function pedStkFont(o) { return o.it.l ? '700 ' + Math.round(o.size * 0.36) + 'px "IBM Plex Sans",system-ui,sans-serif' : Math.round(o.size) + 'px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif'; }
+function pedStkBox(ctx, o) {                                   // riquadro dell'adesivo, in coordinate dell'immagine
+  if (!o.it.l) return { w: o.size * 1.1, h: o.size * 1.1 };
+  ctx.save(); ctx.font = pedStkFont(o); var tw = ctx.measureText(o.it.l).width; ctx.restore();
+  return { w: tw + o.size * 0.5, h: o.size * 0.62 };
+}
+function pedDrawSticker(ctx, o, k) {
+  ctx.save();
+  ctx.translate(o.x * k, o.y * k); ctx.scale(k, k);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = pedStkFont(o);
+  if (o.it.l) {
+    var b = pedStkBox(ctx, o), r = b.h * 0.28;
+    ctx.rotate(-0.05);
+    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = o.size * 0.08; ctx.shadowOffsetY = o.size * 0.03;
+    ctx.fillStyle = o.it.c;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-b.w / 2, -b.h / 2, b.w, b.h, r); else ctx.rect(-b.w / 2, -b.h / 2, b.w, b.h);
+    ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.fillStyle = '#fff'; ctx.fillText(o.it.l, 0, o.size * 0.02);
+  } else {
+    ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = o.size * 0.06; ctx.shadowOffsetY = o.size * 0.02;
+    ctx.fillText(o.it.s, 0, o.size * 0.05);
+  }
+  ctx.restore();
+}
+/* disegna tutto su ctx (w x h pixel, k = pixel per pixel dell'immagine); cur = tratto in corso da includere (gomma) */
+function pedCompose(ctx, w, h, k, cur) {
+  ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, w, h); ctx.drawImage(ped.img, 0, 0, w, h);
+  var strokes = ped.items.filter(function (it) { return it.k === 'hl' || it.k === 'pen' || it.k === 'er'; });
+  if (cur && cur.k === 'er') strokes = strokes.concat([cur]);
+  if (strokes.length) {
+    if (!ped.mk || ped.mk.width !== w || ped.mk.height !== h) { ped.mk = document.createElement('canvas'); ped.mk.width = w; ped.mk.height = h; }
+    var m = ped.mk.getContext('2d');
+    m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; m.clearRect(0, 0, w, h);
+    strokes.forEach(function (st) {
+      m.save();
+      if (st.k === 'er') { m.globalCompositeOperation = 'destination-out'; m.strokeStyle = '#000'; }
+      else { m.globalCompositeOperation = 'source-over'; m.globalAlpha = st.k === 'hl' ? 0.6 : 1; m.strokeStyle = st.color; }
+      pedStrokePath(m, st, k); m.stroke(); m.restore();
+    });
+    ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(ped.mk, 0, 0); ctx.globalCompositeOperation = 'source-over';
+  }
+  pedStickers().forEach(function (o) { pedDrawSticker(ctx, o, k); });
+  ctx.restore();
+}
+function pedRenderBase(cur) {
+  var c = $('#pedCanvas');
+  pedCompose(c.getContext('2d'), c.width, c.height, ped.k, cur);
+  $('#pedUndo').disabled = $('#pedClear').disabled = !ped.items.length;
 }
 function pedRenderLive() {
   var c = $('#pedLive'), ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
-  if (!ped.cur) return;
-  c.classList.toggle('hl', ped.cur.tool === 'hl');
-  pedDrawStroke(ctx, ped.cur, ped.k, true);
+  if (!ped.cur || ped.cur.k === 'er') return;
+  c.classList.toggle('hl', ped.cur.k === 'hl');
+  ctx.save(); ctx.strokeStyle = ped.cur.color; pedStrokePath(ctx, ped.cur, ped.k); ctx.stroke(); ctx.restore();
 }
+function pedLater() { if (ped.raf) return; ped.raf = requestAnimationFrame(function () { ped.raf = 0; pedRenderBase(ped.cur); }); }
 function pedRender() { pedRenderBase(); pedRenderLive(); }
 function pedApplyView() {
   var v = ped.view;
@@ -1722,7 +1775,7 @@ function pedClampView() {
   var v = ped.view, f = ped.fit, a = $('#pedArea');
   v.z = Math.max(1, Math.min(6, v.z));
   if (v.z <= 1.001) { v.z = 1; v.x = 0; v.y = 0; return; }
-  var w = f.w * v.z, hh = f.h * v.z, aw = a.clientWidth, ah = a.clientHeight;      // la foto non esce del tutto dallo schermo
+  var w = f.w * v.z, hh = f.h * v.z, aw = a.clientWidth, ah = a.clientHeight;
   var minX = Math.min(0, aw - f.l - w), maxX = Math.max(0, -f.l), minY = Math.min(0, ah - f.t - hh), maxY = Math.max(0, -f.t);
   if (w <= aw) { minX = maxX = (aw - w) / 2 - f.l; }
   if (hh <= ah) { minY = maxY = (ah - hh) / 2 - f.t; }
@@ -1735,13 +1788,22 @@ function pedFit() {
   var w = Math.round(ped.img.width * k), hh = Math.round(ped.img.height * k);
   ped.fit = { w: w, h: hh, l: Math.round((area.clientWidth - w) / 2), t: Math.round((area.clientHeight - hh) / 2) };
   var st = $('#pedStage'); st.style.width = w + 'px'; st.style.height = hh + 'px'; st.style.left = ped.fit.l + 'px'; st.style.top = ped.fit.t + 'px';
-  var res = Math.min(1, 2400 / Math.max(ped.img.width, ped.img.height));               // nitida anche ingrandita
+  var res = Math.min(1, 2400 / pedMax());
   ['#pedCanvas', '#pedLive'].forEach(function (sel) { var c = $(sel); c.width = Math.round(ped.img.width * res); c.height = Math.round(ped.img.height * res); });
   ped.k = res;
   ped.view = { z: 1, x: 0, y: 0 }; pedApplyView();
   pedRender();
 }
 function pedPoint(e) { var r = $('#pedCanvas').getBoundingClientRect(), k = ped.img.width / r.width; return [Math.max(0, Math.min(ped.img.width, (e.clientX - r.left) * k)), Math.max(0, Math.min(ped.img.height, (e.clientY - r.top) * k))]; }
+function pedStickerAt(pt) {
+  var ctx = $('#pedCanvas').getContext('2d'), list = pedStickers();
+  for (var i = list.length - 1; i >= 0; i--) {
+    var o = list[i], b = pedStkBox(ctx, o), pad = pedMax() * 0.01;
+    if (Math.abs(pt[0] - o.x) <= b.w / 2 + pad && Math.abs(pt[1] - o.y) <= b.h / 2 + pad) return o;
+  }
+  return null;
+}
+function pedStkSize(lab) { return pedMax() * (lab ? 0.085 : 0.09) * ped.stkScale; }
 /* apre l'editor sull'immagine (Blob o URL); resolve(Blob con i segni) oppure null se lasci com'e' */
 function editPhoto(src) {
   return new Promise(async function (resolve) {
@@ -1751,7 +1813,7 @@ function editPhoto(src) {
       var c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0); if (bmp.close) bmp.close();
       ped.img = c;
     } catch (e) { resolve(null); return; }
-    ped.strokes = []; ped.cur = null; ped.done = resolve; ped.ptr = {}; ped.pinch = null; ped.drawId = null;
+    ped.items = []; ped.cur = null; ped.done = resolve; ped.ptr = {}; ped.pinch = null; ped.drawId = null; ped.drag = null; ped.last = null;
     $('#ped').hidden = false; document.body.classList.add('snapping');
     try { history.pushState({ ped: 1 }, ''); ped.pushed = true; } catch (e) {}
     requestAnimationFrame(pedFit);
@@ -1760,15 +1822,14 @@ function editPhoto(src) {
 function closePed(result, fromPop) {
   if ($('#ped').hidden) return;
   $('#ped').hidden = true; if ($('#snap').hidden) document.body.classList.remove('snapping');
-  var done = ped.done; ped.done = null; ped.img = null; ped.strokes = []; ped.cur = null; ped.ptr = {}; ped.pinch = null;
+  var done = ped.done; ped.done = null; ped.img = null; ped.items = []; ped.cur = null; ped.ptr = {}; ped.pinch = null; ped.drag = null; ped.mk = null;
   if (ped.pushed && !fromPop) { ped.pushed = false; try { history.back(); } catch (e) {} }
   if (done) done(result || null);
 }
 async function pedFinish() {
-  if (!ped.strokes.length) { closePed(null); return; }
+  if (!ped.items.length) { closePed(null); return; }
   var c = document.createElement('canvas'); c.width = ped.img.width; c.height = ped.img.height;
-  var ctx = c.getContext('2d'); ctx.drawImage(ped.img, 0, 0);
-  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, 1); });
+  ped.mk = null; pedCompose(c.getContext('2d'), c.width, c.height, 1, null);
   var blob = await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.85); });
   closePed(blob);
 }
@@ -1785,13 +1846,24 @@ async function pedFinish() {
     e.preventDefault(); try { area.setPointerCapture(e.pointerId); } catch (x) {}
     ped.ptr[e.pointerId] = { x: e.clientX, y: e.clientY };
     if (Object.keys(ped.ptr).length >= 2) {                     // secondo dito: niente segno, si ingrandisce
-      if (ped.cur) { ped.cur = null; pedRenderLive(); }
+      if (ped.cur) { ped.cur = null; pedRender(); }
+      if (ped.drag) { var dd = ped.drag; dd.o.it.x = dd.o.it.x; ped.drag = null; pedRender(); }
       ped.drawId = null; pinchStart(); return;
     }
     if (!e.target.closest('#pedStage')) return;
+    var pt = pedPoint(e);
     ped.drawId = e.pointerId;
-    ped.cur = { tool: ped.tool, color: ped.color, w: pedWidth(ped.tool), pts: [pedPoint(e)] };
-    pedRenderLive();
+    if (ped.tool === 'stk' || ped.tool === 'er') {
+      var hit = pedStickerAt(pt);
+      if (hit && ped.tool === 'er') { ped.items.push({ k: 'rm', t: hit.it }); ped.drawId = null; pedRender(); return; }     // la gomma toglie l'adesivo
+      if (hit) { ped.drag = { o: hit, dx: pt[0] - hit.x, dy: pt[1] - hit.y, x0: hit.x, y0: hit.y, moved: false }; ped.last = hit.it; return; }
+      if (ped.tool === 'stk') {
+        var lab = !!ped.stk.l, it = { k: 'stk', s: ped.stk.s || '', l: ped.stk.l || '', c: ped.stk.c || '', x: pt[0], y: pt[1], size: pedStkSize(lab) };
+        ped.items.push(it); ped.last = it; ped.drawId = null; pedRender(); return;
+      }
+    }
+    ped.cur = { k: ped.tool, color: ped.color, w: pedWidth(ped.tool), pts: [pt] };
+    if (ped.tool === 'er') pedLater(); else pedRenderLive();
   });
   area.addEventListener('pointermove', function (e) {
     if (!ped.ptr[e.pointerId]) return;
@@ -1801,23 +1873,34 @@ async function pedFinish() {
       var r = area.getBoundingClientRect(), q = ped.pinch, v0 = q.v;
       var z = Math.max(1, Math.min(6, v0.z * (Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / q.d)));
       var mx = (p[0].x + p[1].x) / 2 - r.left, my = (p[0].y + p[1].y) / 2 - r.top, f = ped.fit;
-      var cx = (q.mx - f.l - v0.x) / v0.z, cy = (q.my - f.t - v0.y) / v0.z;          // punto della foto sotto le dita all'inizio
+      var cx = (q.mx - f.l - v0.x) / v0.z, cy = (q.my - f.t - v0.y) / v0.z;
       ped.view = { z: z, x: mx - f.l - cx * z, y: my - f.t - cy * z };
       pedClampView(); pedApplyView(); return;
     }
-    if (!ped.cur || e.pointerId !== ped.drawId) return;
-    var pt = pedPoint(e), c0 = ped.cur.pts[0];
-    if (ped.cur.tool === 'hl' && ped.cur.pts.length > 1 && Math.abs(pt[0] - c0[0]) > Math.abs(pt[1] - c0[1]) * 2) pt[1] = c0[1] + (pt[1] - c0[1]) * 0.25;   // evidenziatore: righe dritte
-    ped.cur.pts.push(pt); pedRenderLive();
+    if (e.pointerId !== ped.drawId) return;
+    var pt = pedPoint(e);
+    if (ped.drag) {                                               // sposto l'adesivo: mossa provvisoria, registrata al rilascio
+      var d = ped.drag; d.moved = true; d.nx = pt[0] - d.dx; d.ny = pt[1] - d.dy;
+      if (!d.tmp) { d.tmp = { k: 'mv', t: d.o.it, x: d.nx, y: d.ny }; ped.items.push(d.tmp); } else { d.tmp.x = d.nx; d.tmp.y = d.ny; }
+      pedLater(); return;
+    }
+    if (!ped.cur) return;
+    var c0 = ped.cur.pts[0];
+    if (ped.cur.k === 'hl' && ped.cur.pts.length > 1 && Math.abs(pt[0] - c0[0]) > Math.abs(pt[1] - c0[1]) * 2) pt[1] = c0[1] + (pt[1] - c0[1]) * 0.25;   // evidenziatore: righe dritte
+    ped.cur.pts.push(pt);
+    if (ped.cur.k === 'er') pedLater(); else pedRenderLive();
   });
   function up(e) {
     if (!ped.ptr[e.pointerId]) return;
     delete ped.ptr[e.pointerId];
     if (ped.pinch) { if (Object.keys(ped.ptr).length < 2) ped.pinch = null; return; }
-    if (ped.cur && e.pointerId === ped.drawId) { ped.strokes.push(ped.cur); ped.cur = null; ped.drawId = null; pedRender(); }
+    if (e.pointerId !== ped.drawId) return;
+    ped.drawId = null;
+    if (ped.drag) { ped.drag = null; pedRender(); return; }
+    if (ped.cur) { ped.items.push(ped.cur); ped.cur = null; pedRender(); }
   }
   area.addEventListener('pointerup', up); area.addEventListener('pointercancel', up);
-  area.addEventListener('wheel', function (e) {                    // computer: rotellina per ingrandire
+  area.addEventListener('wheel', function (e) {
     if (!ped.img) return; e.preventDefault();
     var r = area.getBoundingClientRect(), v0 = Object.assign({}, ped.view), f = ped.fit;
     var z = Math.max(1, Math.min(6, v0.z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
@@ -1825,15 +1908,31 @@ async function pedFinish() {
     ped.view = { z: z, x: mx - f.l - cx * z, y: my - f.t - cy * z }; pedClampView(); pedApplyView();
   }, { passive: false });
 })();
-$('#pedFit').addEventListener('click', function () { ped.view = { z: 1, x: 0, y: 0 }; pedApplyView(); });
-$('#ped').querySelector('.ped-tools').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-tool]'); if (!b) return;
-  ped.tool = b.dataset.tool; ped.color = b.dataset.color;
-  Array.prototype.forEach.call(this.querySelectorAll('[data-tool]'), function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
-  $('#pedHint').textContent = ped.tool === 'hl' ? 'Evidenziatore: un dito passa sulle righe, due dita ingrandiscono' : 'Penna: un dito scrive, due dita ingrandiscono';
+var PED_HINT = { hl: 'Evidenziatore: un dito passa sulle righe, due dita ingrandiscono', pen: 'Penna: un dito scrive, due dita ingrandiscono',
+  er: 'Gomma: passa sui segni per cancellarli; tocca un adesivo per toglierlo', stk: 'Scegli un adesivo e tocca la foto per metterlo; trascinalo per spostarlo' };
+function pedSetTool(b) {
+  ped.tool = b.dataset.tool; if (b.dataset.color) ped.color = b.dataset.color;
+  Array.prototype.forEach.call($('#ped').querySelectorAll('.ped-tools [data-tool]'), function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+  $('#pedStk').hidden = ped.tool !== 'stk';
+  $('#pedHint').textContent = PED_HINT[ped.tool];
+  $('#pedArea').classList.toggle('stk-mode', ped.tool === 'stk');
+}
+$('#ped').querySelector('.ped-tools').addEventListener('click', function (e) { var b = e.target.closest('[data-tool]'); if (b) pedSetTool(b); });
+$('#pedStk').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-s], [data-l]'); if (!b) return;
+  ped.stk = b.dataset.l ? { l: b.dataset.l, c: b.dataset.c } : { s: b.dataset.s };
+  Array.prototype.forEach.call($('#pedStk').querySelectorAll('[data-s], [data-l]'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
 });
-$('#pedUndo').addEventListener('click', function () { ped.strokes.pop(); pedRender(); });
-$('#pedClear').addEventListener('click', function () { ped.strokes = []; pedRender(); });
+function pedResize(f) {
+  ped.stkScale = Math.max(0.5, Math.min(2.5, ped.stkScale * f));
+  var o = ped.last && pedStickers().find(function (x) { return x.it === ped.last; });
+  if (o) { ped.items.push({ k: 'sz', t: o.it, size: Math.max(pedMax() * 0.03, Math.min(pedMax() * 0.4, o.size * f)) }); pedRender(); }
+}
+$('#pedSmaller').addEventListener('click', function () { pedResize(1 / 1.25); });
+$('#pedBigger').addEventListener('click', function () { pedResize(1.25); });
+$('#pedFit').addEventListener('click', function () { ped.view = { z: 1, x: 0, y: 0 }; pedApplyView(); });
+$('#pedUndo').addEventListener('click', function () { ped.items.pop(); pedRender(); });
+$('#pedClear').addEventListener('click', function () { ped.items = []; pedRender(); });
 $('#pedDone').addEventListener('click', pedFinish);
 $('#pedSkip').addEventListener('click', function () { closePed(null); });
 window.addEventListener('resize', function () { if (!$('#ped').hidden) pedFit(); });
