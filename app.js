@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 79, date: '2026-11-14', note: 'Riga «Sostieni» in cima all\'elenco' };
+var APP_VERSION = { v: 80, date: '2026-11-14', note: 'Riga «Sostieni» dopo 5 accessi' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -270,6 +270,7 @@ function loadAll() {
     settings.donMs = typeof s.donMs === 'number' ? s.donMs : null;                  // ultimo traguardo gia' visto (multiplo di 50)
     settings.donGo = Number(s.donGo) || 0;                                          // quando e' stato aperto PayPal (0 = no)
     settings.donHid = s.donHid === true;                                            // l'app e' passata in secondo piano dopo
+    settings.donOpens = Math.max(0, parseInt(s.donOpens, 10) || 0);                  // aperture dell'app (la riga compare dalla sesta)
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -2128,6 +2129,7 @@ window.addEventListener('popstate', function (e) { if (!$('#logSheet').hidden &&
    altrimenti 10 giorni (l'app non puo' sapere se il pagamento c'e' stato: senza server non c'e' una conferma vera). ---- */
 var DON_URL = 'https://www.paypal.me/PieroRagusa907';
 var DON_DAY = 864e5, DON_SNOOZE = 10 * DON_DAY, DON_THANKS = 90 * DON_DAY, DON_MIN_MS = 20000, DON_STEP = 50;
+var DON_OPENS = 5, DON_AWAY = 30 * 60000, donHiddenAt = 0;   // la riga compare dopo 5 accessi; tornare dopo 30 minuti conta come un accesso
 var donAmt = '3', donPushed = false;
 function donCount() { return state.books.filter(function (b) { return !b.w && hasData(b); }).length; }
 function donPaint() {
@@ -2138,7 +2140,7 @@ function donPaint() {
   var on = tab !== 'wish' && Date.now() >= settings.donUntil;
   ask.hidden = !(on && !settings.donNever && ms >= DON_STEP && ms > settings.donMs);
   if (!ask.hidden) $('#donAskT').textContent = ms + ' libri catalogati';
-  row.hidden = !(on && n > 0 && ask.hidden);
+  row.hidden = !(on && n > 0 && ask.hidden && settings.donOpens > DON_OPENS);
 }
 function donSnooze(ms) { settings.donUntil = Math.max(settings.donUntil, Date.now() + ms); saveSettings(); donPaint(); }
 function paintDonAmt() {
@@ -2173,6 +2175,11 @@ function donBack() {
   saveSettings(); donPaint();
   toast('Grazie se hai donato! ♥', null, 3500);
 }
+function donAccess() { settings.donOpens = Math.min(9999, (settings.donOpens || 0) + 1); saveSettings(); donPaint(); }
+document.addEventListener('visibilitychange', function () {      // l'app installata spesso resta in memoria: un ritorno dopo una lunga pausa e' un nuovo accesso
+  if (document.visibilityState === 'hidden') donHiddenAt = Date.now();
+  else if (donHiddenAt && Date.now() - donHiddenAt >= DON_AWAY) { donHiddenAt = 0; donAccess(); }
+});
 document.addEventListener('visibilitychange', function () {
   if (!settings.donGo) return;
   if (document.visibilityState === 'hidden') { if (!settings.donHid) { settings.donHid = true; saveSettings(); } }
@@ -5463,6 +5470,7 @@ window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeou
 
 /* ---------- avvio ---------- */
 loadAll();
+settings.donOpens = Math.min(9999, settings.donOpens + 1);   // un accesso in piu' (per la riga «Sostieni»)
 saveSettings();                                  // salva subito eventuali scelte aggiornate (es. palette predefinita)
 if (settings.donGo) {                            // l'app e' stata riaperta mentre si era su PayPal (il telefono l'aveva chiusa)
   if (Date.now() - settings.donGo < 2 * DON_DAY) setTimeout(donBack, 1200);
@@ -5513,6 +5521,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 window.__ped = { st: function () { return ped; }, handles: function (o) { return pedHandles(o); }, stickers: function () { return pedStickers(); } };
-window.__app = { donPaint: donPaint, donBack: donBack, openDon: openDon, buildBackup: buildBackup, readPrice: function (c, r) { return readPrice(c, r); }, filtersAll: function () { return { frFlt: frFlt, autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { donAway: function (ms) { donHiddenAt = Date.now() - ms; }, donPaint: donPaint, donBack: donBack, openDon: openDon, buildBackup: buildBackup, readPrice: function (c, r) { return readPrice(c, r); }, filtersAll: function () { return { frFlt: frFlt, autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();

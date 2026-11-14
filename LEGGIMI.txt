@@ -95,8 +95,9 @@ COME SI USA
 - Sostieni Next Libris: l'app e' gratis. Nel menu (scheda Opzioni) e in
   Opzioni > App c'e' "Sostieni Next Libris": si sceglie l'importo (2, 3,
   5 euro o "Altro") e "Dona con PayPal" apre paypal.me/PieroRagusa907.
-  In cima all'elenco una riga lo ricorda (la x la nasconde per 10
-  giorni); ogni 50 libri compare un riquadro in cima ("Piu' tardi" = 10
+  In cima all'elenco una riga lo ricorda, dopo 5 accessi all'app
+  (tornarci dopo almeno 30 minuti conta come accesso); la x la nasconde
+  per 10 giorni; ogni 50 libri compare un riquadro in cima ("Piu' tardi" = 10
   giorni, "Non chiedere piu'" lo spegne). Al ritorno da PayPal: "Grazie
   se hai donato!"; se si e' rimasti su PayPal almeno 20 secondi le
   richieste tacciono 3 mesi, altrimenti 10 giorni. L'app non puo' sapere

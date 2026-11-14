@@ -3,6 +3,9 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 80 · 14/11/2026
+- La riga «Next Libris è gratis…» non compare più dal primo avvio: si vede dopo 5 accessi all'app (tornare nell'app dopo almeno 30 minuti conta come un accesso). Il riquadro ogni 50 libri e la voce nel menu restano come prima.
+
 ## Versione 79 · 14/11/2026
 - La riga «Next Libris è gratis…» ora sta in cima all'elenco, non più in fondo.
 
