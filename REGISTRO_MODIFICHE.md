@@ -3,6 +3,10 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 73 · 14/11/2026
+- «Elimina» su un singolo libro chiede conferma (come per più libri insieme); subito dopo resta «Annulla».
+- I messaggi con «Annulla» restano 4 secondi.
+
 ## Versione 72 · 14/11/2026
 - Messaggi in basso più brevi: senza tasti restano da 2,5 a 5 secondi secondo la lunghezza; con «Annulla» 6 secondi (prima sempre 6,5).
 

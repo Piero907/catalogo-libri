@@ -102,7 +102,8 @@ COME SI USA
   "Desideri" o
   "Libreria" per spostare il libro; "Elimina", in rosso), a destra da sola
   la freccetta che chiude la scheda. Sul telefono "Elimina" va nella riga
-  sotto, lontano dalla freccetta. Dopo "Elimina" c'e' sempre "Annulla".
+  sotto, lontano dalla freccetta. "Elimina" chiede sempre conferma, e
+  subito dopo c'e' ancora "Annulla" per qualche secondo.
   In alto c'e' anche "Cerca sul web": apre Google con titolo e autore
   (prezzo, recensioni, dove comprarlo).
   Sotto i pulsanti, le etichette del libro. In fondo "Condividi".
@@ -253,7 +254,7 @@ titolo e autore (piu' le etichette importanti, come
 "Prestato a Marco · da 3 settimane" o "Da verificare"). Tocca il libro o
 la freccetta per aprire la scheda con tutti i dati e modificarli; la
 freccetta in alto a destra la richiude. Accanto alla freccetta, in alto,
-ci sono la X (elimina il libro, con "Annulla" subito dopo) e il tasto per
+ci sono la X (elimina il libro, dopo la conferma e con "Annulla") e il tasto per
 prestare, vendere o regalare (azzurro quando il libro e' fuori
 casa: toccalo per cambiare o per segnarlo come tornato); le etichette
 (Prestato, Da verificare...) sono in alto anche loro. In fondo restano i
