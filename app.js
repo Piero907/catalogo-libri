@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 54, date: '2026-11-14', note: 'Descrizione del libro nella scheda aperta' };
+var APP_VERSION = { v: 55, date: '2026-11-14', note: 'Descrizione: «rimuovila»' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1294,7 +1294,7 @@ function descBody(b) {
       (long ? '<button type="button" class="link" data-act="descmore">Leggi tutto</button>' : '') +
       '<p class="desc-src">Fonte: ' + esc(DESC_SRC[b.dsf] || 'web') + (foreign ? (b.dsl === 'en' ? ' · in inglese' : ' · in un\'altra lingua') : '') + '</p>' +
       '<div class="desc-acts">' + (foreign ? '<a class="link" target="_blank" rel="noopener" href="https://translate.google.com/?sl=auto&tl=it&op=translate&text=' + encodeURIComponent(b.ds) + '">Traduci in italiano</a>' : '') +
-      '<button type="button" class="link quiet" data-act="descdel">Non è questo libro: toglila</button></div>';
+      '<button type="button" class="link quiet" data-act="descdel">Non è questo libro: rimuovila</button></div>';
   }
   if (descErr[b.id]) return '<p class="desc-none">' + esc(descErr[b.id]) + '</p><button type="button" class="link" data-act="descretry">Riprova</button>';
   if (b.dsn) return '<p class="desc-none">Nessuna descrizione trovata nelle banche dati per questo libro.</p><button type="button" class="link" data-act="descretry">Cerca di nuovo</button>';
@@ -3415,7 +3415,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'addcopy') addCopy(id);
   else if (act === 'descretry') { var db = get(id); if (db) { db.dsn = 0; loadDesc(id, true); } }
   else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
-  else if (act === 'descdel') { var dd = get(id); if (dd) { dd.ds = ''; dd.dsf = ''; dd.dsl = ''; dd.dsn = Date.now(); touch(); paintDesc(id); toast('Descrizione tolta'); } }
+  else if (act === 'descdel') { var dd = get(id); if (dd) { dd.ds = ''; dd.dsf = ''; dd.dsl = ''; dd.dsn = Date.now(); touch(); paintDesc(id); toast('Descrizione rimossa'); } }
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
   else if (act === 'zoom') openCover(id);
