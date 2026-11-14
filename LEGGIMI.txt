@@ -102,16 +102,15 @@ COME SI USA
   In alto c'e' anche "Cerca sul web": apre Google con titolo e autore
   (prezzo, recensioni, dove comprarlo).
   Sotto i pulsanti, le etichette del libro. In fondo "Condividi".
-  Il prezzo si legge con la fotocamera subito dopo la scansione, oppure
-  si scrive nel campo "Costo".
+  Il prezzo si scrive nel riquadro che compare dopo ogni libro, oppure
+  nel campo "Costo".
 - Mentre scrivi in un campo, la barra in basso (Scansiona, Foto, Digita)
   sparisce e il campo viene portato sopra la tastiera.
-- Prezzo con la fotocamera: dopo ogni libro "Leggi il prezzo" legge il
-  prezzo inquadrato. Legge anche i prezzi stampati in verticale accanto al
-  codice a barre, su fondi colorati e con luce non uniforme. Se non vede il
-  simbolo dell'euro te lo dice: controllalo. Per scriverlo, tocca il campo
-  "Scrivi" nella stessa barra: si apre subito la tastiera, la scansione si
-  ferma finche' non premi OK o la x.
+- Prezzo: dopo ogni libro aggiunto (scansione, foto, ISBN o titolo
+  scritto) compare un riquadro con titolo e autore e il campo "Prezzo
+  (facoltativo)". Scrivilo e Salva, oppure Salta. In Scansiona non serve
+  saltare: inquadra direttamente il prossimo codice. Toccando il campo
+  la scansione si ferma finche' non premi Salva o la x.
 - Libro senza copertina: il riquadro "Copertina" accanto al titolo la
   cerca online a ogni tocco (stesso ISBN su Open Library e Google Libri;
   altrimenti una copertina di un'altra edizione, da controllare: "Non e'
@@ -153,21 +152,11 @@ COME SI USA
   solo il titolo" lo salva cosi' com'e'. Oppure scrivi o incolla uno o
   piu' codici ISBN (uno per riga).
 - Il costo e' il PREZZO DI COPERTINA, che nessuna banca dati gratuita
-  conosce per i libri italiani: l'app lo legge dal prezzo stampato
-  (es. "€ 14,00"), di solito sul retro in basso.
-  * Foto: la prima foto e' per il libro (codice a barre o copertina).
-    Subito dopo l'app chiede "E il prezzo?": "Fotografa il prezzo" e
-    fai una foto DA VICINO al solo prezzo, oppure "Salta". Il libro viene
-    cercato intanto, senza aspettare.
-  * Scansiona dal vivo: dopo ogni codice a barre compare il pulsante
-    "Leggi il prezzo". Inquadra il prezzo nel riquadro e toccalo: niente
-    foto da scattare. Se non ti serve, passa al libro successivo.
-  * Se l'hai saltato: sulla scheda del libro il tasto fotocamera legge il
-    prezzo da una foto, il tasto € lo cerca sul web.
-  * Non ti interessa il prezzo? Opzioni > Schede e prezzo > togli "Chiedi il prezzo dopo
-    ogni libro".
-  * Il prezzo letto va controllato: con foto storta o mossa l'app puo' non
-    trovarlo (scrivilo a mano) o, raramente, leggere male una cifra.
+  conosce per i libri italiani: si scrive a mano (di solito e' stampato
+  sul retro in basso) nel riquadro che compare dopo ogni libro, oppure
+  dopo nel campo "Costo" della scheda.
+  * Non ti interessa il prezzo? Opzioni > Schede e prezzo > togli
+    "Chiedi il prezzo dopo ogni libro".
   * Prezzo di copertina = quello stampato sul libro, non quanto l'hai pagato.
 - Esporta: "Scarica Excel (.xlsx)" crea un vero file Excel (intestazione
   in grassetto, filtri, costo in euro, ISBN come testo). Ci sono anche
@@ -366,15 +355,12 @@ Il libro passa nell'altro elenco gia' chiuso, in vista compatta. Spostando
 nei Desideri si tolgono prestito, venduto/regalato/smarrito e lettura, che
 li' non servono; subito dopo c'e' "Annulla", che rimette tutto com'era.
 
-PREZZO SCRITTO A MANO
----------------------
-Quando l'app chiede il prezzo puoi anche scriverlo, spesso e' piu' veloce:
-- in Scansiona, nella barra del prezzo tocca "Scrivi", scrivi (es. 14,50)
-  e OK. Mentre scrivi la fotocamera si ferma, cosi' non aggiunge altri
-  libri; la x torna ai pulsanti;
-- dopo una Foto, nella finestra "E il prezzo?" c'e' "Oppure scrivilo".
-Mentre inquadri il prezzo, il codice a barre dello stesso libro viene
-ignorato (niente "Gia' in elenco"); un codice diverso e' il libro dopo.
+FOTO DALL'APP
+-------------
+Le foto (libro, copertina, pagina di una citazione) si scattano dentro
+l'app, sempre con la fotocamera posteriore. "Galleria" usa una foto gia'
+fatta; "Luce" accende il flash se il telefono lo permette; Indietro o
+"Chiudi" escono senza foto.
 
 SCAFFALE, GENERE, PAGINE, NOTE
 ------------------------------
@@ -477,6 +463,9 @@ Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
   ti basta il testo; tocca la miniatura per ingrandirla, e tocca la foto
   ingrandita per leggerla piu' da vicino.
 - Le foto delle citazioni sono nel backup, come le tue copertine.
+- In ogni citazione, in basso a destra: "Condividi" e la X rossa per
+  eliminarla (con "Annulla"). Mentre l'app legge il testo da una foto,
+  accanto alla foto compare "Leggo il testo..." con la rotellina.
 - Condividere: "Condividi" in basso a destra in ogni citazione, senza
   aprirla, e nella finestra della citazione (manda anche la foto); "Condividi tutte" nel riquadro della scheda e
   nell'elenco di tutte le citazioni manda in un messaggio solo tutte

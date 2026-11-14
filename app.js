@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 61, date: '2026-11-14', note: 'Selezione di più libri: elimina e modifiche di gruppo' };
+var APP_VERSION = { v: 62, date: '2026-11-14', note: 'Prezzo facoltativo dopo ogni libro, fotocamera posteriore, X sulle citazioni' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -742,18 +742,30 @@ function addPhotos(files, ask) {
 }
 /* Seconda foto, facoltativa: il prezzo. La chiedo subito, senza aspettare che il libro sia riconosciuto. */
 var askId = null;
-function askPrice(id) {
-  askId = id;
-  warmPriceOcr();
-  $('#priceAskIn').value = ''; $('#priceAskErr').hidden = true;
-  $('#priceAsk').hidden = false;
+var askTick = null;
+function askBookTxt() {
+  var b = askId && bookFor(askId), s = askId && S[askId];
+  var busy = s && (s.st === 'queued' || s.st === 'reading' || s.st === 'lookup' || s.st === 'search');
+  $('#priceAskT').textContent = b && b.t ? b.t : busy || !b ? 'Cerco titolo e autore…' : (b.i ? 'ISBN ' + b.i : 'Titolo da completare');
+  $('#priceAskA').textContent = b && b.t ? (b.a || '') : '';
 }
+function askPrice(id) {
+  if (!settings.price || scanning) return;
+  askId = id;
+  $('#priceAskIn').value = ''; $('#priceAskErr').hidden = true;
+  askBookTxt();
+  $('#priceAsk').hidden = false;
+  clearInterval(askTick); askTick = setInterval(function () { if ($('#priceAsk').hidden) { clearInterval(askTick); return; } askBookTxt(); }, 600);
+  setTimeout(function () { try { $('#priceAskIn').focus(); } catch (e) {} }, 60);
+}
+function closePriceAsk() { $('#priceAsk').hidden = true; askId = null; clearInterval(askTick); try { $('#priceAskIn').blur(); } catch (e) {} }
 $('#priceAskForm').addEventListener('submit', function (e) {
   e.preventDefault();
+  if (!$('#priceAskIn').value.trim()) { closePriceAsk(); return; }       // vuoto: come «Salta»
   var v = L.parseNum($('#priceAskIn').value);
   if (!(v > 0 && v < 1000)) { $('#priceAskErr').hidden = false; $('#priceAskIn').focus(); return; }
   var id = askId, b = bookFor(id);
-  $('#priceAsk').hidden = true; askId = null; $('#priceAskIn').blur();
+  closePriceAsk();
   v = Math.round(v * 100) / 100;
   if (b) { b.c = v; touch(); refreshRow(b.id); updateSummary(); }
   else if (S[id]) S[id].price = v;
@@ -765,14 +777,21 @@ function bookFor(id) { return get(id) || (sameAs[id] && get(sameAs[id])) || null
 var stream = null, scanTimer = null, scanCtx = { count: 0, added: 0, last: '', lastAt: 0 }, torchOn = false, liveCanvas = null, pushed = false;
 var scanMode = 'add';                         // 'add': aggiunge; 'check': «Ce l'ho già?», controlla soltanto
 var priceTarget = null, scanPaused = false;   // libro appena scansionato a cui dare il prezzo
-function priceBar(txt, btnLabel, busy) {
-  if (typingPrice) closePriceType();
-  $('#scanPriceTxt').textContent = txt;
-  var b = $('#scanPriceBtn');
-  b.innerHTML = icon('euro') + (btnLabel || 'Leggi il prezzo');
-  b.disabled = !!busy;
-  $('#scanPrice').hidden = false;
+var spTick = null;
+function priceBookTxt() {
+  var b = priceTarget && get(priceTarget), s = priceTarget && S[priceTarget];
+  var busy = s && (s.st === 'queued' || s.st === 'reading' || s.st === 'lookup' || s.st === 'search');
+  $('#scanPriceT').textContent = b && b.t ? b.t : busy || !b ? 'Cerco titolo e autore…' : (b.i ? 'ISBN ' + b.i : 'Titolo da completare');
+  $('#scanPriceA').textContent = b && b.t ? (b.a || '') : '';
 }
+function priceBar(txt) {
+  if (typingPrice) closePriceType();
+  $('#scanPriceTxt').textContent = txt || '';
+  priceBookTxt();
+  $('#scanPrice').hidden = false;
+  clearInterval(spTick); spTick = setInterval(function () { if ($('#scanPrice').hidden || !scanning) { clearInterval(spTick); return; } priceBookTxt(); }, 600);
+}
+var PRICE_HINT = 'Prezzo facoltativo: scrivilo, oppure inquadra il prossimo codice.';
 /* Ritaglia dal video la zona del riquadro (un po' allargata), tenendo conto di come il video riempie lo schermo. */
 function guideCanvas(full) {
   var v = $('#scanVideo'), vw = v.videoWidth, vh = v.videoHeight;
@@ -805,7 +824,7 @@ function openPriceType() {
   if (typingPrice) return;
   typingPrice = true; scanPaused = true;
   priceTxtBefore = $('#scanPriceTxt').textContent;
-  $('#scanPriceTxt').textContent = 'Scrivi il prezzo' + (b.t ? ' di «' + b.t + '»' : '') + ' e tocca OK.';
+  $('#scanPriceTxt').textContent = 'Scrivi il prezzo e tocca Salva. La scansione aspetta.';
   $('#scanPrice').classList.add('typing');
   inp.placeholder = 'es. 14,50'; inp.classList.remove('bad');
   if (!inp.value && b.c != null) inp.value = String(b.c.toFixed(2)).replace('.', ',');
@@ -816,44 +835,24 @@ function closePriceType() {
   typingPrice = false; scanPaused = false;
   if (priceTxtBefore) $('#scanPriceTxt').textContent = priceTxtBefore;
   $('#scanPrice').classList.remove('typing');
-  var inp = $('#scanPriceIn'); inp.value = ''; inp.placeholder = 'Scrivi'; inp.classList.remove('bad');
+  var inp = $('#scanPriceIn'); inp.value = ''; inp.placeholder = 'Prezzo (facoltativo)'; inp.classList.remove('bad');
   try { inp.blur(); } catch (e) {}
 }
 function savePriceType(e) {
   if (e) e.preventDefault();
   var inp = $('#scanPriceIn'), v = L.parseNum(inp.value), b = priceTarget && get(priceTarget);
+  if (!inp.value.trim()) { closePriceType(); return; }
   if (!(v > 0 && v < 1000)) { inp.classList.add('bad'); inp.focus(); return; }
   closePriceType();
   if (!b) return;
   b.c = Math.round(v * 100) / 100; touch();
   beep(true); vibrate(40);
-  priceBar('✓ ' + eur(b.c) + (b.t ? ' · ' + b.t : '') + '. Inquadra il prossimo codice a barre.', 'Rileggi');
+  priceBar('✓ Prezzo salvato: ' + eur(b.c) + '. Inquadra il prossimo codice.');
 }
 $('#scanPriceIn').addEventListener('focus', openPriceType);              // il tocco sul campo apre la tastiera e ferma la scansione
 $('#scanPriceForm').addEventListener('submit', savePriceType);
 $('#scanPriceCancel').addEventListener('click', closePriceType);
 $('#scanPriceIn').addEventListener('input', function (e) { e.target.classList.remove('bad'); });
-async function readLivePrice() {
-  var id = priceTarget, b = id && get(id);
-  if (!b || scanPaused) return;
-  scanPaused = true;
-  priceBar('Leggo il prezzo…', 'Leggo…', true);
-  var got = null;
-  try {
-    var c = guideCanvas(false);
-    got = c ? await readPrice(c, 3) : null;
-    if (!got && scanning && priceTarget === id) { c = guideCanvas(true); got = c ? await readPrice(c, 1) : null; }   // prezzo fuori dal riquadro
-  } catch (e) { got = null; }
-  var pr = got ? got.v : null;
-  scanPaused = false;
-  if (!scanning) return;
-  b = get(id);
-  if (!b || priceTarget !== id) return;
-  if (pr == null) { beep(false); priceBar('Non trovo il prezzo. Avvicinati al «€» stampato e riprova, oppure tocca «Scrivi». O passa al libro successivo.', 'Riprova'); return; }
-  b.c = pr; touch();
-  beep(true); vibrate(40);
-  priceBar('✓ ' + eur(pr) + (b.t ? ' · ' + b.t : '') + (got.sure ? '. Inquadra il prossimo codice a barre.' : '. Controllalo: non ho visto il simbolo €. Se è sbagliato scrivilo qui.'), 'Rileggi');
-}
 /* contatore in alto e pulsante di uscita in basso, che dice cosa succede uscendo */
 function setScanCount(t) {
   $('#scanCount').textContent = t;
@@ -957,7 +956,7 @@ async function shootCover() {
   setScanCount(scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti'));
   $('#scanRes').hidden = true; resCode = '';
   scanMsg('Copertina presa: la riconosco mentre continui. Se ci sono più libri possibili, alla fine scegli tu dall\'elenco.');
-  if (settings.price) { priceTarget = id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi». Se non ti serve, passa alla prossima copertina.'); }
+  if (settings.price) { priceTarget = id; priceBar(PRICE_HINT); }
   else { $('#scanPrice').hidden = true; priceTarget = null; }
 }
 $('#scanKinds').addEventListener('click', function (e) { var b = e.target.closest('[data-k]'); if (b && scanning) setScanKind(b.dataset.k); });
@@ -988,7 +987,6 @@ async function startScan(mode) {
   setScanCount(scanMode === 'check' ? 'Ce l\'ho già?' : '0 aggiunti');
   $('#scanRes').hidden = true; $('#scanRes').innerHTML = ''; resCode = ''; resKind = '';
   $('#scanPrice').hidden = true; priceTarget = null; scanPaused = false;
-  if (scanMode === 'add' && settings.price) warmPriceOcr();
   $('#scan').classList.toggle('checking', scanMode === 'check');
   $('#scan').hidden = false;
   scanning = true;
@@ -1040,7 +1038,7 @@ function onScanned(code) {
   if (scanMode === 'add' && priceTarget) {
     var pt = get(priceTarget);
     if (pt && L.toIsbn13(pt.i) === code) {
-      if (pt.c == null && !scanPaused) scanMsg('È lo stesso libro: per il prezzo inquadra il «€» e tocca «Leggi il prezzo», oppure «Scrivi». Per andare avanti, inquadra il prossimo codice.');
+      if (pt.c == null && !scanPaused) scanMsg('È lo stesso libro: se vuoi scrivi il prezzo, altrimenti inquadra il prossimo codice.');
       return;
     }
   }
@@ -1053,7 +1051,7 @@ function onScanned(code) {
   var res = addIsbn(code);
   if (!res.dup) { $('#scanRes').hidden = true; resCode = ''; }
   if (res.moved) {
-    if (settings.price && res.moved.c == null) { priceTarget = res.moved.id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi».'); }
+    if (settings.price && res.moved.c == null) { priceTarget = res.moved.id; priceBar(PRICE_HINT); }
     beep(true); vibrate(50);
     scanCtx.count++; scanCtx.added++;
     setScanCount(scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti'));
@@ -1083,7 +1081,7 @@ function onScanned(code) {
   setScanCount(scanCtx.count + (scanCtx.count === 1 ? ' aggiunto' : ' aggiunti'));
   scanMsg('Aggiunto ' + code + '. Cerco il titolo…');
   var book = res.book;
-  if (settings.price) { priceTarget = book.id; priceBar('Prezzo? Inquadra il prezzo stampato e tocca «Leggi il prezzo», oppure «Scrivi». Se non ti serve, passa al libro successivo.'); }
+  if (settings.price) { priceTarget = book.id; priceBar(PRICE_HINT); }
   res.done.then(function () {
     if (!scanning) return;
     scanMsg(book.t ? '✓ ' + book.t : (book.nf ? 'Non trovato nelle banche dati: lo completi dopo.' : 'Titolo da completare più tardi.'));
@@ -1142,7 +1140,6 @@ function onCheck(code) {
     }, function () { if (scanning && resCode === code && resKind === 'no') showRes(code, 'no', null, false); });
   }
 }
-$('#scanPriceBtn').addEventListener('click', readLivePrice);
 $('#scanRes').addEventListener('click', function (e) {
   var btn = e.target.closest('[data-act]');
   if (!btn || !resCode) return;
@@ -1474,6 +1471,95 @@ $('#bulkSheet').addEventListener('click', function (e) {
   touch(); renderList(); updateSummary();
   toast(msg, bulkUndo(snap));
 });
+/* ---- fotocamera dentro l'app: sempre quella posteriore (l'app Fotocamera del telefono a volte riparte da quella frontale) ---- */
+var snap = { stream: null, done: null, pushed: false, track: null, torch: false };
+async function rearStream() {
+  var md = navigator.mediaDevices;
+  var hi = { width: { ideal: 3264 }, height: { ideal: 2448 } };
+  try { return await md.getUserMedia({ video: Object.assign({ facingMode: { exact: 'environment' } }, hi), audio: false }); }
+  catch (e) {
+    var st = await md.getUserMedia({ video: Object.assign({ facingMode: { ideal: 'environment' } }, hi), audio: false });
+    var tr = st.getVideoTracks()[0], set = tr && tr.getSettings ? tr.getSettings() : {};
+    if (set.facingMode === 'user' || /front|anterior|frontale/i.test(tr && tr.label || '')) {     // ha dato quella frontale: cerco la posteriore per nome
+      try {
+        var cams = (await md.enumerateDevices()).filter(function (d) { return d.kind === 'videoinput'; });
+        var back = cams.find(function (d) { return /back|rear|posterior|environment/i.test(d.label); });
+        if (back) { st.getTracks().forEach(function (t) { t.stop(); }); return await md.getUserMedia({ video: Object.assign({ deviceId: { exact: back.deviceId } }, hi), audio: false }); }
+      } catch (x) {}
+    }
+    return st;
+  }
+}
+/* resolve(File) con la foto scattata o scelta dalla galleria, oppure null; senza fotocamera usa il selettore del telefono */
+function snapPhoto(title, fallbackInput) {
+  return new Promise(async function (resolve) {
+    function viaInput(sel) {
+      var inp = $(sel), done = false;
+      function on() { inp.removeEventListener('change', on); done = true; var f = inp.files && inp.files[0]; inp.value = ''; resolve(f || null); }
+      inp.addEventListener('change', on); inp.click();
+      window.addEventListener('focus', function back() { window.removeEventListener('focus', back); setTimeout(function () { if (!done) { inp.removeEventListener('change', on); resolve(null); } }, 1200); });
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || scanning) { viaInput(fallbackInput); return; }
+    snap.done = resolve;
+    $('#snapH').textContent = title || 'Foto'; $('#snapMsg').textContent = 'Apro la fotocamera…';
+    $('#snap').hidden = false; document.body.classList.add('snapping');
+    try {
+      snap.stream = await rearStream();
+      if ($('#snap').hidden) { stopSnapStream(); return; }
+      try { history.pushState({ snap: 1 }, ''); snap.pushed = true; } catch (e) {}       // solo a fotocamera aperta: Indietro la chiude
+      var v = $('#snapVideo'); v.srcObject = snap.stream; try { await v.play(); } catch (e) {}
+      snap.track = snap.stream.getVideoTracks()[0];
+      try {
+        var caps = snap.track.getCapabilities ? snap.track.getCapabilities() : {};
+        $('#snapTorch').hidden = !caps.torch;
+        if (caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) snap.track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function () {});
+      } catch (e) {}
+      $('#snapMsg').textContent = '';
+    } catch (e) {                                  // fotocamera non disponibile o negata: uso quella del telefono
+      snap.done = null; stopSnapStream();
+      $('#snap').hidden = true; document.body.classList.remove('snapping');
+      viaInput(fallbackInput);
+    }
+  });
+}
+function stopSnapStream() { if (snap.stream) snap.stream.getTracks().forEach(function (t) { t.stop(); }); snap.stream = null; snap.track = null; snap.torch = false; $('#snapTorch').setAttribute('aria-pressed', 'false'); }
+function closeSnap(result, fromPop) {
+  if ($('#snap').hidden) return;
+  stopSnapStream();
+  $('#snap').hidden = true; document.body.classList.remove('snapping'); $('#snapVideo').srcObject = null;
+  var done = snap.done; snap.done = null;
+  if (snap.pushed && !fromPop) { snap.pushed = false; try { history.back(); } catch (e) {} }
+  if (done) done(result || null);
+}
+async function snapShoot() {
+  var v = $('#snapVideo'), btn = $('#snapShoot');
+  if (!snap.track || !v.videoWidth) return;
+  btn.disabled = true;
+  var blob = null;
+  try {
+    if (window.ImageCapture) { var ic = new ImageCapture(snap.track); blob = await ic.takePhoto(snap.torch ? { fillLightMode: 'flash' } : {}); }   // piena risoluzione del sensore
+  } catch (e) { blob = null; }
+  if (!blob) {
+    var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    blob = await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.92); });
+  }
+  btn.disabled = false;
+  if (!blob) { $('#snapMsg').textContent = 'Scatto non riuscito: riprova.'; return; }
+  try { vibrate(30); } catch (e) {}
+  closeSnap(new File([blob], 'foto.jpg', { type: blob.type || 'image/jpeg' }));
+}
+$('#snapShoot').addEventListener('click', snapShoot);
+$('#snapClose').addEventListener('click', function () { closeSnap(null); });
+$('#snapGal').addEventListener('click', function () { $('#fileSnapGal').click(); });
+$('#fileSnapGal').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) closeSnap(f); });
+$('#snapTorch').addEventListener('click', function () {
+  if (!snap.track) return;
+  snap.torch = !snap.torch;
+  snap.track.applyConstraints({ advanced: [{ torch: snap.torch }] }).catch(function () {});
+  $('#snapTorch').setAttribute('aria-pressed', snap.torch ? 'true' : 'false');
+});
+window.addEventListener('popstate', function () { if (!$('#snap').hidden) { snap.pushed = false; closeSnap(null, true); } });
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -1681,7 +1767,8 @@ function quotesBody(b) {
   return (qs.length ? '<ul class="qlist">' + qs.map(function (c, i) {
     return '<li class="qcard"><button type="button" class="qitem' + (c.ph ? ' has-ph' + (c.x ? '' : ' only-ph') : '') + '" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare">' + qThumb(c) +
       (c.x ? '<span class="qt">' + esc(c.x) + '</span>' : '<span class="qt q-only">Foto della pagina</span>') + (c.pg ? '<span class="qp">p. ' + esc(c.pg) + '</span>' : '') + '</button>' +
-      '<button type="button" class="qshare" data-act="quoteshare" data-i="' + i + '" aria-label="Condividi questa citazione">' + icon('share') + 'Condividi</button></li>';
+      '<span class="qbtns"><button type="button" class="qshare" data-act="quoteshare" data-i="' + i + '" aria-label="Condividi questa citazione">' + icon('share') + 'Condividi</button>' +
+      '<button type="button" class="qdel" data-act="quotedel" data-i="' + i + '" aria-label="Elimina questa citazione" title="Elimina">' + icon('x') + '</button></span></li>';
   }).join('') + '</ul>' : '<p class="desc-none">Passaggi da ricordare, frasi sottolineate, appunti di lettura.</p>') +
     '<div class="desc-acts"><button type="button" class="link" data-act="quoteadd">+ Aggiungi una citazione o un appunto</button>' +
     (qs.length ? '<button type="button" class="link" data-act="quoteshareall">' + (qs.length === 1 ? 'Condividi' : 'Condividi tutte (' + qs.length + ')') + '</button>' : '') + '</div>';
@@ -1706,6 +1793,7 @@ function openQuote(id, i) {
   $('#quoteText').value = c ? c.x : ''; $('#quotePage').value = c ? c.pg : '';
   $('#quoteMsg').textContent = ''; $('#quoteDel').hidden = !c;
   paintQuotePh();
+  var ob = $('#quoteOcr'); ob.disabled = false; ob.classList.remove('busy'); ob.textContent = 'Leggi il testo dalla foto'; $('#quotePh').classList.remove('reading');
   $('#quoteSheet').hidden = false;
   if (!c) setTimeout(function () { try { $('#quoteText').focus(); } catch (e) {} }, 60);
 }
@@ -1762,7 +1850,8 @@ async function quotePickPhoto(file) {
 async function quoteOcr(auto) {
   if (!quoteEdit) return;
   var msg = $('#quoteMsg'), btn = $('#quoteOcr'), ed = quoteEdit;
-  btn.disabled = true;
+  btn.disabled = true; btn.classList.add('busy'); btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Leggo il testo…';
+  $('#quotePh').classList.add('reading');
   try {
     msg.textContent = 'Preparo il riconoscimento del testo (la prima volta ci vuole un po\')…';
     var canvas = ed.canvas;
@@ -1783,12 +1872,12 @@ async function quoteOcr(auto) {
     ta.focus();
   } catch (e) {
     if (quoteEdit === ed) msg.textContent = 'Lettura non riuscita' + (navigator.onLine === false ? ' (la prima volta serve la connessione)' : '') + ': la foto resta, e puoi scrivere tu il testo.';
-  } finally { btn.disabled = false; }
+  } finally { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = 'Leggi il testo dalla foto'; $('#quotePh').classList.remove('reading'); }
 }
 $('#quoteForm').addEventListener('submit', function (e) { e.preventDefault(); saveQuote(); });
 $('#quoteCancel').addEventListener('click', closeQuote);
 $('#quoteDel').addEventListener('click', delQuote);
-$('#quotePhoto').addEventListener('click', function () { $('#fileQuote').click(); });
+$('#quotePhoto').addEventListener('click', function () { snapPhoto('Foto della pagina', '#fileQuote').then(function (f) { if (f) quotePickPhoto(f); }); });
 $('#fileQuote').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) quotePickPhoto(f); });
 $('#quoteOcr').addEventListener('click', function () { quoteOcr(false); });
 $('#quoteShare').addEventListener('click', shareQuoteForm);
@@ -2358,6 +2447,7 @@ async function searchTitle(text) {
 }
 function addedToast(b) {
   var id = b.id;
+  if (settings.price && !scanning) return;            // c'e' il riquadro «Libro aggiunto» (con «Togli il libro»)
   toast('Aggiunto ' + (b.w ? 'ai Desideri' : 'alla Libreria') + ': ' + (b.t || b.i), { label: 'Annulla', fn: function () {
     state.books = state.books.filter(function (x) { return x.id !== id; }); delete S[id]; renderList(); touch(); updateSummary();
   } });
@@ -2375,13 +2465,13 @@ function pickTitle(i) {
     var b = res.book;
     b.t = c.t; b.a = c.a; if (c.img) b.img = c.img;           // si vede subito; il resto arriva dalle banche dati
     openState[b.id] = false;
-    renderList(); updateSummary(); addedToast(b);
+    renderList(); updateSummary(); addedToast(b); askPrice(b.id);
     return;
   }
   var nb = blankBook({ t: c.t, a: c.a, e: c.e, y: c.y, img: c.img || '', gen: c.gen || '', pg: c.pg || '' });
   state.books.push(nb); openState[nb.id] = false;
   $('#isbnSheet').hidden = true;
-  touch(); renderList(); updateSummary(); addedToast(nb);
+  touch(); renderList(); updateSummary(); addedToast(nb); askPrice(nb.id);
 }
 function addTitleAsIs() {
   var t = titleText.replace(/\s+/g, ' ').trim();
@@ -2389,7 +2479,7 @@ function addTitleAsIs() {
   var nb = blankBook({ t: t.slice(0, 300) });
   state.books.push(nb); openState[nb.id] = false;
   $('#isbnSheet').hidden = true; q = ''; $('#q').value = '';
-  touch(); renderList(); updateSummary(); addedToast(nb);
+  touch(); renderList(); updateSummary(); addedToast(nb); askPrice(nb.id);
 }
 $('#isbnRes').addEventListener('click', function (e) { var b = e.target.closest('[data-i]'); if (b) pickTitle(+b.dataset.i); });
 $('#isbnAsIs').addEventListener('click', addTitleAsIs);
@@ -2408,14 +2498,15 @@ function submitIsbn() {
     err.hidden = false;
     return;
   }
-  var added = 0, dupes = 0, moved = 0, dupIds = [];
+  var added = 0, dupes = 0, moved = 0, dupIds = [], newBook = null;
   q = ''; flt = ''; $('#q').value = ''; setView('list');
   r.valid.forEach(function (code) {
     var res = addIsbn(code);
-    if (res.dup) { dupes++; if (!res.dup.w && tab === 'lib') dupIds.push(res.dup.id); } else if (res.moved) moved++; else added++;
+    if (res.dup) { dupes++; if (!res.dup.w && tab === 'lib') dupIds.push(res.dup.id); } else if (res.moved) moved++; else { added++; newBook = res.book; }
   });
   $('#isbnSheet').hidden = true;
   renderList(); updateSummary();
+  if (added === 1 && r.valid.length === 1 && newBook && settings.price) { askPrice(newBook.id); return; }
   var parts = [];
   if (added) parts.push(added + (added === 1 ? ' libro aggiunto' : ' libri aggiunti') + (tab === 'wish' ? ' ai Desideri' : ''));
   if (moved) parts.push(moved + (moved === 1 ? ' spostato dai Desideri alla Libreria' : ' spostati dai Desideri alla Libreria'));
@@ -2785,7 +2876,7 @@ async function findCover(b, budget, sameOnly) {
     });
   });
 }
-function openCoverCamera(id) { coverPhotoId = id; $('#fileCover').click(); }
+function openCoverCamera(id) { coverPhotoId = id; snapPhoto('Foto della copertina', '#fileCover').then(function (f) { if (f) coverFromFile(f); else coverPhotoId = null; }); }
 var covAskId = null;
 function askCoverPhoto(id, msg) { covAskId = id; $('#covMsg').textContent = msg; $('#toast').hidden = true; $('#covSheet').hidden = false; }
 function closeCovAsk() { $('#covSheet').hidden = true; covAskId = null; }
@@ -2873,7 +2964,7 @@ function closeCover(fromPop) {
   lbPushed = false;
 }
 $('#lbClose').addEventListener('click', function () { closeCover(false); });
-$('#lbPhoto').addEventListener('click', function (e) { e.stopPropagation(); coverPhotoId = lbId; $('#fileCover').click(); });
+$('#lbPhoto').addEventListener('click', function (e) { e.stopPropagation(); openCoverCamera(lbId); });
 $('#lbReset').addEventListener('click', async function (e) {
   e.stopPropagation();
   var id = lbId, b = get(id);
@@ -2883,7 +2974,9 @@ $('#lbReset').addEventListener('click', async function (e) {
   if (!src) { closeCover(false); toast('Foto tolta.'); return; }
   $('#lbImg').src = src; $('#lbNote').textContent = ''; lbButtons(b);
 });
-bindFile('#fileCover', async function (f) {
+bindFile('#fileCover', function (f) { coverFromFile(f[0]); });
+async function coverFromFile(file) {
+  var f = [file];
   var id = coverPhotoId; coverPhotoId = null;
   if (!id || !get(id)) return;
   try {
@@ -2892,7 +2985,7 @@ bindFile('#fileCover', async function (f) {
     if (!$('#lightbox').hidden && lbId === id) { $('#lbImg').src = coverURL[id]; $('#lbNote').textContent = '✓ Copertina salvata sul telefono (e nel backup).'; lbButtons(get(id)); }
     else toast('Copertina salvata sul telefono (e nel backup).');
   } catch (e) { toast('Non riesco a salvare la foto sul telefono.'); }
-});
+}
 $('#btnCovers').addEventListener('click', improveCovers);
 $('#lightbox').addEventListener('click', function (e) { if (e.target === e.currentTarget || e.target.id === 'lbCap' || e.target.id === 'lbNote') closeCover(false); });
 window.addEventListener('popstate', function () { if (!$('#lightbox').hidden) { lbPushed = false; closeCover(true); } });
@@ -4103,6 +4196,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'quoteadd') openQuote(id, null);
   else if (act === 'quoteshareall') shareAllQuotes(id);
   else if (act === 'quoteshare') shareQuote(id, +btn.dataset.i);
+  else if (act === 'quotedel') { var qb = get(id), qi = +btn.dataset.i; if (qb && qb.qs && qb.qs[qi]) { var qold = qb.qs.splice(qi, 1)[0]; touch(); paintQuotes(id); toast('Citazione eliminata.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.qs.splice(Math.min(qi, x.qs.length), 0, qold); touch(); paintQuotes(id); } } }); } }
   else if (act === 'quoteedit') openQuote(id, +btn.dataset.i);
   else if (act === 'descretry') { var db = get(id); if (db) { db.dsn = 0; loadDesc(id, true); } }
   else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
@@ -4112,7 +4206,6 @@ list.addEventListener('click', function (e) {
   else if (act === 'zoom') openCover(id);
   else if (act === 'coverphoto') coverTap(id);
   else if (act === 'bought') moveToLib(id);
-  else if (act === 'pricephoto') { priceId = id; warmPriceOcr(); $('#filePrice').click(); }
   else if (act === 'priceweb') {
     var pw = get(id);
     if (pw) window.open('https://www.google.com/search?q=' + encodeURIComponent((L.toIsbn13(pw.i) || [pw.t, pw.a].filter(Boolean).join(' ')) + ' prezzo di copertina libro'), '_blank', 'noopener');
@@ -4153,7 +4246,7 @@ function typeCost(id) {
   try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
   inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-bindFile('#filePrice', async function (f) {
+bindFile('#filePrice', async function (f) {   // non piu' usato dall'interfaccia (v62): resta per i backup di prova
   var id = priceId; priceId = null;
   var b = id && bookFor(id);
   if (!b) return;
@@ -4176,12 +4269,17 @@ bindFile('#fileGal', function (f) {
   addPhotos(f, n === 1);                       // una foto sola: chiede anche il prezzo, come dalla fotocamera
   if (n > 1) toast((n > 60 ? 'Ne ho prese 60 su ' + n : 'Aggiunte ' + n + ' foto') + ': le riconosco una alla volta, intanto puoi continuare.');
 });
-$('#priceShot').addEventListener('click', function () { $('#priceAsk').hidden = true; priceId = askId; askId = null; $('#filePrice').click(); });
-$('#priceSkip').addEventListener('click', function () { $('#priceAsk').hidden = true; askId = null; });
+$('#priceSkip').addEventListener('click', closePriceAsk);
+$('#priceUndo').addEventListener('click', function () {
+  var id = askId, b = bookFor(id); closePriceAsk();
+  if (b) { state.books = state.books.filter(function (x) { return x.id !== b.id; }); delete S[b.id]; } else if (id) { state.books = state.books.filter(function (x) { return x.id !== id; }); delete S[id]; }
+  touch(); renderList(); updateSummary(); toast('Libro tolto.');
+});
+$('#priceAskIn').addEventListener('input', function () { $('#priceAskErr').hidden = true; });
 bindFile('#fileBackup', function (f) { restore(f[0]); });
 $('#btnScan').addEventListener('click', startScan);
 $('#btnPhoto').addEventListener('click', function () { $('#photoSheet').hidden = false; });
-$('#photoCam').addEventListener('click', function () { $('#photoSheet').hidden = true; $('#fileCam').click(); });
+$('#photoCam').addEventListener('click', function () { $('#photoSheet').hidden = true; snapPhoto('Foto del libro', '#fileCam').then(function (f) { if (f) addPhotos([f], true); }); });
 $('#photoGal').addEventListener('click', function () { $('#photoSheet').hidden = true; $('#fileGal').click(); });
 $('#photoClose').addEventListener('click', function () { $('#photoSheet').hidden = true; });
 $('#btnType').addEventListener('click', openIsbnSheet);
@@ -4214,13 +4312,15 @@ document.addEventListener('keydown', function (e) {
   if (!$('#shareSheet').hidden) { closeShare(); return; }
   if (!$('#importSheet').hidden) { closeImport(); return; }
   if (!$('#quoteSheet').hidden) { closeQuote(); return; }
+  if (!$('#snap').hidden) { closeSnap(null); return; }
   if (!$('#phView').hidden) { closePh(false); return; }
   if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }
   if (!$('#bulkSheet').hidden) { $('#bulkSheet').hidden = true; return; }
   if (selOn) { endSel(false); return; }
   if (!$('#allqSheet').hidden) { closeAllQuotes(); return; }
   if (!$('#newsSheet').hidden) { $('#newsSheet').hidden = true; return; }
-  ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
+  if (!$('#priceAsk').hidden) closePriceAsk();
+  ['#statsSheet', '#exportSheet', '#pubSheet', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });
 $('#q').addEventListener('input', function (e) { q = e.target.value; collapseCards(); renderList(); });
@@ -4400,7 +4500,7 @@ $('#btnInstDiag').addEventListener('click', async function () {
   btn.disabled = false;
 });
 $('#gbKey').value = '';
-$('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: resta il tasto fotocamera sulla scheda del libro.'); });
+$('#optPrice').addEventListener('change', function (e) { settings.price = e.target.checked; saveSettings(); toast(settings.price ? 'Dopo ogni libro ti chiederò il prezzo (puoi sempre saltarlo).' : 'Non chiederò più il prezzo: puoi scriverlo quando vuoi nel campo «Costo» della scheda.'); });
 /* l'indirizzo del worker si puo' incollare anche senza https:// o con ?isbn=... della prova a mano */
 function cleanWorker(v) {
   v = String(v || '').trim().split(/[?#]/)[0].replace(/\/+$/, '');

@@ -120,12 +120,12 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   <div class="scan-mid"><div class="scan-guide" id="scanGuide"></div></div>
   <div class="scan-res" id="scanRes" hidden aria-live="polite"></div>
   <div class="scan-price" id="scanPrice" hidden>
+    <div class="sp-book"><b id="scanPriceT"></b><span id="scanPriceA"></span></div>
     <span id="scanPriceTxt" aria-live="polite"></span>
     <!-- il campo è sempre visibile: toccandolo Android apre subito la tastiera (un focus dato dal codice a volte non la apre) -->
     <form class="sp-row" id="scanPriceForm">
-      <label class="sp-field" id="scanPriceType"><span class="sp-ico" id="scanPriceIco" aria-hidden="true"></span><input id="scanPriceIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="Scrivi" aria-label="Scrivi il prezzo in euro"><span class="eur" aria-hidden="true">€</span></label>
-      <button class="btn primary" id="scanPriceBtn" type="button">Leggi il prezzo</button>
-      <button class="btn primary" id="scanPriceOk" type="submit">OK</button>
+      <label class="sp-field" id="scanPriceType"><span class="sp-ico" id="scanPriceIco" aria-hidden="true"></span><input id="scanPriceIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="Prezzo (facoltativo)" aria-label="Prezzo in euro, facoltativo"><span class="eur" aria-hidden="true">€</span></label>
+      <button class="btn primary" id="scanPriceOk" type="submit">Salva</button>
       <button class="btn" type="button" id="scanPriceCancel" aria-label="Annulla">×</button>
     </form>
   </div>
@@ -466,7 +466,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       </label>
       <label class="check">
         <input type="checkbox" id="optPrice" checked>
-        <span>Chiedi il prezzo dopo ogni libro<small>Dopo la foto di un libro ti chiedo il prezzo (foto o scritto a mano); con Scansiona compare la barra «Leggi il prezzo / Scrivi». Spegni se il prezzo non ti interessa.</small></span>
+        <span>Chiedi il prezzo dopo ogni libro<small>Dopo ogni libro aggiunto (scansione, foto o ISBN scritto) compare un riquadro con titolo e autore dove scrivere il prezzo, facoltativo. Spegni se il prezzo non ti interessa.</small></span>
       </label>
     </section>
     <section class="opt-sec" data-sec="fix" data-title="Sistema l'elenco">
@@ -530,19 +530,19 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 
 <div class="sheet" id="priceAsk" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="priceAskH">
-    <h2 id="priceAskH">E il prezzo?</h2>
-    <p class="msg">Fotografa <b>da vicino</b> il prezzo stampato (es. «€ 14,00»), di solito sul retro in basso. Intanto cerco il libro.</p>
-    <div class="row-btns">
-      <button class="btn" id="priceSkip">Salta</button>
-      <button class="btn primary" id="priceShot">Fotografa il prezzo</button>
-    </div>
+    <h2 id="priceAskH">Libro aggiunto</h2>
+    <div class="pa-book" aria-live="polite"><b id="priceAskT"></b><span id="priceAskA"></span></div>
     <form class="price-type" id="priceAskForm">
-      <label for="priceAskIn">Oppure scrivilo:</label>
+      <label for="priceAskIn">Prezzo di copertina <span class="opt">(facoltativo)</span></label>
       <input id="priceAskIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="es. 14,50">
       <span class="eur" aria-hidden="true">€</span>
-      <button class="btn" type="submit">OK</button>
     </form>
-    <p class="msg bad" id="priceAskErr" hidden>Scrivi un prezzo, per esempio 14,50.</p>
+    <p class="msg bad" id="priceAskErr" hidden>Scrivi un prezzo, per esempio 14,50, oppure tocca «Salta».</p>
+    <div class="row-btns">
+      <button class="btn primary" type="submit" form="priceAskForm" id="priceSave">Salva</button>
+      <button class="btn" type="button" id="priceSkip">Salta</button>
+    </div>
+    <button class="link quiet pa-undo" type="button" id="priceUndo">Non volevo aggiungerlo: togli il libro</button>
     <p class="hint">Puoi non farti più chiedere il prezzo: Menu › Opzioni › Schede e prezzo.</p>
   </div>
 </div>
@@ -681,6 +681,17 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 <datalist id="loanNames"></datalist>
 <datalist id="seriesList"></datalist>
 
+<div class="snap" id="snap" hidden role="dialog" aria-modal="true" aria-labelledby="snapH">
+  <div class="snap-top"><button type="button" class="btn snap-x" id="snapClose">× Chiudi</button><b id="snapH">Foto</b></div>
+  <video id="snapVideo" playsinline muted autoplay></video>
+  <p class="snap-msg" id="snapMsg" aria-live="polite"></p>
+  <div class="snap-bar">
+    <button type="button" class="btn snap-gal" id="snapGal">Galleria</button>
+    <button type="button" class="shutter" id="snapShoot" aria-label="Scatta"></button>
+    <button type="button" class="btn snap-torch" id="snapTorch" hidden aria-pressed="false">Luce</button>
+  </div>
+</div>
+<input class="sr" id="fileSnapGal" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileQuote" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <div class="lightbox phview" id="phView" hidden role="dialog" aria-modal="true" aria-label="Foto della pagina">
