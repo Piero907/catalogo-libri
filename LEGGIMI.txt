@@ -87,9 +87,11 @@ personale il passo 2 e' piu' semplice e da' lo stesso risultato.
 COME SI USA
 -----------
 - Apertura: tutta verde. Android mostra l'icona su fondo verde, poi l'app
-  mostra i libri con "Next Libris" e "Libreria di <il tuo nome>" per circa
-  un secondo, e sfuma nell'elenco. Con la rete lenta l'app parte dalla
-  copia salvata sul telefono dopo 2,5 secondi e si aggiorna in sottofondo.
+  mostra i libri con "Next Libris" e "Libreria di <il tuo nome>" per poco
+  piu' di mezzo secondo, e sfuma nell'elenco.
+- Aggiornamenti: l'app parte sempre subito dalla copia salvata sul telefono
+  (anche senza rete) e intanto scarica la versione nuova, che vedi
+  all'apertura successiva. Per averla subito: Menu > "Aggiorna adesso".
 - In alto: "Next Libris" e sotto "Libreria di <il tuo nome>". Senza nome
   c'e' "Scrivi il tuo nome", che apre Opzioni > Condivisione.
 - Scheda aperta: in alto i pulsanti con la scritta ("Presta", che mostra
