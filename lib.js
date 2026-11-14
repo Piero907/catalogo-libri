@@ -170,6 +170,7 @@
         lang: str(v.language),
         gen: genreIt(v.categories),
         pg: pagesOf(v.pageCount),
+        ds: cleanDesc(v.description),                   // la descrizione arriva nella stessa risposta: niente richieste in piu'
         src: 'Google Libri'
       };
     }).filter(function (c) { return c.t; });
@@ -366,6 +367,7 @@
     // per i libri italiani il catalogo delle biblioteche e' il piu' affidabile su editore e anno di quella edizione
     // libri italiani: editore, anno e pagine dal catalogo delle biblioteche (scheda di quella precisa edizione)
     if (got.s && italian) { if (got.s.e) book.e = got.s.e; if (got.s.y) book.y = got.s.y; if (got.s.pg) book.pg = got.s.pg; }
+    if (got.g && got.g.ds) { book.ds = got.g.ds; book.dsl = guessLang(got.g.ds) || str(got.g.lang).slice(0, 2).toLowerCase(); }
     book.src = [got.g && 'Google Libri', got.o && 'Open Library', got.s && 'SBN', got.c && 'Crossref'].filter(Boolean).join(' + ');
     return book;
   }

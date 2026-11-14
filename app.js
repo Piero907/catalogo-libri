@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 69, date: '2026-11-14', note: 'Numerazione dei volumi personalizzata' };
+var APP_VERSION = { v: 70, date: '2026-11-14', note: 'Descrizione nella stessa richiesta del libro' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -383,7 +383,9 @@ function addIsbn(code, opts) {
   touch();
   return { book: b, done: lookupPool(function () { return doLookup(b.id); }) };
 }
+function takeDesc(b, ds, lang) { if (ds && !b.ds) { b.ds = ds; b.dsf = 'g'; b.dsl = lang || L.guessLang(ds) || ''; b.dsn = 0; b.dsq = 0; } }
 function applyResult(b, r, code) {
+  takeDesc(b, r.ds, r.dsl);
   if (!b.t) b.t = r.t;
   if (!b.a) b.a = r.a;
   if (!b.e) b.e = r.e;
@@ -567,6 +569,7 @@ function applyCandidate(id, c) {
   b.t = c.t; b.a = c.a; b.e = c.e; b.y = c.y;
   if (c.gen && !b.gen) b.gen = c.gen;
   if (c.pg && !b.pg) b.pg = c.pg;
+  takeDesc(b, c.ds, '');
   if (c.i && !findByIsbn(c.i)) b.i = c.i;
   if (c.img) b.img = c.img;
   if (!b.img && s.big && !coverURL[id]) saveCoverData(id, s.big);
@@ -2840,7 +2843,7 @@ function pickTitle(i) {
     return;
   }
   var nb = blankBook({ t: c.t, a: c.a, e: c.e, y: c.y, img: c.img || '', gen: c.gen || '', pg: c.pg || '' });
-  state.books.push(nb); openState[nb.id] = false; queueDesc(nb.id);
+  takeDesc(nb, c.ds, ''); state.books.push(nb); openState[nb.id] = false; queueDesc(nb.id);
   $('#isbnSheet').hidden = true;
   touch(); renderList(); updateSummary(); addedToast(nb); askPrice(nb.id);
 }

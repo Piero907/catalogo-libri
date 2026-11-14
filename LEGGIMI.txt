@@ -433,7 +433,9 @@ DESCRIZIONE DEL LIBRO
 ---------------------
 Nella scheda aperta c'e' il riquadro "Descrizione": toccalo per aprirlo.
 - Per i libri aggiunti (scansione, foto, ISBN o titolo) la descrizione
-  si cerca da sola appena il libro e' riconosciuto, in sottofondo. Senza
+  arriva insieme agli altri dati, nella stessa richiesta a Google Libri:
+  nessuna ricerca in piu'. Solo se Google non ce l'ha (o il libro l'ha
+  trovato un'altra banca dati) si cerca a parte, in sottofondo. Senza
   rete, con la connessione debole o con le ricerche Google del giorno
   finite resta in sospeso: riparte quando torna la rete, alla prossima
   apertura dell'app, o (connessione debole) dopo qualche minuto.
