@@ -92,6 +92,9 @@ COME SI USA
 - Aggiornamenti: l'app parte sempre subito dalla copia salvata sul telefono
   (anche senza rete) e intanto scarica la versione nuova, che vedi
   all'apertura successiva. Per averla subito: Menu > "Aggiorna adesso".
+- Novita': in Opzioni > App, "Novita' delle versioni" apre il registro
+  delle modifiche (REGISTRO_MODIFICHE.md nel repository), versione per
+  versione.
 - In alto: "Next Libris" e sotto "Libreria di <il tuo nome>". Senza nome
   c'e' "Scrivi il tuo nome", che apre Opzioni > Condivisione.
 - Scheda aperta: in alto i pulsanti con la scritta ("Presta, vendi o
@@ -524,9 +527,9 @@ SELEZIONARE PIU' LIBRI
 - In basso: "Tutti" (tutti quelli che vedi, anche filtrati), "Elimina"
   (chiede conferma; poi c'e' ancora "Annulla") e "Modifica".
 - Sui libri selezionati compare il numero dell'ordine in cui li hai
-  toccati (1, 2, 3...).
+  selezionati (1, 2, 3...).
 - "Modifica" cambia in gruppo: serie o collana (con "Numera anche i
-  volumi": nell'ordine in cui li hai toccati, per anno di pubblicazione,
+  volumi": nell'ordine in cui li hai selezionati, per anno di pubblicazione,
   come nell'elenco, oppure "Personalizzato" (trascini la maniglia o usi
   le frecce per l'ordine, e puoi scrivere a mano il numero di ciascuno;
   se due libri hanno lo stesso numero l'app avvisa e non applica); "Primo numero" riparte da solo dopo l'ultimo
