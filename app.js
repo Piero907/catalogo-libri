@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 51, date: '2026-11-13', note: 'Apertura tutta verde con la scritta; niente schermo bianco con la rete lenta' };
+var APP_VERSION = { v: 52, date: '2026-11-14', note: 'Apertura: niente barra in basso sopra la schermata verde' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -3850,8 +3850,8 @@ checkIncoming();
   if (settings.name) $('#splashWho').textContent = 'Libreria di ' + settings.name;
   // tempo fisso da quando l'app e' pronta: la schermata di Android copre la pagina finche' non e' caricata
   setTimeout(function () {
-    el.classList.add('out');
-    setTimeout(function () { el.remove(); document.documentElement.removeAttribute('data-splash'); applyLook(false); }, 380);
+    document.documentElement.classList.add('splash-out'); el.classList.add('out');
+    setTimeout(function () { el.remove(); document.documentElement.removeAttribute('data-splash'); document.documentElement.classList.remove('splash-out'); applyLook(false); }, 380);
   }, 900);
 })();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
