@@ -1140,3 +1140,14 @@ html[data-theme="dark"] .ico.act.fav.on svg{color:#F4C430}
 .phview.zoom .ph-scroll{display:block}
 .phview.zoom .ph-scroll img{max-width:none;max-height:none;width:220vw;cursor:zoom-out}
 .aq-all{display:block;font-size:13.5px;margin:-4px 0 6px}
+
+/* mentre si scrive: la barra in basso sparisce, cosi' la tastiera non la porta sopra il campo */
+body.typing .dock,body.typing .edge-tab{display:none}
+
+/* condividi su ogni citazione, in basso a destra dentro il riquadro */
+.qcard{position:relative}
+.qcard .qitem{padding-bottom:34px}
+.qshare{position:absolute;right:8px;bottom:6px;display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:3px 8px;border:0;border-radius:8px;background:none;color:var(--accent);font:600 13px/1 var(--font-body);cursor:pointer}
+.qshare svg{width:15px;height:15px}
+.qshare:hover,.qshare:focus-visible{background:var(--accent-soft)}
+.qshare:focus-visible{outline:2px solid var(--accent);outline-offset:1px}

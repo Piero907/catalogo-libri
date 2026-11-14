@@ -99,8 +99,13 @@ COME SI USA
   "Libreria" per spostare il libro; "Elimina", in rosso), a destra da sola
   la freccetta che chiude la scheda. Sul telefono "Elimina" va nella riga
   sotto, lontano dalla freccetta. Dopo "Elimina" c'e' sempre "Annulla".
-  Sotto i pulsanti, le etichette del libro. In fondo
-  "Prezzo da foto" e "Prezzo dal web" se il prezzo manca.
+  In alto c'e' anche "Cerca sul web": apre Google con titolo e autore
+  (prezzo, recensioni, dove comprarlo).
+  Sotto i pulsanti, le etichette del libro. In fondo "Condividi".
+  Il prezzo si legge con la fotocamera subito dopo la scansione, oppure
+  si scrive nel campo "Costo".
+- Mentre scrivi in un campo, la barra in basso (Scansiona, Foto, Digita)
+  sparisce e il campo viene portato sopra la tastiera.
 - Prezzo con la fotocamera: dopo ogni libro "Leggi il prezzo" legge il
   prezzo inquadrato. Legge anche i prezzi stampati in verticale accanto al
   codice a barre, su fondi colorati e con luce non uniforme. Se non vede il
@@ -472,8 +477,8 @@ Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
   ti basta il testo; tocca la miniatura per ingrandirla, e tocca la foto
   ingrandita per leggerla piu' da vicino.
 - Le foto delle citazioni sono nel backup, come le tue copertine.
-- Condividere: "Condividi" nella finestra della citazione (manda anche
-  la foto); "Condividi tutte" nel riquadro della scheda e
+- Condividere: "Condividi" in basso a destra in ogni citazione, senza
+  aprirla, e nella finestra della citazione (manda anche la foto); "Condividi tutte" nel riquadro della scheda e
   nell'elenco di tutte le citazioni manda in un messaggio solo tutte
   quelle di un libro, con la pagina e il tuo nome. In fondo c'e'
   "Inviato con Next Libris" con il link all'app.

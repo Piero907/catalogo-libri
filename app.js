@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 59, date: '2026-11-14', note: 'Condividere le citazioni dalla scheda e tutte insieme' };
+var APP_VERSION = { v: 60, date: '2026-11-14', note: 'Campi sopra la tastiera, «Cerca sul web» in alto, Condividi su ogni citazione' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1520,8 +1520,9 @@ var quoteOpen = {}, quoteEdit = null;
 function quotesBody(b) {
   var qs = b.qs || [];
   return (qs.length ? '<ul class="qlist">' + qs.map(function (c, i) {
-    return '<li><button type="button" class="qitem' + (c.ph ? ' has-ph' + (c.x ? '' : ' only-ph') : '') + '" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare">' + qThumb(c) +
-      (c.x ? '<span class="qt">' + esc(c.x) + '</span>' : '<span class="qt q-only">Foto della pagina</span>') + (c.pg ? '<span class="qp">p. ' + esc(c.pg) + '</span>' : '') + '</button></li>';
+    return '<li class="qcard"><button type="button" class="qitem' + (c.ph ? ' has-ph' + (c.x ? '' : ' only-ph') : '') + '" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare">' + qThumb(c) +
+      (c.x ? '<span class="qt">' + esc(c.x) + '</span>' : '<span class="qt q-only">Foto della pagina</span>') + (c.pg ? '<span class="qp">p. ' + esc(c.pg) + '</span>' : '') + '</button>' +
+      '<button type="button" class="qshare" data-act="quoteshare" data-i="' + i + '" aria-label="Condividi questa citazione">' + icon('share') + 'Condividi</button></li>';
   }).join('') + '</ul>' : '<p class="desc-none">Passaggi da ricordare, frasi sottolineate, appunti di lettura.</p>') +
     '<div class="desc-acts"><button type="button" class="link" data-act="quoteadd">+ Aggiungi una citazione o un appunto</button>' +
     (qs.length ? '<button type="button" class="link" data-act="quoteshareall">' + (qs.length === 1 ? 'Condividi' : 'Condividi tutte (' + qs.length + ')') + '</button>' : '') + '</div>';
@@ -1941,13 +1942,14 @@ function rowHTML(b, dups, ex) {
       ? act('tolib', 'tolib', 'Libreria', 'Sposta in Libreria (l\'ho comprato)', ' move')
       : act('towish', 'towish', 'Desideri', 'Sposta nei Desideri', ' move')) : '';
     var favBtn = !busy && !b.w && hasData(b) ? act('fav', 'fav', 'Preferito', b.fav ? 'È tra i preferiti: tocca per toglierlo' : 'Metti tra i preferiti', b.fav ? ' fav on' : ' fav') : '';
+    var webBtn = !busy && (b.t || b.i) ? act('websearch', 'search', 'Cerca sul web', 'Cerca questo libro su Google: prezzo, recensioni, dove comprarlo') : '';
     var shareBtn = !busy && (b.t || L.toIsbn13(b.i)) ? act('share', 'share', 'Condividi', 'Manda questo libro a un amico') : '';
     var moreActs = shareBtn + (canLookup ? act('lookup', 'redo', 'Cerca di nuovo', 'Cerca di nuovo nelle banche dati') : '') +
-        (canLookup && b.nf ? act('web', 'search', 'Cerca sul web', 'Cerca questo codice sul web') : '') +
-        (!busy && b.c == null && hasData(b) ? act('pricephoto', 'pricetag', 'Prezzo da foto', 'Leggi il prezzo di copertina da una foto del retro') : '') +
-        (!busy && b.c == null && hasData(b) && (L.toIsbn13(b.i) || b.t) ? act('priceweb', 'euro', 'Prezzo dal web', 'Cerca il prezzo sul web') : '') +
+
+
+
         '';
-    body = (openCard ? '<div class="card-top"><span class="top-acts"><span class="acts-main">' + loanBtn + moveBtn + favBtn + delBtn + '</span><span class="acts-win">' +
+    body = (openCard ? '<div class="card-top"><span class="top-acts"><span class="acts-main">' + loanBtn + moveBtn + favBtn + webBtn + delBtn + '</span><span class="acts-win">' +
         '<button class="chev-btn" data-act="toggle" aria-expanded="true" aria-label="Chiudi la scheda" title="Chiudi la scheda">' + icon('chev') + '</button></span></span>' +
         '<span class="flags">' + flagsHTML(b, dups) + '</span></div>' : '') +
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
@@ -3153,6 +3155,22 @@ function pickSugg(v) {
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 document.addEventListener('focusin', function (e) { var t = e.target; if (t && t.tagName === 'INPUT' && suggKey(t)) showSugg(t); });
+/* mentre scrivi: niente barra in basso (la tastiera la spingerebbe sopra il campo) e il campo resta in vista */
+var typingT = 0;
+function isTyping(t) { return t && t.closest && !!t.closest('#list') && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file|range|color)$/.test(t.type))); }
+function showField(t) { if (t && document.activeElement === t && t.closest('#list')) { try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) { t.scrollIntoView(); } } }
+document.addEventListener('focusin', function (e) {
+  if (!isTyping(e.target)) return;
+  clearTimeout(typingT); document.body.classList.add('typing');
+  var t = e.target; setTimeout(function () { showField(t); }, 350);     // dopo che la tastiera si e' aperta
+});
+document.addEventListener('focusout', function (e) {
+  if (!isTyping(e.target)) return;
+  clearTimeout(typingT); typingT = setTimeout(function () { if (!isTyping(document.activeElement)) document.body.classList.remove('typing'); }, 150);
+});
+function typingCheck() { if (!isTyping(document.activeElement)) document.body.classList.remove('typing'); }
+if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { var t = document.activeElement; if (isTyping(t)) showField(t); else typingCheck(); });
+document.addEventListener('pointerdown', function () { setTimeout(typingCheck, 0); }, true);     // campo sparito senza perdere il fuoco: la barra torna
 document.addEventListener('input', function (e) { var t = e.target; if (t && t.tagName === 'INPUT' && suggKey(t)) showSugg(t); });
 document.addEventListener('focusout', function (e) { if (sugg.input && e.target === sugg.input) setTimeout(function () { if (sugg.input && document.activeElement !== sugg.input) hideSugg(); }, 120); });
 document.addEventListener('keydown', function (e) {
@@ -3921,6 +3939,7 @@ list.addEventListener('click', function (e) {
   else if (act === 'sermiss') seriesMissing(id);
   else if (act === 'quoteadd') openQuote(id, null);
   else if (act === 'quoteshareall') shareAllQuotes(id);
+  else if (act === 'quoteshare') shareQuote(id, +btn.dataset.i);
   else if (act === 'quoteedit') openQuote(id, +btn.dataset.i);
   else if (act === 'descretry') { var db = get(id); if (db) { db.dsn = 0; loadDesc(id, true); } }
   else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
@@ -3943,9 +3962,9 @@ list.addEventListener('click', function (e) {
       toast('Segnato come verificato.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.g = snap; refreshRow(id); touch(); updateSummary(); } } });
     }
   }
-  else if (act === 'web') {
+  else if (act === 'web' || act === 'websearch') {
     var wb = get(id);
-    if (wb) window.open('https://www.google.com/search?q=' + encodeURIComponent((L.toIsbn13(wb.i) || wb.i) + ' libro'), '_blank', 'noopener');
+    if (wb) window.open('https://www.google.com/search?q=' + encodeURIComponent(wb.t ? [wb.t, L.str(wb.a).split(/[,;]/)[0], 'libro'].filter(Boolean).join(' ') : (L.toIsbn13(wb.i) || wb.i) + ' libro'), '_blank', 'noopener');
   }
   else if (act === 'lookup') {
     var b = get(id);
