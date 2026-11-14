@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 53, date: '2026-11-14', note: 'Apertura immediata dalla copia sul telefono; aggiornamenti in sottofondo' };
+var APP_VERSION = { v: 54, date: '2026-11-14', note: 'Descrizione del libro nella scheda aperta' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -172,11 +172,11 @@ function inTab(b) { return !!b.w === (tab === 'wish'); }
 function tabBooks() { return state.books.filter(inTab); }
 function blankBook(o) {
   var b = Object.assign({ id: newId(), t: '', a: '', e: '', y: '', c: null, i: '', g: [], img: '', nf: false, ts: Date.now(),
-    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '' }, o || {});
+    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '', ds: '', dsf: '', dsl: '', dsn: 0 }, o || {});
   if (!b.w && !(o && o.rs != null)) b.rs = 'da';        // un libro appena entrato in libreria e' da leggere
   return b;
 }
-var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl'];
+var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl', 'ds', 'dsf', 'dsl', 'dsn'];
 function isBusy(b) { var st = (S[b.id] || {}).st; return st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search'; }
 function cleanBook(x) {
   if (!x || typeof x !== 'object') return null;
@@ -206,7 +206,9 @@ function cleanBook(x) {
     xd: /^\d{4}-\d\d-\d\d$/.test(L.str(x.xd)) ? x.xd : '',
     xa: L.str(x.xa).slice(0, 80),
     fav: !!x.fav,                                   // preferito
-    fr: L.str(x.fr).slice(0, 30), fl: L.str(x.fl).slice(0, 40)      // ricevuto da (nome) e da quale lista
+    fr: L.str(x.fr).slice(0, 30), fl: L.str(x.fl).slice(0, 40),     // ricevuto da (nome) e da quale lista
+    ds: L.str(x.ds).slice(0, L.DESC_MAX + 1), dsf: x.dsf === 'g' || x.dsf === 'o' ? x.dsf : '',   // descrizione e fonte (Google, Open Library)
+    dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0                      // lingua; quando non e' stata trovata
   };
 }
 function storable() {
@@ -1274,6 +1276,86 @@ function toggleRow(id) {
   var el = rowEl(id);
   if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
 }
+/* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
+var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
+var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
+var DESC_CLIP = 420;
+function descHTML(b, off) {
+  if (off || !hasData(b) || !(b.t || L.toIsbn13(b.i))) return '';
+  return '<details class="desc" data-id="' + b.id + '"' + (descOpen[b.id] ? ' open' : '') + '><summary><span class="desc-h">Descrizione</span>' +
+    (b.ds ? '' : '<span class="desc-hint">tocca per cercarla</span>') + '</summary><div class="desc-b" aria-live="polite">' + descBody(b) + '</div></details>';
+}
+function descBody(b) {
+  if (descBusy[b.id]) return '<p class="desc-wait"><span class="spin" aria-hidden="true"></span>Cerco la descrizione…</p>';
+  if (b.ds) {
+    var long = b.ds.length > DESC_CLIP && !descFull[b.id];
+    var foreign = b.dsl && b.dsl !== 'it';
+    return '<div class="desc-t' + (long ? ' clip' : '') + '">' + b.ds.split(/\n+/).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
+      (long ? '<button type="button" class="link" data-act="descmore">Leggi tutto</button>' : '') +
+      '<p class="desc-src">Fonte: ' + esc(DESC_SRC[b.dsf] || 'web') + (foreign ? (b.dsl === 'en' ? ' · in inglese' : ' · in un\'altra lingua') : '') + '</p>' +
+      '<div class="desc-acts">' + (foreign ? '<a class="link" target="_blank" rel="noopener" href="https://translate.google.com/?sl=auto&tl=it&op=translate&text=' + encodeURIComponent(b.ds) + '">Traduci in italiano</a>' : '') +
+      '<button type="button" class="link quiet" data-act="descdel">Non è questo libro: toglila</button></div>';
+  }
+  if (descErr[b.id]) return '<p class="desc-none">' + esc(descErr[b.id]) + '</p><button type="button" class="link" data-act="descretry">Riprova</button>';
+  if (b.dsn) return '<p class="desc-none">Nessuna descrizione trovata nelle banche dati per questo libro.</p><button type="button" class="link" data-act="descretry">Cerca di nuovo</button>';
+  if (navigator.onLine === false) return '<p class="desc-none">Senza connessione: la cerco appena riapri il riquadro con la rete.</p>';
+  return '';
+}
+function paintDesc(id) {
+  var b = get(id);
+  Array.prototype.forEach.call(document.querySelectorAll('details.desc[data-id="' + id + '"]'), function (d) {
+    var body = d.querySelector('.desc-b'), hint = d.querySelector('.desc-hint');
+    if (b && body) body.innerHTML = descBody(b);
+    if (b && b.ds && hint) hint.remove();
+  });
+}
+async function findDesc(b) {
+  var isbn = L.toIsbn13(b.i), tries = 0, errs = 0, best = null;
+  var key = settings.gbKey ? '&key=' + encodeURIComponent(settings.gbKey) : '';
+  async function gq(q, n) {
+    if (!googleLeft(false)) return null;
+    tries++;
+    try {
+      return await L.getJson(apiFetch, 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(q) + '&maxResults=' + n +
+        '&fields=items(volumeInfo(title,subtitle,authors,language,description))' + key, { waits: [900], timeout: 9000 });
+    } catch (e) { errs++; return null; }
+  }
+  async function ol(path) {
+    tries++;
+    try { return await L.getJson(fetch, 'https://openlibrary.org' + path, { waits: [], timeout: 9000 }); }
+    catch (e) { if (e && e.status !== 404) errs++; return null; }
+  }
+  function take(r, src) { if (r && (!best || (best.lang !== 'it' && r.lang === 'it'))) best = { text: r.text, lang: r.lang, src: src }; }
+  if (isbn) take(L.pickDesc(await gq('isbn:' + isbn, 3), ''), 'g');
+  if ((!best || best.lang !== 'it') && b.t) {
+    var a = L.str(b.a).split(/[,;]/)[0].trim();
+    take(L.pickDesc(await gq('intitle:"' + b.t.replace(/"/g, '') + '"' + (a ? ' inauthor:"' + a.replace(/"/g, '') + '"' : ''), 6), b.t, a), 'g');
+  }
+  if (!best && isbn) {
+    var ed = await ol('/isbn/' + isbn + '.json'), t = L.olDesc(ed);
+    var wk = ed && Array.isArray(ed.works) && ed.works[0] && ed.works[0].key;
+    if (!t && /^\/works\/OL\d+W$/.test(L.str(wk))) t = L.olDesc(await ol(wk + '.json'));
+    if (t) take({ text: t, lang: L.guessLang(t) }, 'o');
+  }
+  if (!best && tries && errs === tries) throw { net: true };
+  return best;
+}
+async function loadDesc(id, force) {
+  var b = get(id);
+  if (!b || descBusy[id] || b.ds || (b.dsn && !force)) return;
+  if (navigator.onLine === false) { paintDesc(id); return; }
+  delete descErr[id];
+  descBusy[id] = true; paintDesc(id);
+  var r = null, failed = false;
+  try { r = await findDesc(b); } catch (e) { failed = true; }
+  delete descBusy[id];
+  b = get(id);
+  if (!b) return;
+  if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; touch(); }
+  else if (failed) descErr[id] = navigator.onLine === false ? 'Senza connessione: non sono riuscito a cercarla.' : 'Connessione debole: non sono riuscito a cercarla.';
+  else { b.dsn = Date.now(); touch(); }
+  paintDesc(id);
+}
 /* stato di lettura, voto e data (solo Libreria) */
 function readHTML(b, off) {
   if (b.w) return '';
@@ -1403,7 +1485,7 @@ function rowHTML(b, dups, ex) {
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80) + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80) +
         inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' : '') +
-      facetsHTML(b, ex || busy) + readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
+      facetsHTML(b, ex || busy) + descHTML(b, ex || busy) + readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
       (openCard ? (moreActs ? '<div class="tail">' + moreActs + '</div>' : '') :
         '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
@@ -3294,6 +3376,13 @@ list.addEventListener('change', function (e) {
     updateSummary();
   }
 });
+/* il riquadro Descrizione: ricorda se è aperto e alla prima apertura cerca il testo */
+list.addEventListener('toggle', function (e) {
+  var d = e.target;
+  if (!d.classList || !d.classList.contains('desc')) return;
+  descOpen[d.dataset.id] = d.open;
+  if (d.open) loadDesc(d.dataset.id, false);
+}, true);
 list.addEventListener('keydown', function (e) {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && (((e.target.dataset.act === 'verify' || e.target.dataset.act === 'loan' || e.target.dataset.act === 'dup') && e.target.classList.contains('tag')) || (e.target.dataset.act === 'toggle' && e.target.classList.contains('sum')) || (e.target.dataset.act === 'zoom' && e.target.classList.contains('thumb')))) { e.preventDefault(); e.target.click(); return; }
   if (e.key === 'Enter' && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) { e.preventDefault(); e.target.blur(); }
@@ -3324,6 +3413,9 @@ list.addEventListener('click', function (e) {
   else if (act === 'share') { var sb = get(id); if (sb) openShare([sb], { kind: 'book' }); }
   else if (act === 'tolib') moveToLib(id);
   else if (act === 'addcopy') addCopy(id);
+  else if (act === 'descretry') { var db = get(id); if (db) { db.dsn = 0; loadDesc(id, true); } }
+  else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
+  else if (act === 'descdel') { var dd = get(id); if (dd) { dd.ds = ''; dd.dsf = ''; dd.dsl = ''; dd.dsn = Date.now(); touch(); paintDesc(id); toast('Descrizione tolta'); } }
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
   else if (act === 'zoom') openCover(id);

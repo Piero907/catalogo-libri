@@ -893,7 +893,7 @@
       (priced.length > 1 ? '\n\nTotale: ' + eu(Math.round(tot * 100) / 100) + (priced.length < bs.length ? ' (' + priced.length + ' libri con il prezzo)' : '') : '');
   }
 
-  var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd'];
+  var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd', 'ds'];
   /* Tiene il libro piu' completo (a parita', il piu' vecchio) e lo riempie con i dati degli altri; le note si sommano. */
   function mergeBooks(group) {
     function filled(b) { return MERGE_KEYS.filter(function (k) { return b[k] != null && b[k] !== '' && b[k] !== 0; }).length + (b.n ? 1 : 0); }
@@ -955,6 +955,68 @@
     return Math.floor(days / 365) + ' anni fa';
   }
 
+  /* ---------- descrizione del libro ---------- */
+  var ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', laquo: '«', raquo: '»', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', hellip: '…', ndash: '–', mdash: '—',
+    egrave: 'è', eacute: 'é', agrave: 'à', igrave: 'ì', ograve: 'ò', ugrave: 'ù', Egrave: 'È', Eacute: 'É', Agrave: 'À' };
+  function cp(n) { n = +n; try { return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : ''; } catch (e) { return ''; } }
+  /* testo semplice da HTML di Google o markdown di Open Library; lungo al massimo DESC_MAX */
+  var DESC_MAX = 2000;
+  function cleanDesc(v) {
+    var s = str(v);
+    if (!s) return '';
+    s = s.replace(/\r/g, '')
+      .replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/\s*(p|div|li|h\d|blockquote)\s*>/gi, '\n').replace(/<\s*li[^>]*>/gi, '• ').replace(/<[^>]*>/g, '')
+      .replace(/&#(\d+);/g, function (m, n) { return cp(n); }).replace(/&#x([0-9a-f]+);/gi, function (m, n) { return cp(parseInt(n, 16)); })
+      .replace(/&([a-z]+);/gi, function (m, n) { return ENT.hasOwnProperty(n) ? ENT[n] : m; })
+      .replace(/\n\s*-{3,}[\s\S]*$/, '')                                  // Open Library: note e fonti in fondo
+      .replace(/\(\s*\[[^\]]*\]\s*\[\d+\]\s*\)/g, '').replace(/^\s*\[\d+\]:.*$/gm, '')
+      .replace(/\[([^\]]+)\]\((?:https?:)?[^)]*\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1');
+    s = s.split(/\n+/).map(function (p) { return p.replace(/[ \t ]+/g, ' ').trim(); }).filter(Boolean).join('\n');
+    if (s.length > DESC_MAX) {
+      var cut = s.slice(0, DESC_MAX), k = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('.\n'), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+      s = k > DESC_MAX * 0.6 ? cut.slice(0, k + 1) : cut.replace(/\s+\S*$/, '') + '…';
+    }
+    return s.replace(/\s+$/, '').length >= 30 ? s : '';
+  }
+  /* lingua del testo: italiano, inglese o '' se non si capisce */
+  var IT_W = /^(il|lo|la|gli|le|di|del|della|che|un|una|per|con|non|nel|nella|sono|e|ma|come|suo|sua|dei|delle|questo|questa|anche|piu|tra|dalla|alla)$/;
+  var EN_W = /^(the|of|and|to|in|is|that|with|for|his|her|this|was|are|by|from|an|as|on|be|it|which|their|who|has|have)$/;
+  function guessLang(text) {
+    var it = 0, en = 0;
+    norm(text).split(/[^a-zà-ù']+/).forEach(function (w) { if (IT_W.test(w)) it++; else if (EN_W.test(w)) en++; });
+    if (it + en < 4) return '';
+    return it >= en * 1.5 ? 'it' : en >= it * 1.5 ? 'en' : '';
+  }
+  function words(s) { return norm(s).replace(/[^a-z0-9à-ù]+/g, ' ').split(' ').filter(function (w) { return w.length > 2; }); }
+  /* sceglie fra i risultati di Google la descrizione migliore: titolo (e autore) coerenti, italiano preferito */
+  function pickDesc(json, title, author) {
+    var items = (json && Array.isArray(json.items)) ? json.items : [];
+    var tw = words(title), aw = words(str(author).split(/[,;]/)[0]);
+    var best = null;
+    items.forEach(function (it, i) {
+      var v = (it && it.volumeInfo) || {};
+      var text = cleanDesc(v.description);
+      if (!text) return;
+      if (tw.length) {
+        var have = words(str(v.title) + ' ' + str(v.subtitle)), hit = tw.filter(function (w) { return have.indexOf(w) >= 0; }).length;
+        if (hit < Math.ceil(tw.length * 0.6)) return;
+        if (aw.length && Array.isArray(v.authors)) {
+          var va = words(v.authors.map(str).join(' '));
+          if (!aw.some(function (w) { return va.indexOf(w) >= 0; })) return;
+        }
+      }
+      var lang = guessLang(text) || str(v.language).slice(0, 2).toLowerCase();
+      var score = (lang === 'it' ? 100 : 0) + Math.min(text.length, 600) / 10 - i;
+      if (!best || score > best.score) best = { text: text, lang: lang, score: score };
+    });
+    return best ? { text: best.text, lang: best.lang } : null;
+  }
+  /* Open Library: description e' una stringa oppure { type, value } */
+  function olDesc(json) {
+    var d = json && json.description;
+    return cleanDesc(d && typeof d === 'object' ? d.value : d);
+  }
+
   return {
     str: str, norm: norm, parseNum: parseNum, fmtNum: fmtNum, yearOf: yearOf,
     sortKeyTitle: sortKeyTitle, sortKeyAuthor: sortKeyAuthor,
@@ -966,6 +1028,6 @@
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
     computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,
-    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, analyzeDups: analyzeDups, mergeBooks: mergeBooks, READ_LABEL: READ_LABEL, GONE_LABEL: GONE_LABEL
+    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, analyzeDups: analyzeDups, mergeBooks: mergeBooks, cleanDesc: cleanDesc, guessLang: guessLang, pickDesc: pickDesc, olDesc: olDesc, DESC_MAX: DESC_MAX, READ_LABEL: READ_LABEL, GONE_LABEL: GONE_LABEL
   };
 });

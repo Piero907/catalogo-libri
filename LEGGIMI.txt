@@ -436,6 +436,18 @@ codice. Nota: il servizio JSON di SBN non e' un'API ufficiale documentata
 e potrebbe cambiare; se smette di rispondere, l'app continua con Google e
 Open Library.
 
+DESCRIZIONE DEL LIBRO
+---------------------
+Nella scheda aperta c'e' il riquadro "Descrizione": toccalo per aprirlo.
+- La prima volta la cerca su Google Libri (per le edizioni italiane di
+  solito e' il testo della quarta di copertina); se non c'e', su Open
+  Library (spesso in inglese: compare "Traduci in italiano").
+- Poi resta salvata nel libro (e nel backup): si legge anche senza rete.
+- I testi lunghi si accorciano: "Leggi tutto" li mostra interi.
+- Se non riguarda il tuo libro: "Non e' questo libro: toglila".
+- Se non la trova: "Cerca di nuovo" (le banche dati si aggiornano).
+Ogni ricerca usa 1-2 richieste Google del contatore giornaliero.
+
 PREFERITI E CONDIVISIONE CON GLI AMICI
 --------------------------------------
 - Preferiti: nella scheda aperta di un libro della Libreria tocca
