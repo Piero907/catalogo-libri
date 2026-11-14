@@ -6,6 +6,7 @@ L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versi
 ## Versione 76 · 14/11/2026
 - Editor delle foto: adesivi, emoticon e scritte si selezionano con un tocco e hanno le maniglie per grandezza (verde), rotazione (blu, con aggancio quando è dritto) e per toglierli (rossa).
 - Ogni gesto (spostare, ingrandire, ruotare) si annulla con «↶».
+- **Punto di salvataggio:** questa versione è conservata nel ramo `versione-76` del repository (https://github.com/Piero907/next-libris/tree/versione-76).
 
 ## Versione 75 · 14/11/2026
 - Scheda aperta: il nome dell'autore si tocca e mostra chi è (breve profilo da Wikipedia), con «I suoi libri nella tua libreria», «Cerca sul web» e «Apri su Wikipedia».
