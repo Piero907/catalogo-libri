@@ -3,6 +3,10 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 76 · 14/11/2026
+- Editor delle foto: adesivi, emoticon e scritte si selezionano con un tocco e hanno le maniglie per grandezza (verde), rotazione (blu, con aggancio quando è dritto) e per toglierli (rossa).
+- Ogni gesto (spostare, ingrandire, ruotare) si annulla con «↶».
+
 ## Versione 75 · 14/11/2026
 - Scheda aperta: il nome dell'autore si tocca e mostra chi è (breve profilo da Wikipedia), con «I suoi libri nella tua libreria», «Cerca sul web» e «Apri su Wikipedia».
 - Per modificare l'autore c'è la matita accanto al nome.
