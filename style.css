@@ -1373,3 +1373,21 @@ body.selecting .cover.sel[data-ord]::after{content:attr(data-ord);display:grid;p
 .log-body a{color:var(--accent)}
 
 #logSheet{z-index:37}   /* sopra le Opzioni da cui si apre */
+
+/* ---- donazioni: riga in fondo, promemoria ogni 50 libri, finestra «Sostieni» ---- */
+.don-row{display:flex;align-items:center;gap:4px;margin:16px 0 6px;padding:2px 4px 2px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent)}
+.don-open{flex:1;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;border:0;background:none;color:inherit;font:inherit;font-size:13.5px;line-height:1.35;text-align:left;cursor:pointer}
+.don-ico{font-size:18px;line-height:1}
+.don-row .ico{color:var(--accent)}
+.don-ask{margin:4px 0 12px;padding:14px 16px;border:1px solid var(--accent);border-radius:14px;background:var(--surface);display:grid;gap:8px}
+.don-ask h3{margin:0;font-family:var(--font-display,Georgia,serif);font-size:18px;font-weight:600}
+.don-ask p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+.don-ask-more{display:flex;justify-content:space-between;gap:12px}
+.don-ask-more .link{font-weight:500;color:var(--muted);text-decoration:none}
+.don-amts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.don-amt{min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.don-amt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.don-in{grid-template-columns:minmax(0,1fr)}
+.dmenu .don-menu .n{color:var(--accent);font-size:17px}
+#donSheet{z-index:37}
+body.selecting .don-row,body.selecting .don-ask,body.scanning .don-row{display:none}

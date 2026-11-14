@@ -3,6 +3,13 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 78 · 14/11/2026
+- **Sostieni Next Libris:** l'app resta gratis; chi vuole può fare una donazione con PayPal (2, 3, 5 € o l'importo che preferisci) dalla voce «Sostieni Next Libris» nel menu (scheda Opzioni) o in Opzioni › App.
+- In fondo all'elenco una riga discreta ricorda che l'app è gratis: con la × sparisce per 10 giorni.
+- Ogni 50 libri catalogati (50, 100, 150…) un riquadro in cima all'elenco: «Più tardi» lo rimanda di 10 giorni, «Non chiedere più» lo spegne. Chi aveva già dei libri lo vede dal prossimo multiplo di 50.
+- Tornando da PayPal compare «Grazie se hai donato!»: se si è rimasti su PayPal almeno 20 secondi le richieste tacciono per 3 mesi, altrimenti per 10 giorni.
+- Indietro dal registro delle novità o dalla finestra «Sostieni» aperti dal menu ora lascia aperto il menu.
+
 ## Versione 77 · 14/11/2026
 - «Novità delle versioni» (Opzioni › App) si apre dentro l'app, in una finestra con lo stesso stile: versione per versione, dalla più recente, con quella in uso evidenziata.
 - Il registro è salvato anche sul telefono: si legge pure senza rete.

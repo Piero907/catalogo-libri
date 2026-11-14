@@ -97,8 +97,18 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   </div>
 
 
+  <section class="don-ask" id="donAsk" hidden aria-labelledby="donAskT">
+    <h3 id="donAskT">50 libri catalogati</h3>
+    <p>Next Libris è gratis e senza pubblicità. Se ti è utile, una piccola donazione aiuta a farlo crescere.</p>
+    <button class="btn primary" type="button" id="donAskGo">Sostieni l'app</button>
+    <div class="don-ask-more"><button class="link" type="button" id="donAskLater">Più tardi</button><button class="link" type="button" id="donAskNever">Non chiedere più</button></div>
+  </section>
   <div class="thead" id="thead" aria-hidden="true"><span></span><span>Titolo</span><span>Autore</span><span>Casa editrice</span><span>Anno</span><span>Costo €</span><span>ISBN</span><span></span></div>
   <div id="list"></div>
+  <div class="don-row" id="donRow" hidden>
+    <button type="button" class="don-open" id="donRowOpen"><span class="don-ico" aria-hidden="true">♥</span><span>Next Libris è gratis. Se ti è utile, puoi sostenerlo con una donazione.</span></button>
+    <button type="button" class="ico" id="donRowX" aria-label="Nascondi per 10 giorni">×</button>
+  </div>
 </main>
 
 <div class="dock">
@@ -261,6 +271,22 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <button class="btn" type="button" id="auEdit">Modifica il nome</button>
       <button class="btn" type="button" id="auClose">Chiudi</button>
     </div>
+  </div>
+</div>
+
+<div class="sheet" id="donSheet" hidden>
+  <div class="sheet-in don-in" role="dialog" aria-modal="true" aria-labelledby="donH">
+    <h2 id="donH">Sostieni Next Libris</h2>
+    <p class="msg">Next Libris è gratis, senza pubblicità, e i tuoi libri restano sul tuo telefono. Se ti è utile, puoi fare una donazione con PayPal.</p>
+    <div class="don-amts" role="radiogroup" aria-label="Importo">
+      <button type="button" class="don-amt" role="radio" aria-checked="false" data-amt="2">2 €</button>
+      <button type="button" class="don-amt" role="radio" aria-checked="true" data-amt="3">3 €</button>
+      <button type="button" class="don-amt" role="radio" aria-checked="false" data-amt="5">5 €</button>
+      <button type="button" class="don-amt" role="radio" aria-checked="false" data-amt="">Altro</button>
+    </div>
+    <button class="btn primary" type="button" id="donGo">Dona 3 € con PayPal</button>
+    <button class="btn" type="button" id="donClose">Chiudi</button>
+    <p class="hint">Si apre PayPal. La donazione è libera: l'app resta gratis e completa per tutti.</p>
   </div>
 </div>
 
@@ -547,6 +573,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <div class="menu">
         <button class="btn primary" id="btnInstall" hidden>Installa l'app</button>
         <button class="btn" id="btnInstDiag">Perché non si installa?</button>
+        <button class="btn" type="button" id="donOpt">Sostieni Next Libris</button>
       </div>
       <div class="diag" id="instOut" hidden aria-live="polite"></div>
       <p class="hint" id="verApp"></p>
@@ -607,6 +634,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
         <button type="button" class="dopt" data-sec="export"><span><b>Backup ed esportazione</b><small>Backup, Excel, PDF</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="share"><span><b>Condivisione</b><small>Il tuo nome; link e QR code dell'app</small></span><span class="n" aria-hidden="true">›</span></button>
         <button type="button" class="dopt" data-sec="app"><span><b>App</b><small>Installazione e versione</small></span><span class="n" aria-hidden="true">›</span></button>
+        <button type="button" class="dopt don-menu" id="donMenu"><span><b>Sostieni Next Libris</b><small>È gratis: se ti è utile, una donazione con PayPal</small></span><span class="n" aria-hidden="true">♥</span></button>
       </div>
       <p class="dhint" id="optBackupHint"></p>
       <div class="ver" id="verBox">

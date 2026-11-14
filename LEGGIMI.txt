@@ -92,6 +92,15 @@ COME SI USA
 - Aggiornamenti: l'app parte sempre subito dalla copia salvata sul telefono
   (anche senza rete) e intanto scarica la versione nuova, che vedi
   all'apertura successiva. Per averla subito: Menu > "Aggiorna adesso".
+- Sostieni Next Libris: l'app e' gratis. Nel menu (scheda Opzioni) e in
+  Opzioni > App c'e' "Sostieni Next Libris": si sceglie l'importo (2, 3,
+  5 euro o "Altro") e "Dona con PayPal" apre paypal.me/PieroRagusa907.
+  In fondo all'elenco una riga lo ricorda (la x la nasconde per 10
+  giorni); ogni 50 libri compare un riquadro in cima ("Piu' tardi" = 10
+  giorni, "Non chiedere piu'" lo spegne). Al ritorno da PayPal: "Grazie
+  se hai donato!"; se si e' rimasti su PayPal almeno 20 secondi le
+  richieste tacciono 3 mesi, altrimenti 10 giorni. L'app non puo' sapere
+  se il pagamento c'e' stato davvero (non ha un server).
 - Novita': in Opzioni > App, "Novita' delle versioni" apre dentro l'app
   il registro delle modifiche, versione per versione, dalla piu' recente
   (quella in uso e' evidenziata). Il testo e' REGISTRO_MODIFICHE.md: l'app

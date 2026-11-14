@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 77, date: '2026-11-14', note: 'Novità delle versioni dentro l\'app' };
+var APP_VERSION = { v: 78, date: '2026-11-14', note: 'Sostieni Next Libris (donazioni con PayPal)' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -265,6 +265,11 @@ function loadAll() {
     settings.newsAuto = s.newsAuto !== false;                                       // novita' degli autori: controllo automatico
     settings.selTip = s.selTip ? 1 : 0;
     settings.quoteOcrAuto = s.quoteOcrAuto === true;                                // citazioni: leggi subito il testo delle foto
+    settings.donUntil = Number(s.donUntil) || 0;                                    // donazioni: richieste in pausa fino a
+    settings.donNever = s.donNever === true;                                        // promemoria ogni 50 libri spento
+    settings.donMs = typeof s.donMs === 'number' ? s.donMs : null;                  // ultimo traguardo gia' visto (multiplo di 50)
+    settings.donGo = Number(s.donGo) || 0;                                          // quando e' stato aperto PayPal (0 = no)
+    settings.donHid = s.donHid === true;                                            // l'app e' passata in secondo piano dopo
   } catch (e) {}
 }
 function saveSettings() { ls.set(LS_SET, JSON.stringify(settings)); }
@@ -1295,7 +1300,7 @@ function toggleRow(id, fromPop) {
   if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
 }
 window.addEventListener('popstate', function (e) {
-  if (!cardPushed || (e.state && (e.state.card || e.state.opt || e.state.log))) return;   // si torna a una finestra con la sua cronologia
+  if (!cardPushed || (e.state && (e.state.card || e.state.opt || e.state.log || e.state.drawer))) return;   // si torna a una finestra con la sua cronologia
   if (document.querySelector('.sheet:not([hidden])')) {          // prima la finestra in primo piano, la scheda resta aperta
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     try { history.pushState({ card: cardPushed }, ''); } catch (x) {}
@@ -2118,6 +2123,78 @@ $('#verLog').addEventListener('click', openLog);
 $('#logClose').addEventListener('click', function () { closeLog(); });
 $('#logSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeLog(); });
 window.addEventListener('popstate', function (e) { if (!$('#logSheet').hidden && !(e.state && e.state.log)) { logPushed = false; closeLog(true); } });
+/* ---- Donazioni: l'app e' gratis. Riga in fondo all'elenco (la X la nasconde per 10 giorni), promemoria ogni 50 libri,
+   finestra «Sostieni» che apre PayPal. Al ritorno: se si e' rimasti su PayPal almeno 20 secondi le richieste tacciono 3 mesi,
+   altrimenti 10 giorni (l'app non puo' sapere se il pagamento c'e' stato: senza server non c'e' una conferma vera). ---- */
+var DON_URL = 'https://www.paypal.me/PieroRagusa907';
+var DON_DAY = 864e5, DON_SNOOZE = 10 * DON_DAY, DON_THANKS = 90 * DON_DAY, DON_MIN_MS = 20000, DON_STEP = 50;
+var donAmt = '3', donPushed = false;
+function donCount() { return state.books.filter(function (b) { return !b.w && hasData(b); }).length; }
+function donPaint() {
+  var row = $('#donRow'), ask = $('#donAsk');
+  if (!row || !ask) return;
+  var n = donCount(), ms = Math.floor(n / DON_STEP) * DON_STEP;
+  if (settings.donMs == null) { settings.donMs = ms; saveSettings(); }      // chi ha gia' dei libri non lo vede subito: al prossimo multiplo di 50
+  var on = tab !== 'wish' && Date.now() >= settings.donUntil;
+  ask.hidden = !(on && !settings.donNever && ms >= DON_STEP && ms > settings.donMs);
+  if (!ask.hidden) $('#donAskT').textContent = ms + ' libri catalogati';
+  row.hidden = !(on && n > 0 && ask.hidden);
+}
+function donSnooze(ms) { settings.donUntil = Math.max(settings.donUntil, Date.now() + ms); saveSettings(); donPaint(); }
+function paintDonAmt() {
+  Array.prototype.forEach.call(document.querySelectorAll('.don-amt'), function (x) { x.setAttribute('aria-checked', x.dataset.amt === donAmt ? 'true' : 'false'); });
+  $('#donGo').textContent = donAmt ? 'Dona ' + donAmt + ' € con PayPal' : 'Dona con PayPal';
+}
+function openDon(reuse) {
+  paintDonAmt();
+  $('#donSheet').hidden = false;
+  if (reuse) { try { history.replaceState({ don: 1 }, ''); donPushed = true; } catch (e) {} }
+  else if (!donPushed) { try { history.pushState({ don: 1 }, ''); donPushed = true; } catch (e) {} }
+}
+function closeDon(fromPop) {
+  if ($('#donSheet').hidden) return;
+  $('#donSheet').hidden = true;
+  if (donPushed && !fromPop) { donPushed = false; try { history.back(); } catch (e) {} }
+  else donPushed = false;
+}
+function donGo() {
+  var url = DON_URL + (donAmt ? '/' + donAmt + 'EUR' : '');
+  settings.donGo = Date.now(); settings.donHid = false; saveSettings();
+  closeDon();
+  var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function donBack() {
+  if (!settings.donGo) return;
+  var spent = Date.now() - settings.donGo;
+  settings.donGo = 0; settings.donHid = false;
+  if (spent >= DON_MIN_MS) { settings.donUntil = Math.max(settings.donUntil, Date.now() + DON_THANKS); settings.donMs = Math.max(settings.donMs || 0, Math.floor(donCount() / DON_STEP) * DON_STEP); }
+  else settings.donUntil = Math.max(settings.donUntil, Date.now() + DON_SNOOZE);
+  saveSettings(); donPaint();
+  toast('Grazie se hai donato! ♥', null, 3500);
+}
+document.addEventListener('visibilitychange', function () {
+  if (!settings.donGo) return;
+  if (document.visibilityState === 'hidden') { if (!settings.donHid) { settings.donHid = true; saveSettings(); } }
+  else if (settings.donHid) donBack();
+});
+$('#donRowOpen').addEventListener('click', function () { openDon(); });
+$('#donRowX').addEventListener('click', function () { donSnooze(DON_SNOOZE); });
+$('#donAskGo').addEventListener('click', function () { openDon(); });
+$('#donAskLater').addEventListener('click', function () { donSnooze(DON_SNOOZE); });
+$('#donAskNever').addEventListener('click', function () {
+  settings.donNever = true; settings.donMs = Math.floor(donCount() / DON_STEP) * DON_STEP; saveSettings(); donPaint();
+  toast('Non te lo chiederò più a ogni traguardo. Resta «Sostieni Next Libris» nel menu.');
+});
+$('#donMenu').addEventListener('click', function () { var had = drawerPushed; drawerPushed = false; closeDrawer(true); openDon(had); });
+$('#donOpt').addEventListener('click', function () { openDon(); });
+$('#donSheet').addEventListener('click', function (e) {
+  if (e.target === e.currentTarget) { closeDon(); return; }
+  var x = e.target.closest('.don-amt'); if (x) { donAmt = x.dataset.amt; paintDonAmt(); }
+});
+$('#donGo').addEventListener('click', donGo);
+$('#donClose').addEventListener('click', function () { closeDon(); });
+window.addEventListener('popstate', function (e) { if (!$('#donSheet').hidden && !(e.state && e.state.don)) { donPushed = false; closeDon(true); } });
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -2953,6 +3030,7 @@ function renderList() {
   clearTimeout(tGrid);
   setTimeout(updateStick, 0);
   if (scanning) return;
+  donPaint();
   var list = $('#list');
   syncThumbs();
   fillDatalists();
@@ -3970,7 +4048,7 @@ $('#drawerShow').addEventListener('click', function () { closeDrawer(); window.s
 $('#drawerReset').addEventListener('click', clearFilters);
 $('#drawerQX').addEventListener('click', function () { q = ''; $('#q').value = ''; renderList(); updateSummary(); renderDrawer(); });
 scrimEl.addEventListener('click', function () { closeDrawer(); });
-window.addEventListener('popstate', function () { if (drawerOpen) { drawerPushed = false; closeDrawer(true); } });
+window.addEventListener('popstate', function (e) { if (drawerOpen && !(e.state && e.state.drawer)) { drawerPushed = false; closeDrawer(true); } });
 
 /* Il gesto: dal bordo sinistro (o da un punto qualsiasi della meta' sinistra, perche' con la navigazione a gesti
    di Android il bordo e' riservato a Indietro) si trascina verso destra; il pannello segue il pollice.
@@ -4992,6 +5070,7 @@ document.addEventListener('keydown', function (e) {
   if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }
   if (!$('#bulkSheet').hidden) { $('#bulkSheet').hidden = true; return; }
   if (selOn) { endSel(false); return; }
+  if (!$('#donSheet').hidden) { closeDon(); return; }
   if (!$('#allqSheet').hidden) { closeAllQuotes(); return; }
   if (!$('#newsSheet').hidden) { $('#newsSheet').hidden = true; return; }
   if (!$('#priceAsk').hidden) closePriceAsk();
@@ -5385,6 +5464,10 @@ window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeou
 /* ---------- avvio ---------- */
 loadAll();
 saveSettings();                                  // salva subito eventuali scelte aggiornate (es. palette predefinita)
+if (settings.donGo) {                            // l'app e' stata riaperta mentre si era su PayPal (il telefono l'aveva chiusa)
+  if (Date.now() - settings.donGo < 2 * DON_DAY) setTimeout(donBack, 1200);
+  else { settings.donGo = 0; settings.donHid = false; saveSettings(); }
+}
 loadSaved();
 renderSvc();
 $('#optName').value = settings.name || '';
@@ -5430,6 +5513,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 window.__ped = { st: function () { return ped; }, handles: function (o) { return pedHandles(o); }, stickers: function () { return pedStickers(); } };
-window.__app = { buildBackup: buildBackup, readPrice: function (c, r) { return readPrice(c, r); }, filtersAll: function () { return { frFlt: frFlt, autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
+window.__app = { donPaint: donPaint, donBack: donBack, openDon: openDon, buildBackup: buildBackup, readPrice: function (c, r) { return readPrice(c, r); }, filtersAll: function () { return { frFlt: frFlt, autFlt: autFlt, edFlt: edFlt, genFlt: genFlt, shFlt: shFlt, q: q }; }, openDrawer: openDrawer, closeDrawer: closeDrawer, openOptions: function (s) { openOptions(s || 'search'); }, closeOptions: function () { closeOptions(); }, filters: function () { return { flt: flt, readFlt: readFlt, shFlt: shFlt, genFlt: genFlt, sortBy: sortBy }; }, state: state, S: S, openState: function () { return openState; }, addIsbn: addIsbn, addPhotos: addPhotos, settings: settings, setTab: setTab, onScanned: onScanned, startScan: startScan,
   get scanning() { return scanning; }, setScanMode: function (m) { scanMode = m; }, setScanKind: setScanKind, get scanKind() { return scanKind; } };
 })();
