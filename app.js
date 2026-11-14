@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 62, date: '2026-11-14', note: 'Prezzo facoltativo dopo ogni libro, fotocamera posteriore, X sulle citazioni' };
+var APP_VERSION = { v: 63, date: '2026-11-14', note: 'Numerazione dei volumi nell\'ordine dei tocchi, con anteprima' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1313,7 +1313,7 @@ var exitArmed = 0;
   });
 })();
 /* ---- selezione di più libri: tieni premuto un libro, poi tocca gli altri ---- */
-var selOn = false, sel = {}, selPushed = false, lp = { t: 0, x: 0, y: 0, fired: false };
+var selSeq = 0, selOn = false, sel = {}, selPushed = false, lp = { t: 0, x: 0, y: 0, fired: false };
 function selIds() { return Object.keys(sel).filter(function (id) { var b = get(id); return b && inTab(b); }); }
 function selBooks() { return selIds().map(get); }
 function paintSel() {
@@ -1323,6 +1323,7 @@ function paintSel() {
   Array.prototype.forEach.call($('#list').querySelectorAll('.row[data-id], .cover[data-id]'), function (el) {
     var on = !!sel[el.dataset.id];
     el.classList.toggle('sel', on); el.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (on) el.dataset.ord = selRank(el.dataset.id); else delete el.dataset.ord;          // ordine in cui l'hai toccato
   });
   var n = selIds().length;
   $('#selN').innerHTML = '<b>' + n + '</b><small>' + (n === 1 ? 'selezionato' : 'selezionati') + '</small>';
@@ -1339,10 +1340,12 @@ function startSel(id) {
     renderList();
     if (!settings.selTip) { settings.selTip = 1; saveSettings(); toast('Tocca altri libri per aggiungerli. Poi Elimina o Modifica qui sotto.', null, 4500); }
   }
-  if (id) { sel[id] = true; paintSel(); }
+  if (id) { sel[id] = ++selSeq; paintSel(); }
   try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
 }
-function toggleSel(id) { if (sel[id]) delete sel[id]; else sel[id] = true; paintSel(); }
+function toggleSel(id) { if (sel[id]) delete sel[id]; else sel[id] = ++selSeq; paintSel(); }
+function selOrdered() { return selIds().sort(function (a, b) { return sel[a] - sel[b]; }).map(get); }
+function selRank(id) { var ids = selIds().sort(function (a, b) { return sel[a] - sel[b]; }); return ids.indexOf(id) + 1; }
 function endSel(fromPop) {
   if (!selOn) return;
   selOn = false; sel = {};
@@ -1382,9 +1385,38 @@ $('#selExit').addEventListener('click', function () { endSel(false); });
 $('#selAll').addEventListener('click', function () {
   var vis = visible(), n = selIds().length;
   sel = {};
-  if (!(n && n >= vis.length)) vis.forEach(function (b) { sel[b.id] = true; });
+  if (!(n && n >= vis.length)) vis.forEach(function (b) { sel[b.id] = ++selSeq; });
   paintSel();
 });
+/* numerazione dei volumi: ordine scelto, primo numero, anteprima */
+var bkFromTouched = false;
+function numFrom() { return Math.max(1, Math.min(999, parseInt($('#bkFrom').value, 10) || 1)); }
+function numOrder() {
+  var how = ($('#bulkSheet').querySelector('input[name="bkOrd"]:checked') || {}).value || 'sel';
+  if (how === 'list') return visible().filter(function (b) { return sel[b.id]; });
+  var books = selOrdered();
+  if (how === 'year') books = books.slice().sort(function (x, y) { return (parseInt(x.y, 10) || 9999) - (parseInt(y.y, 10) || 9999) || sel[x.id] - sel[y.id]; });
+  return books;
+}
+function numPreview() {
+  var on = $('#bkSeNum').checked;
+  $('#bkNumBox').hidden = !on;
+  if (!on) return;
+  var val = $('#bkSe').value.replace(/\s+/g, ' ').trim();
+  if (!bkFromTouched) {                                                    // serie che hai gia': riparto dal numero dopo l'ultimo
+    var max = 0;
+    if (val) state.books.forEach(function (b) { if (!sel[b.id] && L.serKey(b.se) === L.serKey(val)) max = Math.max(max, parseInt(b.sn, 10) || 0); });
+    $('#bkFrom').value = String(max + 1);
+  }
+  var from = numFrom();
+  $('#bkPrev').innerHTML = numOrder().map(function (b, i) {
+    return '<li><b>' + (from + i) + '</b><span>' + esc(b.t || b.i || 'Senza titolo') + (b.y ? ' <small>' + esc(b.y) + '</small>' : '') + '</span></li>';
+  }).join('');
+}
+$('#bkSeNum').addEventListener('change', numPreview);
+$('#bkSe').addEventListener('input', numPreview);
+$('#bkFrom').addEventListener('input', function () { bkFromTouched = true; numPreview(); });
+$('#bulkSheet').addEventListener('change', function (e) { if (e.target.name === 'bkOrd') numPreview(); });
 /* annulla per le modifiche di gruppo: copia dei libri com'erano */
 function bulkSnap(books) { return books.map(function (b) { return JSON.parse(JSON.stringify(b)); }); }
 function bulkUndo(snap) {
@@ -1421,7 +1453,8 @@ function openBulk() {
   fillDatalists();
   $('#bulkMsg').textContent = 'Le modifiche valgono per ' + plural(n, 'libro selezionato', 'libri selezionati') + '. Dopo ognuna c\'è «Annulla».';
   ['#bkSe', '#bkSh', '#bkGen'].forEach(function (k) { $(k).value = ''; });
-  $('#bkSeNum').checked = false;
+  $('#bkSeNum').checked = false; $('#bkNumBox').hidden = true; $('#bkFrom').value = '1'; bkFromTouched = false;
+  var r0 = $('#bulkSheet').querySelector('input[name="bkOrd"][value="sel"]'); if (r0) r0.checked = true;
   Array.prototype.forEach.call($('#bulkSheet').querySelectorAll('.bk-lib'), function (el) { el.hidden = tab === 'wish'; });
   $('#bulkSheet').querySelector('[data-bk="move"]').textContent = tab === 'wish' ? 'Sposta in Libreria' : 'Sposta nei Desideri';
   $('#bulkSheet').hidden = false;
@@ -1439,10 +1472,10 @@ $('#bulkSheet').addEventListener('click', function (e) {
     var val = $({ se: '#bkSe', sh: '#bkSh', gen: '#bkGen' }[k]).value.replace(/\s+/g, ' ').trim().slice(0, 80);
     if (k === 'se' && $('#bkSeNum').checked) {
       if (!val) { toast('Scrivi il nome della serie per numerare i volumi.'); return; }
-      var order = visible().filter(function (b) { return sel[b.id]; });
-      order.forEach(function (b, i) { b.se = val; b.sn = String(i + 1); });
+      var order = numOrder(), from = numFrom();
+      order.forEach(function (b, i) { b.se = val; b.sn = String(from + i); });
       var tot = L.seriesInfo(state.books)[L.serKey(val)];
-      msg = plural(n, 'libro', 'libri') + ' nella serie «' + val + '», numerati da 1 a ' + n + '.';
+      msg = plural(n, 'libro', 'libri') + ' nella serie «' + val + '», numerati da ' + from + ' a ' + (from + n - 1) + '.';
       if (tot && tot.total) books.forEach(function (b) { if (!b.sq) b.sq = String(tot.total); });
     } else {
       books.forEach(function (b) { b[k] = val; if (k === 'se' && !val) { b.sn = ''; b.sq = ''; } });

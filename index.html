@@ -266,7 +266,16 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
     <div class="bulk" id="bulkBody">
       <section class="bk-sec"><h3>Serie o collana</h3>
         <div class="bk-row"><input id="bkSe" type="text" list="seriesList" maxlength="80" autocomplete="off" placeholder="Nome della serie o collana"><button class="btn" type="button" data-bk="se">Applica</button></div>
-        <label class="check small"><input type="checkbox" id="bkSeNum"><span>Numera i volumi nell'ordine dell'elenco (1, 2, 3…)</span></label>
+        <label class="check small"><input type="checkbox" id="bkSeNum"><span>Numera anche i volumi</span></label>
+        <div class="bk-num" id="bkNumBox" hidden>
+          <div class="bk-ord" role="radiogroup" aria-label="Ordine dei volumi">
+            <label><input type="radio" name="bkOrd" value="sel" checked><span>Nell'ordine in cui li hai toccati</span></label>
+            <label><input type="radio" name="bkOrd" value="year"><span>Per anno di pubblicazione</span></label>
+            <label><input type="radio" name="bkOrd" value="list"><span>Come nell'elenco</span></label>
+          </div>
+          <label class="bk-from">Primo numero <input id="bkFrom" type="text" inputmode="numeric" maxlength="3" value="1" autocomplete="off"></label>
+          <ol class="bk-prev" id="bkPrev" aria-label="Anteprima della numerazione"></ol>
+        </div>
       </section>
       <section class="bk-sec"><h3>Scaffale</h3>
         <div class="bk-row"><input id="bkSh" type="text" list="shelfList" maxlength="80" autocomplete="off" placeholder="Es. Studio, sala"><button class="btn" type="button" data-bk="sh">Applica</button></div>

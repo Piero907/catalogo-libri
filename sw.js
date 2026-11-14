@@ -1,5 +1,5 @@
 /* Next Libris: funziona anche senza rete. Le ricerche (Google Libri, Open Library) passano sempre dalla rete. */
-const CACHE = 'catalogo-libri-v62';
+const CACHE = 'catalogo-libri-v63';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'lib.js', 'manifest.json',
   'icons/next-libris-192.png', 'icons/next-libris-512.png', 'vendor/zxing.min.js', 'vendor/fonts/literata-latin.woff2', 'vendor/tesseract.min.js', 'vendor/worker.min.js'];
 

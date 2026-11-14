@@ -499,8 +499,13 @@ SELEZIONARE PIU' LIBRI
   selezione. Tocca altri libri per aggiungerli o toglierli.
 - In basso: "Tutti" (tutti quelli che vedi, anche filtrati), "Elimina"
   (chiede conferma; poi c'e' ancora "Annulla") e "Modifica".
-- "Modifica" cambia in gruppo: serie o collana (con "Numera i volumi
-  nell'ordine dell'elenco"), scaffale, genere, stato di lettura,
+- Sui libri selezionati compare il numero dell'ordine in cui li hai
+  toccati (1, 2, 3...).
+- "Modifica" cambia in gruppo: serie o collana (con "Numera anche i
+  volumi": nell'ordine in cui li hai toccati, per anno di pubblicazione
+  o come nell'elenco; "Primo numero" riparte da solo dopo l'ultimo
+  volume che hai gia' di quella serie; sotto vedi l'anteprima),
+  scaffale, genere, stato di lettura,
   preferiti; sposta tra Libreria e Desideri; segna come verificati;
   condivide i libri scelti. Ogni modifica ha "Annulla".
 - Per uscire: la X nella barra oppure Indietro.
