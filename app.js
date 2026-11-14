@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 74, date: '2026-11-14', note: 'Gomma, emoticon e adesivi nell\'editor delle foto' };
+var APP_VERSION = { v: 75, date: '2026-11-14', note: 'Autore: profilo da Wikipedia e matita per modificare' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1296,6 +1296,11 @@ function toggleRow(id, fromPop) {
 }
 window.addEventListener('popstate', function (e) {
   if (!cardPushed || (e.state && e.state.card)) return;
+  if (document.querySelector('.sheet:not([hidden])')) {          // prima la finestra in primo piano, la scheda resta aperta
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    try { history.pushState({ card: cardPushed }, ''); } catch (x) {}
+    return;
+  }
   var id = cardPushed; cardPushed = null;
   var b = get(id);
   if (b && isOpen(b) && !settings.openAll) toggleRow(id, true);
@@ -1937,6 +1942,72 @@ $('#pedDone').addEventListener('click', pedFinish);
 $('#pedSkip').addEventListener('click', function () { closePed(null); });
 window.addEventListener('resize', function () { if (!$('#ped').hidden) pedFit(); });
 window.addEventListener('popstate', function () { if (!$('#ped').hidden) { ped.pushed = false; closePed(null, true); } });
+/* ---- autore: profilo da Wikipedia, ricerca sul web, modifica con la matita ---- */
+var auEditing = {}, auCache = {}, auNow = null;
+function editAuthor(id) {
+  auEditing[id] = true; refreshRow(id);
+  var ta = document.getElementById('a-' + id);
+  if (ta) { try { ta.focus({ preventScroll: true }); var n = ta.value.length; ta.setSelectionRange(n, n); } catch (e) { ta.focus(); } }
+}
+document.addEventListener('focusout', function (e) {               // finito di scrivere: torna il nome da toccare
+  var t = e.target;
+  if (!t || t.dataset.k !== 'a' || !t.closest('#list')) return;
+  var row = t.closest('.row'), id = row && row.dataset.id;
+  if (!id || !auEditing[id]) return;
+  setTimeout(function () { if (document.activeElement === t) return; delete auEditing[id]; var b = get(id); if (b && b.a.trim()) refreshRow(id); }, 120);
+});
+function auWikiUrl(t) { return 'https://it.wikipedia.org/wiki/' + encodeURIComponent(String(t).replace(/ /g, '_')); }
+var AU_WORDS = /scritt|autor|romanz|poet|saggist|giornalist|drammaturg|filosof|storic|letterat|narrat|fumett|sceneggiat|critic|traduttor|accademic|docent|scienziat|teolog|biograf|novellier/i;
+async function auLookup(name) {
+  if (auCache[name]) return auCache[name];
+  async function summary(title) {
+    var j = await L.getJson(fetch, 'https://it.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_')) + '?redirect=true', { waits: [], timeout: 8000 });
+    return j && j.type !== 'disambiguation' && j.extract ? { title: j.title, desc: L.str(j.description), text: L.str(j.extract), url: (j.content_urls && j.content_urls.mobile && j.content_urls.mobile.page) || auWikiUrl(j.title) } : null;
+  }
+  var r = null;
+  try { r = await summary(name); } catch (e) { if (!(e && e.status === 404)) throw e; }
+  if (!r || !AU_WORDS.test(r.desc + ' ' + r.text.slice(0, 300))) {          // nome ambiguo: cerco «nome scrittore»
+    var j = null;
+    try { j = await L.getJson(fetch, 'https://it.wikipedia.org/w/api.php?action=query&list=search&srlimit=3&format=json&origin=*&srsearch=' + encodeURIComponent(name + ' scrittore'), { waits: [], timeout: 8000 }); }
+    catch (e3) { if (!(e3 && e3.status)) throw e3; }              // risposta d'errore: come «nessun risultato»; senza rete: avviso
+    var hits = (j && j.query && j.query.search) || [], want = L.norm(name).split(/\s+/).filter(function (w) { return w.length > 2; });
+    for (var i = 0; i < hits.length; i++) {
+      var tn = L.norm(hits[i].title);
+      if (!want.every(function (w) { return tn.indexOf(w) >= 0; })) continue;
+      try { var r2 = await summary(hits[i].title); if (r2 && AU_WORDS.test(r2.desc + ' ' + r2.text.slice(0, 300))) { r = r2; break; } } catch (e2) {}
+    }
+    if (r && !AU_WORDS.test(r.desc + ' ' + r.text.slice(0, 300))) r = null;
+  }
+  auCache[name] = r || { none: true };
+  return auCache[name];
+}
+async function openAuthor(id, name) {
+  auNow = { id: id, name: name };
+  var mine = state.books.filter(function (x) { return !x.w && authorsOf(x).some(function (n) { return L.norm(n) === L.norm(name); }); }).length;
+  $('#auH').textContent = name; $('#auDesc').textContent = ''; $('#auSrc').hidden = true; $('#auWiki').hidden = true;
+  $('#auMine').textContent = mine > 1 ? 'I suoi libri nella tua libreria (' + mine + ')' : 'Il suo libro nella tua libreria';
+  $('#auMine').hidden = mine < 2;
+  $('#auTxt').innerHTML = '<p class="desc-wait"><span class="spin" aria-hidden="true"></span>Cerco chi è…</p>';
+  $('#auSheet').hidden = false;
+  if (navigator.onLine === false) { $('#auTxt').innerHTML = '<p class="desc-none">Senza connessione: le informazioni sull\'autore si cercano online.</p>'; return; }
+  try {
+    var r = await auLookup(name);
+    if (!auNow || auNow.name !== name) return;
+    if (r.none) { $('#auTxt').innerHTML = '<p class="desc-none">Non ho trovato una voce di Wikipedia su questo autore. Prova «Cerca sul web».</p>'; return; }
+    $('#auDesc').textContent = r.desc ? r.desc.charAt(0).toUpperCase() + r.desc.slice(1) : '';
+    $('#auTxt').innerHTML = r.text.split(/\n+/).map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('');
+    $('#auSrc').hidden = false;
+    var w = $('#auWiki'); w.href = r.url; w.hidden = false;
+  } catch (e) {
+    if (auNow && auNow.name === name) $('#auTxt').innerHTML = '<p class="desc-none">Connessione debole: non sono riuscito a cercare. Prova «Cerca sul web».</p>';
+  }
+}
+function closeAuthor() { $('#auSheet').hidden = true; auNow = null; }
+$('#auClose').addEventListener('click', closeAuthor);
+$('#auSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeAuthor(); });
+$('#auWeb').addEventListener('click', function () { if (auNow) window.open('https://www.google.com/search?q=' + encodeURIComponent(auNow.name + ' scrittore'), '_blank', 'noopener'); });
+$('#auMine').addEventListener('click', function () { if (!auNow) return; var n = auNow.name; closeAuthor(); applyFacet('a', L.norm(n), n); });
+$('#auEdit').addEventListener('click', function () { if (!auNow) return; var id = auNow.id; closeAuthor(); editAuthor(id); });
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -2622,6 +2693,12 @@ function rowHTML(b, dups, ex) {
   var cls = 'row' + (busy ? ' busy' : '') + (st === 'error' ? ' bad' : '') + (hasThumb ? ' has-thumb' : '') + (ex ? ' ex' : '') + (b.xs ? ' gone' : '');
   function fieldTitle(k) { return b.g.indexOf(k) >= 0 ? ' title="Da verificare"' : ''; }
   function ta(k, label, val, ph) {
+    if (k === 'a' && !dis && String(val || '').trim() && !auEditing[b.id]) {     // autore compilato: nomi da toccare (profilo) e matita per modificare
+      var names = authorsOf(b);
+      return '<div class="f f-a au-view' + (b.g.indexOf('a') >= 0 ? ' is-guess' : '') + '"' + fieldTitle('a') + '><span class="lbl">Autore</span><span class="au-names">' +
+        names.map(function (n) { return '<button type="button" class="au-name" data-act="auinfo" data-n="' + esc(n) + '" title="Chi è ' + esc(n) + '">' + esc(n) + '</button>'; }).join('<span class="au-sep">, </span>') +
+        '</span><button type="button" class="ico au-edit" data-act="auedit" aria-label="Modifica l\'autore" title="Modifica l\'autore">' + icon('pen') + '</button></div>';
+    }
     return '<label class="f f-' + k + (b.g.indexOf(k) >= 0 ? ' is-guess' : '') + '"' + fieldTitle(k) + '><span class="lbl">' + label + '</span>' +
       '<textarea id="' + k + '-' + b.id + '" data-k="' + k + '" rows="1" spellcheck="false" placeholder="' + ph + '"' + dis + '>' + esc(val) + '</textarea></label>';
   }
@@ -4685,6 +4762,8 @@ list.addEventListener('click', function (e) {
   else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
   else if (act === 'descdel') { var dd = get(id); if (dd) { dd.ds = ''; dd.dsf = ''; dd.dsl = ''; dd.dsn = Date.now(); touch(); paintDesc(id); toast('Descrizione rimossa'); } }
   else if (act === 'rs' || act === 'rt') setRead(id, act, btn.dataset.v);
+  else if (act === 'auinfo') openAuthor(id, btn.dataset.n);
+  else if (act === 'auedit') editAuthor(id);
   else if (act === 'author') { q = btn.dataset.q; $('#q').value = q; flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; renderList(); updateSummary(); window.scrollTo({ top: 0 }); toast('Libri di ' + q + '. Svuota la ricerca per vederli tutti.'); }
   else if (act === 'zoom') openCover(id);
   else if (act === 'coverphoto') coverTap(id);
@@ -4798,6 +4877,7 @@ document.addEventListener('keydown', function (e) {
   if (!$('#ped').hidden) { closePed(null); return; }
   if (!$('#snap').hidden) { closeSnap(null); return; }
   if (!$('#phView').hidden) { closePh(false); return; }
+  if (!$('#auSheet').hidden) { closeAuthor(); return; }
   if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }
   if (!$('#bulkSheet').hidden) { $('#bulkSheet').hidden = true; return; }
   if (selOn) { endSel(false); return; }

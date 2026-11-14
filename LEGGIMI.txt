@@ -109,6 +109,10 @@ COME SI USA
   Sotto i pulsanti, le etichette del libro. In fondo "Condividi".
   Il prezzo si scrive nel riquadro che compare dopo ogni libro, oppure
   nel campo "Costo".
+- Autore: quando c'e', il nome si tocca e apre chi e' (breve profilo da
+  Wikipedia), con "I suoi libri nella tua libreria", "Cerca sul web" e
+  "Apri su Wikipedia"; con piu' autori ogni nome si tocca a parte. Per
+  cambiarlo: la matita accanto (o "Modifica il nome" nel profilo).
 - Mentre scrivi in un campo, la barra in basso (Scansiona, Foto, Digita)
   sparisce e il campo viene portato sopra la tastiera.
 - Prezzo: dopo ogni libro aggiunto (scansione, foto, ISBN o titolo

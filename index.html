@@ -248,6 +248,22 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   </div>
 </div>
 
+<div class="sheet" id="auSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="auH">
+    <h2 id="auH"></h2>
+    <p class="au-desc" id="auDesc"></p>
+    <div class="au-txt" id="auTxt" aria-live="polite"></div>
+    <p class="au-src" id="auSrc" hidden>Da Wikipedia, l'enciclopedia libera.</p>
+    <div class="au-acts">
+      <button class="btn" type="button" id="auMine"></button>
+      <button class="btn" type="button" id="auWeb">Cerca sul web</button>
+      <a class="btn" id="auWiki" target="_blank" rel="noopener" hidden>Apri su Wikipedia</a>
+      <button class="btn" type="button" id="auEdit">Modifica il nome</button>
+      <button class="btn" type="button" id="auClose">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="confirmSheet" hidden>
   <div class="sheet-in" role="alertdialog" aria-modal="true" aria-labelledby="confirmH" aria-describedby="confirmMsg">
     <h2 id="confirmH">Conferma</h2>

@@ -3,6 +3,11 @@
 Le novità di ogni versione, dalla più recente. Il numero di versione dell'app si vede in Opzioni › App.
 L'indirizzo dell'app è https://piero907.github.io/next-libris/ (fino alla versione 49 era …/catalogo-libri/).
 
+## Versione 75 · 14/11/2026
+- Scheda aperta: il nome dell'autore si tocca e mostra chi è (breve profilo da Wikipedia), con «I suoi libri nella tua libreria», «Cerca sul web» e «Apri su Wikipedia».
+- Per modificare l'autore c'è la matita accanto al nome.
+- Con una scheda aperta, Indietro chiude prima la finestra in primo piano.
+
 ## Versione 74 · 14/11/2026
 - Editor delle foto delle citazioni: gomma (cancella i segni dove passi, non la foto; toglie gli adesivi con un tocco).
 - Emoticon e adesivi con la scritta («Importante», «Da rileggere», «Bellissima», «Da ricordare», «Non sono d'accordo»): si mettono con un tocco, si spostano trascinandoli, si ingrandiscono o rimpiccioliscono.
