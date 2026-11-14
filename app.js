@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 55, date: '2026-11-14', note: 'Descrizione: «rimuovila»' };
+var APP_VERSION = { v: 56, date: '2026-11-14', note: 'Serie, citazioni, novità degli autori, obiettivo di lettura, ricerca nelle descrizioni' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -172,11 +172,11 @@ function inTab(b) { return !!b.w === (tab === 'wish'); }
 function tabBooks() { return state.books.filter(inTab); }
 function blankBook(o) {
   var b = Object.assign({ id: newId(), t: '', a: '', e: '', y: '', c: null, i: '', g: [], img: '', nf: false, ts: Date.now(),
-    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '', ds: '', dsf: '', dsl: '', dsn: 0 }, o || {});
+    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '', ds: '', dsf: '', dsl: '', dsn: 0, se: '', sn: '', sq: '', qs: [] }, o || {});
   if (!b.w && !(o && o.rs != null)) b.rs = 'da';        // un libro appena entrato in libreria e' da leggere
   return b;
 }
-var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl', 'ds', 'dsf', 'dsl', 'dsn'];
+var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl', 'ds', 'dsf', 'dsl', 'dsn', 'se', 'sn', 'sq', 'qs'];
 function isBusy(b) { var st = (S[b.id] || {}).st; return st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search'; }
 function cleanBook(x) {
   if (!x || typeof x !== 'object') return null;
@@ -208,12 +208,15 @@ function cleanBook(x) {
     fav: !!x.fav,                                   // preferito
     fr: L.str(x.fr).slice(0, 30), fl: L.str(x.fl).slice(0, 40),     // ricevuto da (nome) e da quale lista
     ds: L.str(x.ds).slice(0, L.DESC_MAX + 1), dsf: x.dsf === 'g' || x.dsf === 'o' ? x.dsf : '',   // descrizione e fonte (Google, Open Library)
-    dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0                      // lingua; quando non e' stata trovata
+    dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0,                     // lingua; quando non e' stata trovata
+    se: L.str(x.se).slice(0, 80), sn: L.str(x.sn).replace(/\D/g, '').slice(0, 3), sq: L.str(x.sq).replace(/\D/g, '').slice(0, 3),   // serie, volume, di quanti
+    qs: (Array.isArray(x.qs) ? x.qs : []).map(function (c) { return c && typeof c === 'object' ? { x: L.str(c.x).slice(0, 1500).trim(), pg: L.str(c.pg).replace(/\D/g, '').slice(0, 5), d: Number(c.d) || 0 } : null; })
+      .filter(function (c) { return c && c.x; }).slice(0, 200)                                      // citazioni e appunti
   };
 }
 function storable() {
   return state.books.filter(hasData).map(function (b) {
-    var o = {}; FIELDS.forEach(function (k) { o[k] = k === 'g' ? b.g.slice() : b[k]; }); return o;
+    var o = {}; FIELDS.forEach(function (k) { o[k] = k === 'g' ? b.g.slice() : k === 'qs' ? (b.qs || []).slice() : b[k]; }); return o;
   });
 }
 function persist() {
@@ -1173,7 +1176,7 @@ async function toggleTorch() {
 function visible() {
   var a = tabBooks();
   var nq = L.norm(q);
-  if (nq) a = a.filter(function (b) { return L.norm([b.t, b.a, b.e, b.i, b.sh, b.gen, b.n, b.p, b.xa].join(' ')).indexOf(nq) >= 0; });
+  if (nq) a = a.filter(function (b) { return L.norm([b.t, b.a, b.e, b.i, b.sh, b.gen, b.n, b.p, b.xa, b.ds, b.se].concat((b.qs || []).map(function (c) { return c.x; })).join(' ')).indexOf(nq) >= 0; });
   if (flt === 'guess') a = a.filter(function (b) { return b.g.length; });
   if (flt === 'gone') a = a.filter(function (b) { return b.xs; });
   if (flt === 'fav') a = a.filter(function (b) { return b.fav; });
@@ -1303,7 +1306,7 @@ function descBody(b) {
 }
 function paintDesc(id) {
   var b = get(id);
-  Array.prototype.forEach.call(document.querySelectorAll('details.desc[data-id="' + id + '"]'), function (d) {
+  Array.prototype.forEach.call(document.querySelectorAll('details.desc:not(.quotes)[data-id="' + id + '"]'), function (d) {
     var body = d.querySelector('.desc-b'), hint = d.querySelector('.desc-hint');
     if (b && body) body.innerHTML = descBody(b);
     if (b && b.ds && hint) hint.remove();
@@ -1337,8 +1340,42 @@ async function findDesc(b) {
     if (!t && /^\/works\/OL\d+W$/.test(L.str(wk))) t = L.olDesc(await ol(wk + '.json'));
     if (t) take({ text: t, lang: L.guessLang(t) }, 'o');
   }
-  if (!best && tries && errs === tries) throw { net: true };
+  if (!best && errs) throw { net: true };
   return best;
+}
+/* tutte le descrizioni che mancano, una alla volta, senza consumare le ricerche Google che servono ai libri nuovi */
+var descAll = { on: false, stop: false };
+async function allDescs() {
+  var btn = $('#btnDescAll');
+  if (descAll.on) { descAll.stop = true; btn.querySelector('b').textContent = 'Mi fermo…'; return; }
+  var todo = state.books.filter(function (b) { return hasData(b) && !b.ds && !b.dsn && (b.t || L.toIsbn13(b.i)); });
+  if (!todo.length) { toast('Le descrizioni ci sono già tutte: per gli altri libri ho già cercato e non esistono.'); return; }
+  if (navigator.onLine === false) { toast('Sei offline. Riprova quando c\'è connessione.'); return; }
+  if (!googleLeft(true)) { toast('Le ricerche di Google per oggi le tengo per i libri nuovi: riprova domani.'); return; }
+  descAll = { on: true, stop: false };
+  var label = btn.querySelector('b'), old = label.textContent, done = 0, found = 0, fails = 0, why = '';
+  for (var i = 0; i < todo.length; i++) {
+    if (descAll.stop) { why = 'stop'; break; }
+    if (!googleLeft(true)) { why = 'quota'; break; }
+    if (navigator.onLine === false) { why = 'net'; break; }
+    var b = get(todo[i].id);
+    if (!b || b.ds) continue;
+    label.textContent = 'Cerco… ' + (done + 1) + ' di ' + todo.length + ' · tocca per fermare';
+    try {
+      var r = await findDesc(b);
+      b = get(todo[i].id);
+      if (b) { if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; found++; } else b.dsn = Date.now(); touch(); paintDesc(b.id); }
+      fails = 0;
+    } catch (e) { if (++fails >= 3) { why = 'net'; break; } }
+    done++;
+    await new Promise(function (ok) { setTimeout(ok, 250); });
+  }
+  descAll.on = false; label.textContent = old;
+  var left = todo.length - done;
+  toast((found === 1 ? 'Trovata 1 descrizione' : 'Trovate ' + found + ' descrizioni') + ' su ' + done + (done === 1 ? ' libro' : ' libri') + '.' +
+    (why === 'quota' ? ' Per oggi mi fermo qui per non finire le ricerche di Google: ne restano ' + left + ', riprendi domani.' :
+     why === 'net' ? ' La connessione non regge: ne restano ' + left + ', riprova più tardi.' :
+     why === 'stop' ? ' Fermato: ne restano ' + left + '.' : ''));
 }
 async function loadDesc(id, force) {
   var b = get(id);
@@ -1356,6 +1393,236 @@ async function loadDesc(id, force) {
   else { b.dsn = Date.now(); touch(); }
   paintDesc(id);
 }
+/* ---- serie e collane: quali volumi hai, quali mancano ---- */
+function serNums(a) { return a.join(', '); }
+function seriesBody(b) {
+  var s = L.seriesInfo(state.books)[L.serKey(b.se)];
+  if (!s) return '';
+  var out = '<p><b>' + esc(s.name) + '</b>: ' + (s.n === 1 ? 'hai 1 volume' : 'hai ' + s.n + ' volumi') +
+    (s.have.length ? ' (' + (s.have.length === 1 ? 'il ' : 'i numeri ') + serNums(s.have) + ')' : '') + (s.total ? ' su ' + s.total : '') + '.' +
+    (s.missing.length ? ' ' + (s.missing.length === 1 ? 'Manca il ' : 'Mancano: ') + serNums(s.missing.slice(0, 40)) + (s.missing.length > 40 ? '…' : '') + '.' : (s.total && s.have.length >= s.total ? ' Serie completa.' : '')) +
+    (s.wish.length ? ' Nei Desideri: ' + serNums(s.wish) + '.' : '') + '</p>';
+  if (!parseInt(b.sn, 10)) out += '<p class="ser-hint">Scrivi il numero di questo volume per sapere quali mancano.</p>';
+  else if (!s.total) out += '<p class="ser-hint">Se sai di quanti volumi è la serie, scrivilo in «di»: conto anche quelli dopo l\'ultimo che hai.</p>';
+  var btns = (s.n + s.nw > 1 ? '<button type="button" class="link" data-act="serall">Vedi la serie</button>' : '') +
+    (s.toAdd.length ? '<button type="button" class="link" data-act="sermiss">Metti ' + (s.toAdd.length === 1 ? 'il mancante' : 'i ' + Math.min(s.toAdd.length, 40) + ' mancanti') + ' nei Desideri</button>' : '');
+  return out + (btns ? '<div class="desc-acts">' + btns + '</div>' : '');
+}
+function seriesHTML(b, off) { return off || !hasData(b) ? '' : '<div class="serbox">' + seriesBody(b) + '</div>'; }
+function seriesChanged(b, row, k) {
+  if (k === 'se' && b.se && !b.sq) {            // serie gia' nota: il totale lo prendo dagli altri volumi
+    var s = L.seriesInfo(state.books)[L.serKey(b.se)];
+    if (s && s.total) { b.sq = String(s.total); var f = row.querySelector('[data-k="sq"]'); if (f) f.value = b.sq; touch(); }
+  }
+  if (k === 'sq' && b.se && b.sq) state.books.forEach(function (x) { if (x !== b && L.serKey(x.se) === L.serKey(b.se)) x.sq = b.sq; });
+  var box = row.querySelector('.serbox');
+  if (box) box.innerHTML = seriesBody(b);
+}
+function seriesAll(id) {
+  var b = get(id); if (!b || !b.se) return;
+  flt = ''; readFlt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = ''; frFlt = '';
+  q = b.se.trim(); $('#q').value = q; collapseCards(); renderList(); updateSummary(); window.scrollTo({ top: 0 });
+  toast('Libri della serie «' + q + '». Svuota la ricerca per vederli tutti.');
+}
+function seriesMissing(id) {
+  var b = get(id); if (!b || !b.se) return;
+  var s = L.seriesInfo(state.books)[L.serKey(b.se)];
+  if (!s || !s.toAdd.length) return;
+  var ids = [];
+  s.toAdd.slice(0, 40).forEach(function (n, i) {
+    var w = blankBook({ t: s.name + ', vol. ' + n, a: s.author || b.a || '', se: s.name, sn: String(n), sq: s.total ? String(s.total) : '', w: true, rs: '', ts: Date.now() + i });
+    state.books.push(w); ids.push(w.id);
+  });
+  touch(); refreshRow(id); updateSummary();
+  toast((ids.length === 1 ? 'Aggiunto 1 volume' : 'Aggiunti ' + ids.length + ' volumi') + ' ai Desideri.', { label: 'Annulla', fn: function () {
+    state.books = state.books.filter(function (x) { return ids.indexOf(x.id) < 0; }); touch(); refreshRow(id); updateSummary(); } });
+}
+function seriesStatsHTML() {
+  var m = L.seriesInfo(state.books), keys = Object.keys(m).filter(function (k) { return m[k].n; }).sort(function (x, y) { return coll.compare(m[x].name, m[y].name); });
+  if (!keys.length) return '';
+  return '<section class="st-sec"><h3>Serie e collane</h3><ul class="loans">' + keys.map(function (k) {
+    var s = m[k];
+    return '<li><button type="button" class="link" data-q="' + esc(s.name) + '">' + esc(s.name) + '</button> · ' + s.n + (s.total ? ' su ' + s.total : '') +
+      (s.missing.length ? ' <small>' + (s.missing.length === 1 ? 'manca il ' : 'mancano: ') + serNums(s.missing.slice(0, 20)) + (s.missing.length > 20 ? '…' : '') + '</small>' : (s.total && s.have.length >= s.total ? ' <small>completa</small>' : '')) + '</li>';
+  }).join('') + '</ul></section>';
+}
+
+/* ---- citazioni e appunti: riquadro nella scheda aperta, testo scritto o letto da una foto della pagina ---- */
+var quoteOpen = {}, quoteEdit = null;
+function quotesBody(b) {
+  var qs = b.qs || [];
+  return (qs.length ? '<ul class="qlist">' + qs.map(function (c, i) {
+    return '<li><button type="button" class="qitem" data-act="quoteedit" data-i="' + i + '" title="Tocca per modificare"><span class="qt">' + esc(c.x) + '</span>' + (c.pg ? '<span class="qp">p. ' + esc(c.pg) + '</span>' : '') + '</button></li>';
+  }).join('') + '</ul>' : '<p class="desc-none">Passaggi da ricordare, frasi sottolineate, appunti di lettura.</p>') +
+    '<button type="button" class="link" data-act="quoteadd">+ Aggiungi una citazione o un appunto</button>';
+}
+function quotesHTML(b, off) {
+  if (off || !hasData(b)) return '';
+  var n = (b.qs || []).length;
+  return '<details class="desc quotes" data-id="' + b.id + '"' + (quoteOpen[b.id] ? ' open' : '') + '><summary><span class="desc-h">Citazioni e appunti</span><span class="desc-hint qn">' + (n || '') + '</span></summary><div class="desc-b">' + quotesBody(b) + '</div></details>';
+}
+function paintQuotes(id) {
+  var b = get(id), d = b && document.querySelector('details.quotes[data-id="' + id + '"]');
+  if (!d) return;
+  d.querySelector('.desc-b').innerHTML = quotesBody(b);
+  d.querySelector('.qn').textContent = (b.qs || []).length || '';
+}
+function openQuote(id, i) {
+  var b = get(id); if (!b) return;
+  var c = i == null ? null : (b.qs || [])[i];
+  quoteEdit = { id: id, i: c ? i : null };
+  $('#quoteH').textContent = c ? 'Modifica' : 'Citazione o appunto';
+  $('#quoteBook').textContent = [b.t || 'Senza titolo', b.a].filter(Boolean).join(' — ');
+  $('#quoteText').value = c ? c.x : ''; $('#quotePage').value = c ? c.pg : '';
+  $('#quoteMsg').textContent = ''; $('#quoteDel').hidden = !c;
+  $('#quoteSheet').hidden = false;
+  if (!c) setTimeout(function () { try { $('#quoteText').focus(); } catch (e) {} }, 60);
+}
+function closeQuote() { $('#quoteSheet').hidden = true; quoteEdit = null; }
+function saveQuote() {
+  if (!quoteEdit) return;
+  var b = get(quoteEdit.id), x = $('#quoteText').value.replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim().slice(0, 1500);
+  if (!b) { closeQuote(); return; }
+  if (!x) { $('#quoteMsg').textContent = 'Scrivi il testo, oppure leggilo da una foto.'; $('#quoteText').focus(); return; }
+  var c = { x: x, pg: $('#quotePage').value.replace(/\D/g, '').slice(0, 5), d: Date.now() };
+  if (!Array.isArray(b.qs)) b.qs = [];
+  if (quoteEdit.i != null) { c.d = b.qs[quoteEdit.i].d || c.d; b.qs[quoteEdit.i] = c; }
+  else if (b.qs.length >= 200) { $('#quoteMsg').textContent = 'Per questo libro ci sono già 200 citazioni.'; return; }
+  else b.qs.push(c);
+  var id = b.id; quoteOpen[id] = true;
+  touch(); closeQuote(); paintQuotes(id); toast('Salvata.');
+}
+function delQuote() {
+  if (!quoteEdit || quoteEdit.i == null) return;
+  var id = quoteEdit.id, i = quoteEdit.i, b = get(id);
+  if (!b) { closeQuote(); return; }
+  var old = b.qs.splice(i, 1)[0];
+  touch(); closeQuote(); paintQuotes(id);
+  toast('Citazione eliminata.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.qs.splice(Math.min(i, x.qs.length), 0, old); touch(); paintQuotes(id); } } });
+}
+async function quoteFromPhoto(file) {
+  var msg = $('#quoteMsg'), btn = $('#quotePhoto');
+  btn.disabled = true;
+  try {
+    msg.textContent = 'Preparo il riconoscimento del testo (la prima volta ci vuole un po\')…';
+    var canvas = await loadCanvas(file, 2200);
+    var w = await getOcr();
+    msg.textContent = 'Leggo la pagina…';
+    var res;
+    await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.AUTO) });
+    try { res = await w.recognize(canvas); }
+    finally { await w.setParameters({ tessedit_pageseg_mode: String(window.Tesseract.PSM.SPARSE_TEXT) }); }
+    var text = L.ocrParagraph((res.data || {}).text || '');
+    if (!text) { msg.textContent = 'Non sono riuscito a leggere del testo: riprova con più luce e la pagina ben piatta, oppure scrivilo.'; return; }
+    var ta = $('#quoteText');
+    ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + text;
+    ta.value = ta.value.slice(0, 1500);
+    msg.textContent = 'Ho letto la pagina: tieni solo il passaggio che ti interessa e correggi gli errori.';
+    ta.focus();
+  } catch (e) {
+    msg.textContent = 'Lettura non riuscita' + (navigator.onLine === false ? ' (la prima volta serve la connessione)' : '') + ': puoi scrivere il testo a mano.';
+  } finally { btn.disabled = false; }
+}
+$('#quoteForm').addEventListener('submit', function (e) { e.preventDefault(); saveQuote(); });
+$('#quoteCancel').addEventListener('click', closeQuote);
+$('#quoteDel').addEventListener('click', delQuote);
+$('#quotePhoto').addEventListener('click', function () { $('#fileQuote').click(); });
+$('#fileQuote').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) quoteFromPhoto(f); });
+$('#quoteSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeQuote(); });
+
+/* ---- novità dei tuoi autori: libri recenti che non hai, da mettere nei Desideri ---- */
+var LS_NEWS = 'catalogo-libri-news', NEWS_EVERY = 14 * 86400000;
+var news = { at: 0, items: [], hide: [], busy: false };
+function loadNews() { try { var n = JSON.parse(ls.get(LS_NEWS) || '{}'); news.at = Number(n.at) || 0; news.items = Array.isArray(n.items) ? n.items.filter(function (x) { return x && x.t && x.k; }).slice(0, 80) : []; news.hide = Array.isArray(n.hide) ? n.hide.map(L.str).slice(-400) : []; } catch (e) {} }
+function saveNews() { ls.set(LS_NEWS, JSON.stringify({ at: news.at, items: news.items, hide: news.hide })); }
+function newsAuthors() {
+  var m = {};
+  state.books.forEach(function (b) { if (b.w || b.g.indexOf('a') >= 0) return; authorsOf(b).forEach(function (n) { var k = L.norm(n); (m[k] || (m[k] = { name: n, n: 0 })).n++; }); });
+  var all = Object.keys(m).map(function (k) { return m[k]; }).filter(function (x) { return !/^(aa\.? ?vv\.?|autori vari|anonimo)$/i.test(x.name); }).sort(function (x, y) { return y.n - x.n || coll.compare(x.name, y.name); });
+  var many = all.filter(function (x) { return x.n >= 2; });
+  return (many.length ? many.slice(0, 8) : all.slice(0, 5)).map(function (x) { return x.name; });
+}
+function newsOwn() {
+  var own = { titles: {}, isbns: {}, hide: {} };
+  state.books.forEach(function (b) { var k = L.titleKey(b.t); if (k) own.titles[k] = 1; var i = L.toIsbn13(b.i); if (i) own.isbns[i] = 1; });
+  news.hide.forEach(function (k) { own.hide[k] = 1; });
+  return own;
+}
+function newsFresh() { var own = newsOwn(); return news.items.filter(function (x) { return !own.titles[x.k] && !own.hide[x.k] && !(x.i && own.isbns[x.i]); }); }
+async function findNews() {
+  if (news.busy) return null;
+  var authors = newsAuthors(), y = new Date().getFullYear(), own = newsOwn(), found = [], seen = {}, errs = 0, done = 0;
+  if (!authors.length) return [];
+  news.busy = true;
+  try {
+    for (var i = 0; i < authors.length; i++) {
+      if (!googleLeft(true)) break;
+      try {
+        var j = await L.getJson(apiFetch, 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent('inauthor:"' + authors[i].replace(/"/g, '') + '"') +
+          '&orderBy=newest&langRestrict=it&printType=books&maxResults=20&fields=items(id,volumeInfo(title,subtitle,authors,publisher,publishedDate,language,industryIdentifiers,imageLinks))' +
+          (settings.gbKey ? '&key=' + encodeURIComponent(settings.gbKey) : ''), { waits: [900], timeout: 9000 });
+        L.pickNews(j, authors[i], own, y - 1, y + 1).slice(0, 6).forEach(function (x) { if (!seen[x.k]) { seen[x.k] = 1; found.push(x); } });
+        done++;
+      } catch (e) { errs++; if (errs >= 2 && !done) break; }
+      if (!$('#newsSheet').hidden) $('#newsMsg').textContent = 'Cerco… ' + (i + 1) + ' di ' + authors.length + ' autori';
+    }
+  } finally { news.busy = false; }
+  if (!done) throw { net: true };
+  news.items = found.slice(0, 80); news.at = Date.now(); saveNews();
+  return found;
+}
+function renderNews(note) {
+  var items = newsFresh(), authors = newsAuthors();
+  $('#newsMsg').textContent = note || (!authors.length ? 'Aggiungi qualche libro con l\'autore: cerco le novità di quelli che hai di più.' :
+    !news.at ? '' : items.length ? 'Usciti dal ' + (new Date().getFullYear() - 1) + ' in poi, di ' + authors.slice(0, 3).join(', ') + (authors.length > 3 ? ' e altri ' + (authors.length - 3) : '') + '. Ultimo controllo: ' + L.agoText(news.at) + '.' :
+    'Nessuna novità che non hai già, tra gli autori che hai di più (' + authors.slice(0, 3).join(', ') + (authors.length > 3 ? '…' : '') + '). Ultimo controllo: ' + L.agoText(news.at) + '.');
+  $('#newsList').innerHTML = items.map(function (x) {
+    return '<li data-k="' + esc(x.k) + '">' + (x.img ? '<img src="' + esc(x.img) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<span class="nimg" aria-hidden="true"></span>') +
+      '<div class="nt"><b>' + esc(x.t) + '</b><span>' + esc([x.a, x.e, x.y].filter(Boolean).join(' · ')) + '</span>' +
+      '<div class="desc-acts"><button type="button" class="link" data-act="newswish">Metti nei Desideri</button><button type="button" class="link quiet" data-act="newshide">Non mi interessa</button></div></div></li>';
+  }).join('');
+  $('#newsAgain').disabled = news.busy || !authors.length;
+}
+async function runNews() {
+  if (navigator.onLine === false) { renderNews('Sei offline. Riprova quando c\'è connessione.'); return; }
+  if (!googleLeft(true)) { renderNews('Le ricerche di Google per oggi le tengo per i libri nuovi: riprova domani.'); return; }
+  $('#newsAgain').disabled = true; $('#newsMsg').textContent = 'Cerco le novità…';
+  try { await findNews(); renderNews(); }
+  catch (e) { renderNews('Non sono riuscito a cercare (connessione o limite di Google' + (settings.gbKey ? '' : ': senza chiave capita spesso') + '). Riprova più tardi.'); }
+}
+function openNews() {
+  $('#newsAuto').checked = settings.newsAuto !== false;
+  $('#newsSheet').hidden = false;
+  renderNews();
+  if (!news.at && newsAuthors().length) runNews();
+}
+function newsPick(k, wish) {
+  var x = news.items.find(function (n) { return n.k === k; });
+  if (!x) return;
+  if (wish) {
+    var w = blankBook({ t: x.t, a: x.a, e: x.e, y: x.y, i: x.i || '', img: /^https:\/\//.test(x.img || '') ? x.img : '', w: true, rs: '' });
+    state.books.push(w); touch(); renderList(); updateSummary();
+    toast('Nei Desideri: ' + x.t, { label: 'Annulla', fn: function () { state.books = state.books.filter(function (b) { return b.id !== w.id; }); touch(); renderList(); updateSummary(); if (!$('#newsSheet').hidden) renderNews(); } });
+  } else { news.hide.push(k); saveNews(); }
+  renderNews();
+}
+function autoNews() {
+  if (settings.newsAuto === false || !settings.gbKey || navigator.onLine === false || Date.now() - news.at < NEWS_EVERY || !newsAuthors().length || !googleLeft(true)) return;
+  var before = {}; newsFresh().forEach(function (x) { before[x.k] = 1; });
+  findNews().then(function () {
+    var fresh = newsFresh().filter(function (x) { return !before[x.k]; });
+    if (fresh.length && $('#newsSheet').hidden) toast(fresh.length === 1 ? 'È uscito un libro di ' + fresh[0].by + ' che non hai.' : fresh.length + ' novità dei tuoi autori.', { label: 'Vedi', fn: openNews });
+  }, function () {});
+}
+$('#btnNews').addEventListener('click', openNews);
+$('#newsClose').addEventListener('click', function () { $('#newsSheet').hidden = true; });
+$('#newsAgain').addEventListener('click', runNews);
+$('#newsAuto').addEventListener('change', function (e) { settings.newsAuto = e.target.checked; saveSettings(); });
+$('#newsSheet').addEventListener('click', function (e) {
+  if (e.target === e.currentTarget) { $('#newsSheet').hidden = true; return; }
+  var b = e.target.closest('[data-act]'), li = b && b.closest('li[data-k]');
+  if (li) newsPick(li.dataset.k, b.dataset.act === 'newswish');
+});
 /* stato di lettura, voto e data (solo Libreria) */
 function readHTML(b, off) {
   if (b.w) return '';
@@ -1484,8 +1751,9 @@ function rowHTML(b, dups, ex) {
       '<div class="head">' + thumb + ta('t', 'Titolo', b.t, 'Titolo') + ta('a', 'Autore', b.a, 'Autore') + '</div>' +
       '<div class="meta">' + ta('e', 'Casa editrice', b.e, 'Casa editrice') + inp('y', 'Anno', b.y, 'numeric', 'Anno', 4) + inp('c', 'Costo €', b.c == null ? '' : L.fmtNum(b.c), 'decimal', '—') + '</div>' +
       (settings.extra ? '<div class="more">' + inp('sh', 'Scaffale', b.sh || '', 'text', 'Scaffale', 80) + inp('gen', 'Genere', b.gen || '', 'text', 'Genere', 80) +
-        inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' : '') +
-      facetsHTML(b, ex || busy) + descHTML(b, ex || busy) + readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
+        inp('pg', 'Pagine', b.pg || '', 'numeric', 'Pagine', 5) + ta('n', 'Note', b.n || '', 'Note') + '</div>' +
+        '<div class="ser">' + inp('se', 'Serie o collana', b.se || '', 'text', 'Serie o collana', 80) + inp('sn', 'Volume', b.sn || '', 'numeric', 'N.', 3) + inp('sq', 'di', b.sq || '', 'numeric', 'Totale', 3) + '</div>' : '') +
+      seriesHTML(b, ex || busy) + facetsHTML(b, ex || busy) + descHTML(b, ex || busy) + quotesHTML(b, ex || busy) + readHTML(b, ex || busy) + authorLinkHTML(b, ex) +
       '<div class="foot">' + inp('i', 'ISBN', b.i, 'numeric', 'ISBN', 13) +
       (openCard ? (moreActs ? '<div class="tail">' + moreActs + '</div>' : '') :
         '<div class="tail"><span class="flags">' + flagsHTML(b, dups) + '</span>' +
@@ -1622,6 +1890,7 @@ function updateSummary() {
   $('#cntLib').textContent = nl; $('#cntWish').textContent = nw;
   $('#tabLib').setAttribute('aria-selected', tab === 'lib' ? 'true' : 'false');
   $('#tabWish').setAttribute('aria-selected', tab === 'wish' ? 'true' : 'false');
+  $('#btnNews').hidden = tab !== 'wish' || !state.books.some(function (b) { return !b.w && b.a; });
   $('#btnShareWish').hidden = !shareable().length || !(tab === 'wish' || activeCount() || q);     // Desideri, oppure una selezione (preferiti, genere, ricerca...)
   updateActiveFilters();
   var fg = $('#fltGuess');
@@ -2632,7 +2901,7 @@ var sugg = { el: null, input: null, k: '', idx: -1 };
 function suggKey(input) {
   if (input.id === 'loanWho') return loanKind === 's' ? '' : 'p';
   var k = input.dataset && input.dataset.k;
-  return (k === 'sh' || k === 'gen') && input.closest('#list') && !input.closest('[data-ex]') ? k : '';
+  return (k === 'sh' || k === 'gen' || k === 'se') && input.closest('#list') && !input.closest('[data-ex]') ? k : '';
 }
 function suggValues(k, input) {
   var m = {};
@@ -2694,7 +2963,7 @@ function addCopy(id, quiet) {
   var src = get(id);
   if (!src) return null;
   var wasCp = src.cp;
-  var copy = cleanBook(Object.assign({}, src, { id: newId(), ts: Date.now(), cp: true, sh: '', n: '', p: '', pd: '', rs: 'da', rt: 0, rd: '', xs: '', xd: '', xa: '', g: src.g.slice() }));
+  var copy = cleanBook(Object.assign({}, src, { id: newId(), ts: Date.now(), cp: true, sh: '', n: '', p: '', pd: '', rs: 'da', rt: 0, rd: '', xs: '', xd: '', xa: '', qs: [], g: src.g.slice() }));
   src.cp = true;
   state.books.push(copy);
   if (coverURL[id]) fetch(coverURL[id]).then(function (r) { return r.blob(); }).then(function (bl) { return saveCover(copy.id, bl); }).catch(function () {});
@@ -3237,6 +3506,29 @@ function barsHTML(title, items, filterable) {
     return filterable ? '<button class="bar-row" data-q="' + esc(x.k) + '" title="Mostra questi libri">' + inner + '</button>' : '<div class="bar-row">' + inner + '</div>';
   }).join('') + '</div></section>';
 }
+/* obiettivo di lettura dell'anno: libri segnati «Letto» con la data in quest'anno */
+function goalHTML() {
+  var y = String(new Date().getFullYear()), g = Math.max(0, parseInt(settings.goal, 10) || 0);
+  var n = state.books.filter(function (b) { return !b.w && b.rs === 'ok' && L.str(b.rd).slice(0, 4) === y; }).length;
+  var head = '<section class="st-sec goal"><h3>Obiettivo di lettura ' + y + '</h3>';
+  var form = '<label class="goal-set"><span>' + (g ? 'Cambia obiettivo' : 'Quanti libri vuoi leggere quest\'anno?') + '</span><input id="goalIn" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="es. 20" value="' + (g || '') + '"><button type="button" class="btn" id="goalSave">Salva</button></label>';
+  if (!g) return head + '<p class="msg">Finora ne hai ' + (n === 1 ? 'letto 1' : 'letti ' + n) + '.</p>' + form + '</section>';
+  var now = new Date(), start = new Date(now.getFullYear(), 0, 1), end = new Date(now.getFullYear() + 1, 0, 1);
+  var part = (now - start) / (end - start), due = Math.round(g * part), left = g - n;
+  var pace = n >= g ? 'Obiettivo raggiunto' + (n > g ? ': ' + (n - g) + ' in più' : '') + '.' :
+    n >= due ? 'Sei in linea: ne ' + (left === 1 ? 'manca 1' : 'mancano ' + left) + '.' :
+    'Sei indietro di ' + (due - n) + (due - n === 1 ? ' libro' : ' libri') + ' rispetto al ritmo: ne ' + (left === 1 ? 'manca 1' : 'mancano ' + left) + '.';
+  return head + '<p class="goal-n"><b>' + n + '</b> di ' + g + (g === 1 ? ' libro' : ' libri') + '</p>' +
+    '<div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + g + '" aria-valuenow="' + Math.min(n, g) + '" aria-label="Libri letti quest\'anno"><span style="width:' + Math.min(100, Math.round(n / g * 100)) + '%"></span><i style="left:' + Math.round(part * 100) + '%" title="Oggi"></i></div>' +
+    '<p class="msg">' + pace + ' Contano i libri segnati «Letto» con la data in quest\'anno.</p>' +
+    '<details class="goal-more"><summary>Cambia obiettivo</summary>' + form.replace('<span>Cambia obiettivo</span>', '<span>Libri da leggere nel ' + y + ' (0 per toglierlo)</span>') + '</details></section>';
+}
+function saveGoal() {
+  var v = Math.min(999, parseInt($('#goalIn').value.replace(/\D/g, ''), 10) || 0);
+  settings.goal = v; saveSettings();
+  var box = $('#statsBody .goal'); if (box) box.outerHTML = goalHTML();
+  toast(v ? 'Obiettivo: ' + v + (v === 1 ? ' libro' : ' libri') + ' quest\'anno.' : 'Obiettivo tolto.');
+}
 function openStats() {
   var books = tabBooks().filter(hasData);
   if (!books.length) { toast('Aggiungi qualche libro per vedere le statistiche.'); return; }
@@ -3258,7 +3550,7 @@ function openStats() {
     return '<li><b>' + esc(x.p) + '</b> · ' + esc(x.t) + (x.pd ? ' <small>dal ' + esc(L.itDate(x.pd)) + ', ' + esc(L.agoText(Date.parse(x.pd))) + '</small>' : '') + '</li>';
   }).join('') + '</ul></section>' : '';
   $('#statsH').textContent = 'Statistiche · ' + (tab === 'wish' ? 'Desideri' : 'Libreria');
-  $('#statsBody').innerHTML = '<div class="tiles">' + tiles + '</div>' + loans +
+  $('#statsBody').innerHTML = '<div class="tiles">' + tiles + '</div>' + (tab === 'lib' ? goalHTML() : '') + loans + (tab === 'lib' ? seriesStatsHTML() : '') +
     barsHTML('Autori più presenti', st.topAuthors, true) + barsHTML('Case editrici', st.topPublishers, true) +
     barsHTML('Generi', st.topGenres, true) + barsHTML('Scaffali', st.topShelves, true) + barsHTML('Anno di pubblicazione, per decennio', st.byDecade, false) +
     barsHTML('Libri letti, per anno', st.byReadYear, false) +
@@ -3348,6 +3640,7 @@ list.addEventListener('input', function (e) {
   else if (k === 'c') { b.c = L.parseNum(el.value); }
   else if (k === 'i') { var w = el.value.replace(/[^\dXx]/g, '').toUpperCase(); if (w !== el.value) el.value = w; b.i = w; }
   else if (k === 'pg') { var pv = el.value.replace(/\D/g, '').slice(0, 5); if (pv !== el.value) el.value = pv; b.pg = pv; }
+  else if (k === 'sn' || k === 'sq') { var sv = el.value.replace(/\D/g, '').slice(0, 3); if (sv !== el.value) el.value = sv; b[k] = sv; }
   else { b[k] = el.value.replace(/\s*[\r\n]+\s*/g, ' '); if (el.tagName === 'TEXTAREA') autosize(el); }
   if (b.g.indexOf(k) >= 0) {
     b.g = b.g.filter(function (x) { return x !== k; });
@@ -3363,6 +3656,7 @@ list.addEventListener('change', function (e) {
   if (!el.dataset || !el.dataset.k) return;
   var row = el.closest('.row'), b = row && get(row.dataset.id);
   if (!b) return;
+  if (el.dataset.k === 'se' || el.dataset.k === 'sn' || el.dataset.k === 'sq') seriesChanged(b, row, el.dataset.k);
   if (el.dataset.k === 'c') el.value = b.c == null ? '' : L.fmtNum(b.c);
   if (el.dataset.k === 'i') {
     var code = L.toIsbn13(b.i);
@@ -3380,6 +3674,7 @@ list.addEventListener('change', function (e) {
 list.addEventListener('toggle', function (e) {
   var d = e.target;
   if (!d.classList || !d.classList.contains('desc')) return;
+  if (d.classList.contains('quotes')) { quoteOpen[d.dataset.id] = d.open; return; }
   descOpen[d.dataset.id] = d.open;
   if (d.open) loadDesc(d.dataset.id, false);
 }, true);
@@ -3413,6 +3708,10 @@ list.addEventListener('click', function (e) {
   else if (act === 'share') { var sb = get(id); if (sb) openShare([sb], { kind: 'book' }); }
   else if (act === 'tolib') moveToLib(id);
   else if (act === 'addcopy') addCopy(id);
+  else if (act === 'serall') seriesAll(id);
+  else if (act === 'sermiss') seriesMissing(id);
+  else if (act === 'quoteadd') openQuote(id, null);
+  else if (act === 'quoteedit') openQuote(id, +btn.dataset.i);
   else if (act === 'descretry') { var db = get(id); if (db) { db.dsn = 0; loadDesc(id, true); } }
   else if (act === 'descmore') { descFull[id] = true; paintDesc(id); }
   else if (act === 'descdel') { var dd = get(id); if (dd) { dd.ds = ''; dd.dsf = ''; dd.dsl = ''; dd.dsn = Date.now(); touch(); paintDesc(id); toast('Descrizione rimossa'); } }
@@ -3522,6 +3821,8 @@ document.addEventListener('keydown', function (e) {
   if (!$('#svcInSheet').hidden) { closeSvcImport(); return; }
   if (!$('#shareSheet').hidden) { closeShare(); return; }
   if (!$('#importSheet').hidden) { closeImport(); return; }
+  if (!$('#quoteSheet').hidden) { closeQuote(); return; }
+  if (!$('#newsSheet').hidden) { $('#newsSheet').hidden = true; return; }
   ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });
   if (!$('#loanSheet').hidden) closeLoan();
 });
@@ -3547,7 +3848,9 @@ $('#btnView').addEventListener('click', function () { setView(settings.view === 
 $('#btnCheck').addEventListener('click', function () { startScan('check'); });
 $('#btnStats').addEventListener('click', openStats);
 $('#statsClose').addEventListener('click', function () { $('#statsSheet').hidden = true; });
+$('#statsBody').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.id === 'goalIn') { e.preventDefault(); saveGoal(); } });
 $('#statsBody').addEventListener('click', function (e) {
+  if (e.target.closest('#goalSave')) { saveGoal(); return; }
   var r = e.target.closest('[data-q]');
   if (!r) return;
   q = r.dataset.q; $('#q').value = q; flt = '';
@@ -3581,6 +3884,7 @@ $('#pubList').addEventListener('change', function (e) {
   document.querySelectorAll('#pubList input[data-g="' + gi + '"]').forEach(function (cb) { var me = cb.dataset.n === e.target.value; cb.disabled = me; if (me) cb.checked = true; });
 });
 $('#btnFill').addEventListener('click', fillMissing);
+$('#btnDescAll').addEventListener('click', allDescs);
 $('#btnMergeDups').addEventListener('click', mergeDups);
 $('#dupCopies').addEventListener('click', dupCopies);
 $('#dupMerge').addEventListener('click', dupMerge);
@@ -3935,6 +4239,7 @@ try { if (navigator.storage && navigator.storage.persisted) navigator.storage.pe
 updateSummary();
 persist();
 checkIncoming();
+loadNews(); setTimeout(autoNews, 12000);
 /* schermata d'apertura (solo app installata): resta almeno ~0,7 s dall'avvio, poi sfuma */
 (function () {
   var el = document.getElementById('splash');

@@ -91,6 +91,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
     <button class="chip todo" id="btnTodo" hidden>Completa con l'ISBN</button>
     <button class="chip" id="fltGuess" aria-pressed="false" hidden>Da verificare</button>
     <span class="active-flt" id="activeFlt"></span>
+    <button class="chip" id="btnNews" hidden>Novità dei tuoi autori</button>
     <button class="chip share" id="btnShareWish" hidden>Condividi la lista</button>
   </div>
   </div>
@@ -222,6 +223,35 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <button class="btn" type="button" id="covLater">Non ora</button>
     </div>
   </div>
+</div>
+
+<div class="sheet" id="newsSheet" hidden>
+  <div class="sheet-in wide" role="dialog" aria-modal="true" aria-labelledby="newsH">
+    <h2 id="newsH">Novità dei tuoi autori</h2>
+    <p class="msg" id="newsMsg" aria-live="polite"></p>
+    <ul class="news" id="newsList"></ul>
+    <label class="check small"><input type="checkbox" id="newsAuto"><span>Controlla da solo ogni due settimane (serve la chiave Google)</span></label>
+    <div class="row-btns">
+      <button class="btn" type="button" id="newsAgain">Cerca di nuovo</button>
+      <button class="btn" type="button" id="newsClose">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="quoteSheet" hidden>
+  <form class="sheet-in" id="quoteForm" role="dialog" aria-modal="true" aria-labelledby="quoteH">
+    <h2 id="quoteH">Citazione o appunto</h2>
+    <p class="msg" id="quoteBook"></p>
+    <label class="field"><span>Testo</span><textarea id="quoteText" rows="6" maxlength="1500" placeholder="Scrivi il passaggio, oppure leggilo da una foto della pagina"></textarea></label>
+    <button class="btn" type="button" id="quotePhoto">Leggi da una foto della pagina</button>
+    <p class="msg" id="quoteMsg" aria-live="polite"></p>
+    <label class="field q-pg"><span>Pagina (se vuoi)</span><input id="quotePage" type="text" inputmode="numeric" maxlength="5" autocomplete="off"></label>
+    <div class="row-btns">
+      <button class="btn primary" type="submit" id="quoteSave">Salva</button>
+      <button class="btn" type="button" id="quoteDel" hidden>Elimina</button>
+      <button class="btn" type="button" id="quoteCancel">Annulla</button>
+    </div>
+  </form>
 </div>
 
 <div class="sheet" id="svcSheet" hidden>
@@ -377,6 +407,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
         <button class="btn mitem" id="btnPubs"><b>Uniforma le case editrici</b><small>Stesso editore scritto in modi diversi: scegli il nome da usare.</small></button>
         <button class="btn mitem" id="btnGuessPub"><b>Deduci le case editrici mancanti</b><small>Dal codice dell'editore contenuto nell'ISBN.</small></button>
         <button class="btn mitem" id="btnFill"><b>Completa genere, pagine e copertine</b><small>Cerca di nuovo i dati che mancano.</small></button>
+        <button class="btn mitem" id="btnDescAll"><b>Scarica tutte le descrizioni</b><small>Le cerca per i libri che non l'hanno, così le leggi anche senza rete.</small></button>
         <button class="btn mitem" id="btnCovers"><b>Cerca copertine più grandi</b><small>Per vederle meglio quando le ingrandisci.</small></button>
         <button class="btn mitem" id="btnMergeDups"><b>Unisci i doppioni</b><small>Stesso libro inserito più volte; non tocca le copie segnate.</small></button>
         <button class="btn mitem" id="btnClearGuess"><b>Svuota le ipotesi</b><small>Cancella i dati segnati «Da verificare».</small></button>
@@ -582,6 +613,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 <datalist id="loanNames"></datalist>
 
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<input class="sr" id="fileQuote" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileCover" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="filePrice" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileGal" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true">

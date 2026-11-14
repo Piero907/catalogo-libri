@@ -447,6 +447,43 @@ Nella scheda aperta c'e' il riquadro "Descrizione": toccalo per aprirlo.
 - Se non riguarda il tuo libro: "Non e' questo libro: rimuovila".
 - Se non la trova: "Cerca di nuovo" (le banche dati si aggiornano).
 Ogni ricerca usa 1-2 richieste Google del contatore giornaliero.
+- Tutte insieme: Opzioni > Sistema l'elenco > "Scarica tutte le
+  descrizioni". Si ferma da sola prima di finire le ricerche Google del
+  giorno; il giorno dopo riprende da dove era arrivata.
+- La ricerca nell'elenco trova anche le parole delle descrizioni e
+  delle citazioni.
+
+SERIE E COLLANE
+---------------
+Nella scheda aperta (con i campi in piu' attivi): "Serie o collana",
+"Volume" e "di" (quanti volumi in tutto, se lo sai).
+- Sotto compare quali numeri hai e quali mancano; "Metti i mancanti nei
+  Desideri" li aggiunge con un tocco, "Vedi la serie" li mostra tutti.
+- Il riepilogo di tutte le serie e' in Statistiche.
+- Serie e numero vanno scritti a mano: le banche dati non li danno.
+
+CITAZIONI E APPUNTI
+-------------------
+Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
+- Scrivi il testo, oppure "Leggi da una foto della pagina": l'app legge
+  il testo, tu tieni il passaggio che ti interessa e correggi.
+- Puoi indicare la pagina. Tocca una citazione per cambiarla o
+  eliminarla. Sono salvate nel libro e nel backup.
+
+OBIETTIVO DI LETTURA
+--------------------
+Statistiche (scheda Libreria) > "Obiettivo di lettura": scrivi quanti
+libri vuoi leggere nell'anno. Contano i libri segnati "Letto" con la
+data nell'anno; la tacca sulla barra indica a che punto dell'anno sei.
+
+NOVITA' DEI TUOI AUTORI
+-----------------------
+Scheda Desideri > "Novita' dei tuoi autori": cerca su Google Libri i
+libri usciti da un anno a questa parte degli autori che hai di piu'
+(fino a 8) e che non hai gia'. "Metti nei Desideri" o "Non mi
+interessa". Usa una richiesta Google per autore. Con la chiave Google
+controlla da solo ogni due settimane e avvisa se trova qualcosa (si
+puo' spegnere nella stessa finestra).
 
 PREFERITI E CONDIVISIONE CON GLI AMICI
 --------------------------------------

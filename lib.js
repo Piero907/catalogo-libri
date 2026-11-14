@@ -623,6 +623,7 @@
     { k: 't', h: 'Titolo', w: 42 }, { k: 'a', h: 'Autore', w: 28 }, { k: 'e', h: 'Casa editrice', w: 22 },
     { k: 'y', h: 'Anno', w: 7, type: 'n' }, { k: 'c', h: 'Costo', w: 11, type: 'c' }, { k: 'i', h: 'ISBN', w: 16, type: 'x' },
     { k: 'sh', h: 'Scaffale', w: 16, opt: true }, { k: 'gen', h: 'Genere', w: 16, opt: true }, { k: 'pg', h: 'Pagine', w: 8, type: 'n', opt: true },
+    { k: 'se', h: 'Serie', w: 22, opt: true }, { k: 'sn', h: 'Volume', w: 8, type: 'n', opt: true },
     { k: 'n', h: 'Note', w: 36, opt: true }, { k: 'p', h: 'Prestato a', w: 16, opt: true }, { k: 'pd', h: 'Data prestito', w: 13, opt: true },
     { k: 'rs', h: 'Lettura', w: 12, opt: true }, { k: 'rt', h: 'Voto', w: 7, type: 'n', opt: true }, { k: 'rd', h: 'Data lettura', w: 13, opt: true },
     { k: 'xs', h: 'Non più in libreria', w: 18, opt: true }, { k: 'xa', h: 'Dato a', w: 16, opt: true }, { k: 'xd', h: 'In data', w: 13, opt: true },
@@ -893,7 +894,7 @@
       (priced.length > 1 ? '\n\nTotale: ' + eu(Math.round(tot * 100) / 100) + (priced.length < bs.length ? ' (' + priced.length + ' libri con il prezzo)' : '') : '');
   }
 
-  var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd', 'ds'];
+  var MERGE_KEYS = ['t', 'a', 'e', 'y', 'c', 'i', 'img', 'imgL', 'sh', 'gen', 'pg', 'p', 'pd', 'rs', 'rt', 'rd', 'ds', 'se', 'sn', 'sq'];
   /* Tiene il libro piu' completo (a parita', il piu' vecchio) e lo riempie con i dati degli altri; le note si sommano. */
   function mergeBooks(group) {
     function filled(b) { return MERGE_KEYS.filter(function (k) { return b[k] != null && b[k] !== '' && b[k] !== 0; }).length + (b.n ? 1 : 0); }
@@ -902,6 +903,7 @@
     sorted.slice(1).forEach(function (o) {
       MERGE_KEYS.forEach(function (k) { if ((keep[k] == null || keep[k] === '' || keep[k] === 0) && o[k] != null && o[k] !== '' && o[k] !== 0) keep[k] = o[k]; });
       if (o.n && (keep.n || '').indexOf(o.n) < 0) keep.n = keep.n ? keep.n + ' · ' + o.n : o.n;
+      if (Array.isArray(o.qs) && o.qs.length) keep.qs = (keep.qs || []).concat(o.qs.filter(function (x) { return !(keep.qs || []).some(function (y) { return y.x === x.x; }); }));
     });
     keep.g = (keep.g || []).filter(function (k) { return keep[k]; });
     keep.cp = group.some(function (b) { return b.cp; });
@@ -1017,6 +1019,65 @@
     return cleanDesc(d && typeof d === 'object' ? d.value : d);
   }
 
+  /* ---------- serie e collane ---------- */
+  function serKey(v) { return norm(str(v).trim().replace(/\s+/g, ' ')); }
+  /* per ogni serie: volumi che hai, quelli nei Desideri, quelli che mancano (fino al totale, o fino al numero piu' alto che hai) */
+  function seriesInfo(books) {
+    var m = {};
+    (books || []).forEach(function (b) {
+      var k = serKey(b.se);
+      if (!k) return;
+      var s = m[k] || (m[k] = { key: k, name: str(b.se).trim().replace(/\s+/g, ' '), total: 0, have: [], wish: [], n: 0, nw: 0, author: '' });
+      var n = parseInt(b.sn, 10) || 0, t = parseInt(b.sq, 10) || 0;
+      if (t > s.total) s.total = t;
+      if (!s.author && b.a) s.author = str(b.a);
+      if (b.w) { s.nw++; if (n && s.wish.indexOf(n) < 0) s.wish.push(n); }
+      else if (!b.xs) { s.n++; if (n && s.have.indexOf(n) < 0) s.have.push(n); }
+    });
+    Object.keys(m).forEach(function (k) {
+      var s = m[k], num = function (a, b) { return a - b; };
+      s.have.sort(num); s.wish.sort(num);
+      var top = Math.min(300, Math.max(s.total, s.have.length ? s.have[s.have.length - 1] : 0));
+      s.missing = [];
+      for (var i = 1; i <= top; i++) if (s.have.indexOf(i) < 0) s.missing.push(i);
+      s.toAdd = s.missing.filter(function (i) { return s.wish.indexOf(i) < 0; });
+    });
+    return m;
+  }
+  /* ---------- novita' di un autore ---------- */
+  function titleKey(t) { return norm(str(t).split(/\s*[:.(\[]\s*/)[0]).replace(/[^a-z0-9]+/g, ' ').trim(); }
+  /* dai risultati di Google (i piu' recenti di un autore) tiene i libri usciti da minYear che non hai gia' */
+  function pickNews(json, author, own, minYear, maxYear) {
+    var aw = words(author), seen = {}, out = [];
+    var titles = (own && own.titles) || {}, isbns = (own && own.isbns) || {}, hide = (own && own.hide) || {};
+    parseGoogle(json).forEach(function (c) {
+      var y = parseInt(c.y, 10) || 0, k = titleKey(c.t);
+      if (!k || y < minYear || (maxYear && y > maxYear)) return;
+      var ca = words(c.a);
+      if (!aw.length || !aw.every(function (w) { return ca.indexOf(w) >= 0; })) return;
+      if (c.lang && c.lang !== 'it') return;
+      if (titles[k] || hide[k] || c.isbns.some(function (i) { return isbns[i]; })) return;
+      if (seen[k]) { if (!seen[k].img && c.img) seen[k].img = c.img; return; }
+      out.push(seen[k] = { k: k, t: c.t, a: c.a, e: c.e, y: c.y, i: c.i, img: c.img, by: author });
+    });
+    return out.sort(function (x, y) { return y.y - x.y; });
+  }
+  /* ---------- testo di una pagina letta da foto: righe riunite in paragrafi ---------- */
+  function ocrParagraph(text, max) {
+    var out = '', gap = false;
+    str(text).replace(/\r/g, '').split('\n').forEach(function (line) {
+      line = line.replace(/[|_~^`]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!line) { gap = true; return; }
+      if ((line.match(/[A-Za-zÀ-ÿ]/g) || []).length < 2) return;
+      if (!out) out = line;
+      else if (/[A-Za-zÀ-ÿ]-$/.test(out) && /^[a-zà-ÿ]/.test(line)) out = out.slice(0, -1) + line;
+      else if (gap && /[.!?»”"]$/.test(out)) out += '\n' + line;
+      else out += ' ' + line;
+      gap = false;
+    });
+    return out.slice(0, max || 1500).trim();
+  }
+
   return {
     str: str, norm: norm, parseNum: parseNum, fmtNum: fmtNum, yearOf: yearOf,
     sortKeyTitle: sortKeyTitle, sortKeyAuthor: sortKeyAuthor,
@@ -1028,6 +1089,6 @@
     csvCell: csvCell, buildCSV: buildCSV, buildTSV: buildTSV, rowsFor: rowsFor, colsFor: colsFor, itDate: itDate,
     genreIt: genreIt, crc32: crc32, zipStore: zipStore, buildXLSX: buildXLSX, publisherGroups: publisherGroups, pubTokens: pubTokens,
     computeStats: computeStats, agoText: agoText, coverCandidates: coverCandidates, googleVolumeId: googleVolumeId, bestGoogleImage: bestGoogleImage, getJson: getJson,
-    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, analyzeDups: analyzeDups, mergeBooks: mergeBooks, cleanDesc: cleanDesc, guessLang: guessLang, pickDesc: pickDesc, olDesc: olDesc, DESC_MAX: DESC_MAX, READ_LABEL: READ_LABEL, GONE_LABEL: GONE_LABEL
+    parseSbn: parseSbn, sbnUrl: sbnUrl, deweyGenre: deweyGenre, dupGroups: dupGroups, analyzeDups: analyzeDups, mergeBooks: mergeBooks, serKey: serKey, seriesInfo: seriesInfo, titleKey: titleKey, pickNews: pickNews, ocrParagraph: ocrParagraph, cleanDesc: cleanDesc, guessLang: guessLang, pickDesc: pickDesc, olDesc: olDesc, DESC_MAX: DESC_MAX, READ_LABEL: READ_LABEL, GONE_LABEL: GONE_LABEL
   };
 });
