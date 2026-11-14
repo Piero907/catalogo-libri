@@ -94,8 +94,9 @@ COME SI USA
   all'apertura successiva. Per averla subito: Menu > "Aggiorna adesso".
 - In alto: "Next Libris" e sotto "Libreria di <il tuo nome>". Senza nome
   c'e' "Scrivi il tuo nome", che apre Opzioni > Condivisione.
-- Scheda aperta: in alto i pulsanti con la scritta ("Presta", che mostra
-  anche lo stato: Prestato, Venduto, Regalato, Smarrito; "Desideri" o
+- Scheda aperta: in alto i pulsanti con la scritta ("Presta, vendi o
+  regala", che poi mostra lo stato: Prestato, Venduto o Regalato;
+  "Desideri" o
   "Libreria" per spostare il libro; "Elimina", in rosso), a destra da sola
   la freccetta che chiude la scheda. Sul telefono "Elimina" va nella riga
   sotto, lontano dalla freccetta. Dopo "Elimina" c'e' sempre "Annulla".
@@ -221,7 +222,7 @@ Si apre in tre modi:
 - toccando "Filtri" accanto alla ricerca.
 Il pannello occupa meno di meta' schermo, cosi' l'elenco resta visibile
 accanto e cambia subito. Dentro trovi: Ordina per; Mostra (tutti, in
-prestito, venduti/regalati/smarriti, da verificare, copie e doppioni);
+prestito, venduti e regalati, da verificare, copie e doppioni);
 Lettura (da leggere, in lettura, letti, non indicato); Scaffale; Genere.
 Ogni voce ha il numero dei libri. I filtri si sommano (es. "Da leggere" +
 scaffale "Studio"); "Mostra N libri" chiude il pannello, "Azzera" toglie
@@ -250,7 +251,7 @@ titolo e autore (piu' le etichette importanti, come
 la freccetta per aprire la scheda con tutti i dati e modificarli; la
 freccetta in alto a destra la richiude. Accanto alla freccetta, in alto,
 ci sono la X (elimina il libro, con "Annulla" subito dopo) e il tasto per
-prestato / venduto / regalato / smarrito (azzurro quando il libro e' fuori
+prestare, vendere o regalare (azzurro quando il libro e' fuori
 casa: toccalo per cambiare o per segnarlo come tornato); le etichette
 (Prestato, Da verificare...) sono in alto anche loro. In fondo restano i
 tasti per cercare di nuovo il libro o il prezzo. I libri senza titolo (per esempio
@@ -294,23 +295,24 @@ l'app dice subito se il libro e' gia' tuo, con lo scaffale e l'eventuale
 prestito, oppure se e' nei Desideri. Se non ce l'hai cerca il titolo e ti
 propone "Aggiungi alla Libreria" o "Aggiungi ai Desideri".
 
-PRESTATO, VENDUTO, REGALATO, SMARRITO
--------------------------------------
-Sulla scheda del libro il pulsante con la freccia apre "Dov'e' il libro?":
-scegli Prestato, Venduto, Regalato o Smarrito.
-- Prestato: a chi e da quando. Compare l'etichetta "Prestato a ...";
-  toccala quando te lo restituiscono. Il pulsante "Prestati", accanto a
-  Libreria e Desideri, mostra tutti i libri fuori casa, dai prestiti piu'
-  vecchi (toccalo di nuovo per vedere tutto).
-- Venduto: la data (e, se vuoi, a chi). Regalato: a chi e la data.
-  Smarrito: da quando.
-Venduti, regalati e smarriti restano nell'elenco in grigio, con
-l'etichetta (es. "Venduto il 13/11/2026"), ma non contano piu' nel numero
-dei libri ne' nel valore della libreria. Nel pannello Filtri, "Venduti,
-regalati, smarriti" li mostra da soli; le Statistiche li contano a parte;
-Excel e stampa hanno le colonne in piu'. "Ce l'ho gia'?" risponde "Non ce
-l'hai piu'". Se torna a casa: tocca l'etichetta > "E' tornato in libreria"
-(o "Ritrovato").
+PRESTATO, VENDUTO O REGALATO
+----------------------------
+Sulla scheda del libro il tasto "Presta, vendi o regala" apre la
+finestra con tre scelte, spiegate sotto i tasti:
+- Prestato: a chi e da quando. Resta tuo: compare l'etichetta "Prestato
+  a ..."; toccala quando te lo restituiscono ("Restituito"). Il pulsante
+  "Prestati", accanto a Libreria e Desideri, mostra tutti i libri fuori
+  casa, dai prestiti piu' vecchi (toccalo di nuovo per vedere tutto).
+- Venduto (la data e, se vuoi, a chi) o Regalato (a chi e la data): non
+  e' piu' tuo, ma resta nell'elenco in grigio come storico della
+  libreria, con l'etichetta (es. "Venduto il 13/11/2026"); non conta piu'
+  nel numero dei libri ne' nel valore della libreria. Nel pannello
+  Filtri, "Venduti e regalati" li mostra da soli; le Statistiche li contano a parte; Excel
+  e stampa hanno le colonne in piu'. "Ce l'ho gia'?" risponde "Non ce
+  l'hai piu'". Se torna a casa: tocca l'etichetta > "E' tornato in
+  libreria".
+I libri segnati come smarriti con le versioni precedenti restano com'erano
+e si possono sempre riportare in libreria ("Ritrovato").
 
 COPIE DELLO STESSO LIBRO
 ------------------------
@@ -352,7 +354,7 @@ Nella scheda aperta, in alto accanto alla X e alla freccetta:
 - libri dei Desideri: il tasto con i libri sullo scaffale e la freccia
   ("Sposta in Libreria", cioe' l'ho comprato: diventa "Da leggere").
 Il libro passa nell'altro elenco gia' chiuso, in vista compatta. Spostando
-nei Desideri si tolgono prestito, venduto/regalato/smarrito e lettura, che
+nei Desideri si tolgono prestito, vendita, regalo e lettura, che
 li' non servono; subito dopo c'e' "Annulla", che rimette tutto com'era.
 
 FOTO DALL'APP

@@ -627,11 +627,12 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 
 <div class="sheet" id="loanSheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="loanH">
-    <h2 id="loanH">Presta il libro</h2>
+    <h2 id="loanH">Presta, vendi o regala</h2>
     <p class="msg" id="loanBook"></p>
-    <div class="seg kinds" id="loanKind" role="group" aria-label="Dov'è il libro">
-      <button type="button" data-k="p" aria-pressed="true">Prestato</button><button type="button" data-k="v" aria-pressed="false">Venduto</button><button type="button" data-k="r" aria-pressed="false">Regalato</button><button type="button" data-k="s" aria-pressed="false">Smarrito</button>
+    <div class="seg kinds" id="loanKind" role="group" aria-label="Presta, vendi o regala">
+      <button type="button" data-k="p" aria-pressed="true">Prestato</button><button type="button" data-k="v" aria-pressed="false">Venduto</button><button type="button" data-k="r" aria-pressed="false">Regalato</button><button type="button" data-k="s" aria-pressed="false" hidden>Smarrito</button>
     </div>
+    <p class="hint" id="loanHint"></p>
     <label class="field" id="loanWhoF"><span id="loanWhoL">A chi</span><input id="loanWho" type="text" autocomplete="off" placeholder="Nome" role="combobox" aria-expanded="false"></label>
     <label class="field"><span id="loanDateL">Dal giorno</span><input id="loanDate" type="date"></label>
     <p class="msg bad" id="loanErr" hidden></p>

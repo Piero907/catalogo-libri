@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 67, date: '2026-11-14', note: 'Descrizione cercata da sola dopo l\'aggiunta, anche senza rete' };
+var APP_VERSION = { v: 68, date: '2026-11-14', note: '«Presta, vendi o regala» al posto di «Presta»; tolto Smarrito' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -2476,9 +2476,9 @@ function rowHTML(b, dups, ex) {
     var stateOn = !!(b.p || b.xs);
     /* azioni con icona e scritta, tutte nello stesso stile; la × (elimina) e la freccetta (chiudi) restano solo icona */
     function act(a, ic, label, title, cls) { return '<button class="ico act' + (cls || '') + '" data-act="' + a + '" title="' + esc(title) + '" aria-label="' + esc(title) + '">' + icon(ic) + '<span class="al" aria-hidden="true">' + esc(label) + '</span></button>'; }
-    var stateLabel = b.xs ? (L.GONE_LABEL[b.xs] || 'Non più qui') : b.p ? 'Prestato' : 'Presta';
+    var stateLabel = b.xs ? (L.GONE_LABEL[b.xs] || 'Non più qui') : b.p ? 'Prestato' : 'Presta, vendi o regala';
     var loanBtn = (!busy && !b.w && hasData(b) && (openCard || !stateOn))
-      ? act('loan', 'loan', stateLabel, stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Segna il libro come prestato, venduto, regalato o smarrito', stateOn ? ' on' : '') : '';
+      ? act('loan', 'loan', stateLabel, stateOn ? (b.xs ? goneText(b) : loanText(b)) + ': tocca per cambiare' : 'Presta, vendi o regala il libro', stateOn ? ' on' : '') : '';
     var delBtn = act('del', 'x', 'Elimina', 'Elimina il libro', ' danger');
     var moveBtn = !busy && hasData(b) ? (b.w
       ? act('tolib', 'tolib', 'Libreria', 'Sposta in Libreria (l\'ho comprato)', ' move')
@@ -2598,7 +2598,7 @@ function renderList() {
     var only = !q && activeCount() === 1;
     list.innerHTML = only && flt === 'loan'
       ? '<p class="none">Nessun libro in prestito. Per prestarne uno apri la sua scheda con la freccetta e tocca il tasto con la freccia verso destra.</p>'
-      : only && flt === 'gone' ? '<p class="none">Nessun libro venduto, regalato o smarrito.</p>'
+      : only && flt === 'gone' ? '<p class="none">Nessun libro venduto o regalato.</p>'
       : '<p class="none">Nessun libro corrisponde ' + (activeCount() ? (q ? 'alla ricerca e ai filtri.' : 'ai filtri.') : 'alla ricerca.') + '</p><p><button class="btn" data-act="clearflt">' + (activeCount() ? (q ? 'Azzera ricerca e filtri' : 'Azzera i filtri') : 'Cancella la ricerca') + '</button></p>';
     return;
   }
@@ -3302,7 +3302,7 @@ function setRead(id, what, v) {
 /* ---------- pannello Filtri (a sinistra): si apre dal pulsante o trascinando il pollice dal bordo sinistro verso destra ---------- */
 var NONE = '\u0001';
 var READ_TXT = { da: 'Da leggere', in: 'In lettura', ok: 'Letti', no: 'Non indicato' };
-var FLT_TXT = { qs: 'Con citazioni', fav: 'Preferiti', loan: 'In prestito', gone: 'Venduti, regalati, smarriti', guess: 'Da verificare', dup: 'Copie e doppioni' };
+var FLT_TXT = { qs: 'Con citazioni', fav: 'Preferiti', loan: 'In prestito', gone: 'Venduti e regalati', guess: 'Da verificare', dup: 'Copie e doppioni' };
 function facetKey(s) { var k = L.norm(String(s || '').trim().replace(/\s+/g, ' ')); return k || NONE; }
 /* scaffali o generi del tab corrente: chiave normalizzata, nome piu' usato, quanti libri */
 function facets(field) {
@@ -4125,7 +4125,7 @@ async function printCatalog() {
   if (has('p')) cols.push(['p', 'Prestato a']);
   if (has('xs')) cols.push(['xs', 'Non più in libreria']);
   var total = books.reduce(function (s, b) { return s + (b.xs ? 0 : b.c || 0); }, 0);
-  var filt = [q ? 'ricerca «' + q + '»' : '', flt === 'loan' ? 'solo libri in prestito' : '', flt === 'gone' ? 'solo venduti, regalati, smarriti' : '', flt === 'guess' ? 'solo da verificare' : '', flt === 'dup' ? 'solo copie e doppioni' : '', readFlt ? 'lettura: ' + READ_TXT[readFlt].toLowerCase() : '', shFlt ? 'scaffale: ' + facetName('sh', shFlt) : '', genFlt ? 'genere: ' + facetName('gen', genFlt) : '', autFlt ? 'autore: ' + autName : '', edFlt ? 'casa editrice: ' + facetName('e', edFlt) : ''].filter(Boolean).join(', ');
+  var filt = [q ? 'ricerca «' + q + '»' : '', flt === 'loan' ? 'solo libri in prestito' : '', flt === 'gone' ? 'solo venduti e regalati' : '', flt === 'guess' ? 'solo da verificare' : '', flt === 'dup' ? 'solo copie e doppioni' : '', readFlt ? 'lettura: ' + READ_TXT[readFlt].toLowerCase() : '', shFlt ? 'scaffale: ' + facetName('sh', shFlt) : '', genFlt ? 'genere: ' + facetName('gen', genFlt) : '', autFlt ? 'autore: ' + autName : '', edFlt ? 'casa editrice: ' + facetName('e', edFlt) : ''].filter(Boolean).join(', ');
   function cell(b, k) {
     if (k === 'c') return b.c == null ? '' : eur(b.c);
     if (k === 'rs') return readLabel(b);
@@ -4156,16 +4156,20 @@ var loanId = null;
    ma non contano piu' nel numero dei libri ne' nel valore della libreria. */
 var loanKind = 'p';
 var KIND_TXT = {
-  p: { h: 'Presta il libro', who: 'A chi', date: 'Dal giorno', need: 'Scrivi a chi lo presti.' },
-  v: { h: 'Libro venduto', who: 'A chi (facoltativo)', date: 'Venduto il' },
-  r: { h: 'Libro regalato', who: 'A chi', date: 'Regalato il', need: 'Scrivi a chi l\'hai regalato.' },
+  p: { h: 'Presta, vendi o regala', who: 'A chi', date: 'Dal giorno', need: 'Scrivi a chi lo presti.', hint: 'Prestato: resta tuo, e quando torna tocchi «Restituito».' },
+  v: { h: 'Presta, vendi o regala', who: 'A chi (facoltativo)', date: 'Venduto il', hint: 'Venduto: non è più tuo; resta nell\'elenco, in grigio, come storico della libreria.' },
+  r: { h: 'Presta, vendi o regala', who: 'A chi', date: 'Regalato il', need: 'Scrivi a chi l\'hai regalato.', hint: 'Regalato: non è più tuo; resta nell\'elenco, in grigio, come storico della libreria.' },
   s: { h: 'Libro smarrito', who: '', date: 'Smarrito dal' }
 };
 function setLoanKind(k) {
   var b = get(loanId);
   loanKind = KIND_TXT[k] ? k : 'p';
   var t = KIND_TXT[loanKind];
-  Array.prototype.forEach.call($('#loanKind').querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x.dataset.k === loanKind ? 'true' : 'false'); });
+  Array.prototype.forEach.call($('#loanKind').querySelectorAll('button'), function (x) {
+    x.setAttribute('aria-pressed', x.dataset.k === loanKind ? 'true' : 'false');
+    if (x.dataset.k === 's') x.hidden = !(b && b.xs === 's');      // smarrito: solo per i libri segnati cosi' in passato
+  });
+  $('#loanHint').textContent = t.hint || '';
   $('#loanH').textContent = b && loanKind === 'p' && b.p ? 'In prestito' : t.h;
   $('#loanWhoF').hidden = !t.who;
   $('#loanWhoL').textContent = t.who || 'A chi';
