@@ -1375,7 +1375,7 @@ body.selecting .cover.sel[data-ord]::after{content:attr(data-ord);display:grid;p
 #logSheet{z-index:37}   /* sopra le Opzioni da cui si apre */
 
 /* ---- donazioni: riga in fondo, promemoria ogni 50 libri, finestra «Sostieni» ---- */
-.don-row{display:flex;align-items:center;gap:4px;margin:16px 0 6px;padding:2px 4px 2px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent)}
+.don-row{display:flex;align-items:center;gap:4px;margin:4px 0 12px;padding:2px 4px 2px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent)}
 .don-open{flex:1;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;border:0;background:none;color:inherit;font:inherit;font-size:13.5px;line-height:1.35;text-align:left;cursor:pointer}
 .don-ico{font-size:18px;line-height:1}
 .don-row .ico{color:var(--accent)}

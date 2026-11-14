@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 78, date: '2026-11-14', note: 'Sostieni Next Libris (donazioni con PayPal)' };
+var APP_VERSION = { v: 79, date: '2026-11-14', note: 'Riga «Sostieni» in cima all\'elenco' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -2123,7 +2123,7 @@ $('#verLog').addEventListener('click', openLog);
 $('#logClose').addEventListener('click', function () { closeLog(); });
 $('#logSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeLog(); });
 window.addEventListener('popstate', function (e) { if (!$('#logSheet').hidden && !(e.state && e.state.log)) { logPushed = false; closeLog(true); } });
-/* ---- Donazioni: l'app e' gratis. Riga in fondo all'elenco (la X la nasconde per 10 giorni), promemoria ogni 50 libri,
+/* ---- Donazioni: l'app e' gratis. Riga in cima all'elenco (la X la nasconde per 10 giorni), promemoria ogni 50 libri,
    finestra «Sostieni» che apre PayPal. Al ritorno: se si e' rimasti su PayPal almeno 20 secondi le richieste tacciono 3 mesi,
    altrimenti 10 giorni (l'app non puo' sapere se il pagamento c'e' stato: senza server non c'e' una conferma vera). ---- */
 var DON_URL = 'https://www.paypal.me/PieroRagusa907';
