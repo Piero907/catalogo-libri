@@ -272,7 +272,9 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
             <label><input type="radio" name="bkOrd" value="sel" checked><span>Nell'ordine in cui li hai toccati</span></label>
             <label><input type="radio" name="bkOrd" value="year"><span>Per anno di pubblicazione</span></label>
             <label><input type="radio" name="bkOrd" value="list"><span>Come nell'elenco</span></label>
+            <label><input type="radio" name="bkOrd" value="custom"><span>Personalizzato: sposti i libri o scrivi i numeri</span></label>
           </div>
+          <p class="hint bk-cust-hint" id="bkCustHint" hidden>Trascina la maniglia ≡ o usa le frecce per cambiare l'ordine (i numeri si rifanno di seguito); tocca un numero per scriverlo a mano.</p>
           <label class="bk-from">Primo numero <input id="bkFrom" type="text" inputmode="numeric" maxlength="3" value="1" autocomplete="off"></label>
           <ol class="bk-prev" id="bkPrev" aria-label="Anteprima della numerazione"></ol>
         </div>

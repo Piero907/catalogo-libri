@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 68, date: '2026-11-14', note: '«Presta, vendi o regala» al posto di «Presta»; tolto Smarrito' };
+var APP_VERSION = { v: 69, date: '2026-11-14', note: 'Numerazione dei volumi personalizzata' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1398,8 +1398,12 @@ $('#selAll').addEventListener('click', function () {
 /* numerazione dei volumi: ordine scelto, primo numero, anteprima */
 var bkFromTouched = false;
 function numFrom() { return Math.max(1, Math.min(999, parseInt($('#bkFrom').value, 10) || 1)); }
-function numOrder() {
-  var how = ($('#bulkSheet').querySelector('input[name="bkOrd"]:checked') || {}).value || 'sel';
+var bkCust = null;                                   // ordine personalizzato: { ids: [...], nums: { id: numero } }
+function numHow() { return ($('#bulkSheet').querySelector('input[name="bkOrd"]:checked') || {}).value || 'sel'; }
+function numOrder(how) {
+  how = how || numHow();
+  if (how === 'custom' && bkCust) return bkCust.ids.map(get).filter(function (b) { return b && sel[b.id]; });
+  if (how === 'custom') how = 'sel';
   if (how === 'list') return visible().filter(function (b) { return sel[b.id]; });
   var books = selOrdered();
   if (how === 'year') books = books.slice().sort(function (x, y) { return (parseInt(x.y, 10) || 9999) - (parseInt(y.y, 10) || 9999) || sel[x.id] - sel[y.id]; });
@@ -1415,15 +1419,86 @@ function numPreview() {
     if (val) state.books.forEach(function (b) { if (!sel[b.id] && L.serKey(b.se) === L.serKey(val)) max = Math.max(max, parseInt(b.sn, 10) || 0); });
     $('#bkFrom').value = String(max + 1);
   }
-  var from = numFrom();
+  var from = numFrom(), how = numHow();
+  $('#bkCustHint').hidden = how !== 'custom';
+  $('#bkPrev').classList.toggle('cust', how === 'custom');
+  if (how === 'custom') {
+    var ids = numOrder().map(function (b) { return b.id; });
+    $('#bkPrev').innerHTML = ids.map(function (id, i) {
+      var b = get(id), n = bkCust.nums[id];
+      return '<li data-id="' + id + '"><button type="button" class="bk-drag" aria-label="Trascina per spostare">≡</button>' +
+        '<input class="bk-n" type="text" inputmode="numeric" maxlength="3" value="' + (n || '') + '" aria-label="Numero del volume">' +
+        '<span>' + esc(b.t || b.i || 'Senza titolo') + (b.y ? ' <small>' + esc(b.y) + '</small>' : '') + '</span>' +
+        '<button type="button" class="bk-mv" data-mv="-1" aria-label="Sposta su"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+        '<button type="button" class="bk-mv" data-mv="1" aria-label="Sposta giù"' + (i === ids.length - 1 ? ' disabled' : '') + '>↓</button></li>';
+    }).join('');
+    return;
+  }
   $('#bkPrev').innerHTML = numOrder().map(function (b, i) {
     return '<li><b>' + (from + i) + '</b><span>' + esc(b.t || b.i || 'Senza titolo') + (b.y ? ' <small>' + esc(b.y) + '</small>' : '') + '</span></li>';
   }).join('');
 }
+function custRenumber() { var from = numFrom(); bkCust.ids.forEach(function (id, i) { bkCust.nums[id] = from + i; }); }
+/* numeri da assegnare: [{ b, n }] oppure null (con l'avviso) se i numeri scritti a mano non vanno */
+function numPlan() {
+  var from = numFrom();
+  if (numHow() !== 'custom') return numOrder().map(function (b, i) { return { b: b, n: from + i }; });
+  var plan = numOrder().map(function (b) { return { b: b, n: parseInt(bkCust.nums[b.id], 10) || 0 }; }), seen = {};
+  for (var i = 0; i < plan.length; i++) {
+    if (!(plan[i].n >= 1 && plan[i].n <= 999)) { toast('Manca il numero di «' + (plan[i].b.t || plan[i].b.i) + '».'); return null; }
+    if (seen[plan[i].n]) { toast('Il numero ' + plan[i].n + ' è usato due volte: correggi l\'anteprima.'); return null; }
+    seen[plan[i].n] = 1;
+  }
+  return plan;
+}
 $('#bkSeNum').addEventListener('change', numPreview);
 $('#bkSe').addEventListener('input', numPreview);
-$('#bkFrom').addEventListener('input', function () { bkFromTouched = true; numPreview(); });
-$('#bulkSheet').addEventListener('change', function (e) { if (e.target.name === 'bkOrd') numPreview(); });
+$('#bkFrom').addEventListener('input', function () { bkFromTouched = true; if (bkCust && numHow() === 'custom') custRenumber(); numPreview(); });
+$('#bulkSheet').addEventListener('change', function (e) {
+  if (e.target.name !== 'bkOrd') return;
+  if (e.target.value === 'custom' && !bkCust) {                // si parte dall'ordine che vedevi
+    var prevHow = ($('#bulkSheet').dataset.lastHow) || 'sel';
+    bkCust = { ids: numOrder(prevHow).map(function (b) { return b.id; }), nums: {} }; custRenumber();
+  }
+  if (e.target.value !== 'custom') $('#bulkSheet').dataset.lastHow = e.target.value;
+  numPreview();
+});
+/* personalizzato: frecce, numeri scritti a mano, trascinamento con la maniglia */
+$('#bkPrev').addEventListener('click', function (e) {
+  var mv = e.target.closest('[data-mv]'); if (!mv || !bkCust) return;
+  var id = mv.closest('li').dataset.id, ids = bkCust.ids, i = ids.indexOf(id), j = i + (+mv.dataset.mv);
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids.splice(i, 1); ids.splice(j, 0, id); custRenumber(); numPreview();
+  var again = $('#bkPrev').querySelector('li[data-id="' + id + '"] [data-mv="' + mv.dataset.mv + '"]'); if (again && !again.disabled) again.focus(); else { var any = $('#bkPrev').querySelector('li[data-id="' + id + '"] .bk-drag'); if (any) any.focus(); }
+});
+$('#bkPrev').addEventListener('input', function (e) {
+  if (!e.target.classList.contains('bk-n') || !bkCust) return;
+  var v = e.target.value.replace(/\D/g, '').slice(0, 3); if (v !== e.target.value) e.target.value = v;
+  bkCust.nums[e.target.closest('li').dataset.id] = v ? parseInt(v, 10) : '';
+});
+(function () {
+  var drag = null;
+  $('#bkPrev').addEventListener('pointerdown', function (e) {
+    var hnd = e.target.closest('.bk-drag'); if (!hnd || !bkCust) return;
+    e.preventDefault(); var li = hnd.closest('li');
+    try { hnd.setPointerCapture(e.pointerId); } catch (x) {}
+    drag = { li: li, id: li.dataset.id }; li.classList.add('dragging');
+  });
+  $('#bkPrev').addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var rows = Array.prototype.slice.call($('#bkPrev').children).filter(function (x) { return x !== drag.li; });
+    var before = rows.find(function (x) { var r = x.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+    if (before) { if (drag.li.nextSibling !== before) $('#bkPrev').insertBefore(drag.li, before); }
+    else if ($('#bkPrev').lastElementChild !== drag.li) $('#bkPrev').appendChild(drag.li);
+  });
+  function end() {
+    if (!drag) return;
+    drag.li.classList.remove('dragging');
+    bkCust.ids = Array.prototype.map.call($('#bkPrev').children, function (x) { return x.dataset.id; }).concat(bkCust.ids.filter(function (id) { return !$('#bkPrev').querySelector('li[data-id="' + id + '"]'); }));
+    drag = null; custRenumber(); numPreview();
+  }
+  $('#bkPrev').addEventListener('pointerup', end); $('#bkPrev').addEventListener('pointercancel', end);
+})();
 /* annulla per le modifiche di gruppo: copia dei libri com'erano */
 function bulkSnap(books) { return books.map(function (b) { return JSON.parse(JSON.stringify(b)); }); }
 function bulkUndo(snap) {
@@ -1460,7 +1535,7 @@ function openBulk() {
   fillDatalists();
   $('#bulkMsg').textContent = 'Le modifiche valgono per ' + plural(n, 'libro selezionato', 'libri selezionati') + '. Dopo ognuna c\'è «Annulla».';
   ['#bkSe', '#bkSh', '#bkGen'].forEach(function (k) { $(k).value = ''; });
-  $('#bkSeNum').checked = false; $('#bkNumBox').hidden = true; $('#bkFrom').value = '1'; bkFromTouched = false;
+  $('#bkSeNum').checked = false; $('#bkNumBox').hidden = true; $('#bkFrom').value = '1'; bkFromTouched = false; bkCust = null; $('#bulkSheet').dataset.lastHow = 'sel';
   var r0 = $('#bulkSheet').querySelector('input[name="bkOrd"][value="sel"]'); if (r0) r0.checked = true;
   Array.prototype.forEach.call($('#bulkSheet').querySelectorAll('.bk-lib'), function (el) { el.hidden = tab === 'wish'; });
   $('#bulkSheet').querySelector('[data-bk="move"]').textContent = tab === 'wish' ? 'Sposta in Libreria' : 'Sposta nei Desideri';
@@ -1479,10 +1554,12 @@ $('#bulkSheet').addEventListener('click', function (e) {
     var val = $({ se: '#bkSe', sh: '#bkSh', gen: '#bkGen' }[k]).value.replace(/\s+/g, ' ').trim().slice(0, 80);
     if (k === 'se' && $('#bkSeNum').checked) {
       if (!val) { toast('Scrivi il nome della serie per numerare i volumi.'); return; }
-      var order = numOrder(), from = numFrom();
-      order.forEach(function (b, i) { b.se = val; b.sn = String(from + i); });
-      var tot = L.seriesInfo(state.books)[L.serKey(val)];
-      msg = plural(n, 'libro', 'libri') + ' nella serie «' + val + '», numerati da ' + from + ' a ' + (from + n - 1) + '.';
+      var plan = numPlan();
+      if (!plan) return;
+      plan.forEach(function (p) { p.b.se = val; p.b.sn = String(p.n); });
+      var tot = L.seriesInfo(state.books)[L.serKey(val)], ns = plan.map(function (p) { return p.n; }).sort(function (a, b) { return a - b; });
+      var seq = ns.every(function (x, i) { return !i || x === ns[i - 1] + 1; });
+      msg = plural(n, 'libro', 'libri') + ' nella serie «' + val + '», ' + (seq ? 'numerati da ' + ns[0] + ' a ' + ns[ns.length - 1] : 'con i numeri ' + ns.join(', ')) + '.';
       if (tot && tot.total) books.forEach(function (b) { if (!b.sq) b.sq = String(tot.total); });
     } else {
       books.forEach(function (b) { b[k] = val; if (k === 'se' && !val) { b.sn = ''; b.sq = ''; } });
