@@ -264,6 +264,15 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   </div>
 </div>
 
+<div class="sheet" id="logSheet" hidden>
+  <div class="sheet-in wide log-in" role="dialog" aria-modal="true" aria-labelledby="logH">
+    <h2 id="logH">Novità delle versioni</h2>
+    <p class="hint">Dalla più recente. Quella che stai usando è evidenziata.</p>
+    <div class="log-body" id="logBody" aria-live="polite"></div>
+    <button class="btn" type="button" id="logClose">Chiudi</button>
+  </div>
+</div>
+
 <div class="sheet" id="confirmSheet" hidden>
   <div class="sheet-in" role="alertdialog" aria-modal="true" aria-labelledby="confirmH" aria-describedby="confirmMsg">
     <h2 id="confirmH">Conferma</h2>
@@ -605,7 +614,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
         <p class="ver-note" id="verNote"></p>
         <p class="ver-state" id="verState" aria-live="polite"></p>
         <button class="btn primary" id="verUpdate" type="button" hidden>Aggiorna adesso</button>
-        <a class="link" id="verLog" href="https://github.com/Piero907/next-libris/blob/main/REGISTRO_MODIFICHE.md" target="_blank" rel="noopener">Novità delle versioni</a>
+        <button type="button" class="link" id="verLog">Novità delle versioni</button>
       </div>
     </div>
     <div id="drawerFilters" role="tabpanel" aria-labelledby="dtFlt">

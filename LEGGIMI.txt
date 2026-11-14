@@ -92,9 +92,11 @@ COME SI USA
 - Aggiornamenti: l'app parte sempre subito dalla copia salvata sul telefono
   (anche senza rete) e intanto scarica la versione nuova, che vedi
   all'apertura successiva. Per averla subito: Menu > "Aggiorna adesso".
-- Novita': in Opzioni > App, "Novita' delle versioni" apre il registro
-  delle modifiche (REGISTRO_MODIFICHE.md nel repository), versione per
-  versione.
+- Novita': in Opzioni > App, "Novita' delle versioni" apre dentro l'app
+  il registro delle modifiche, versione per versione, dalla piu' recente
+  (quella in uso e' evidenziata). Il testo e' REGISTRO_MODIFICHE.md: l'app
+  ne tiene una copia sul telefono, quindi si legge anche senza rete.
+  Indietro o "Chiudi" tornano alle Opzioni.
 - In alto: "Next Libris" e sotto "Libreria di <il tuo nome>". Senza nome
   c'e' "Scrivi il tuo nome", che apre Opzioni > Condivisione.
 - Scheda aperta: in alto i pulsanti con la scritta ("Presta, vendi o

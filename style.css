@@ -1355,3 +1355,21 @@ body.selecting .cover.sel[data-ord]::after{content:attr(data-ord);display:grid;p
 .au-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .au-acts .btn{flex:1 1 auto}
 .au-acts a.btn{text-decoration:none;color:inherit}
+
+/* ---- novità delle versioni ---- */
+.log-in{grid-template-columns:minmax(0,1fr)}
+.log-body{display:grid;gap:4px;max-height:66vh;overflow:auto;padding-right:2px}
+.log-body section{padding:10px 0;border-top:1px solid var(--line)}
+.log-body section.log-intro{border-top:0;padding-top:0}
+.log-body section:empty{display:none}
+.log-body h3{margin:0 0 6px;font:600 17px/1.3 var(--font-display);display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.log-body h3 small{font:500 13px var(--font-body);color:var(--muted)}
+.log-now{font:700 11.5px var(--font-body);color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:2px 8px;letter-spacing:.02em}
+.log-v.cur{background:var(--accent-soft);border-radius:12px;padding:10px 12px;border-top-color:transparent}
+.log-body ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.log-body li,.log-body p{font-size:14.5px;line-height:1.5;margin:0;max-width:68ch;overflow-wrap:anywhere}
+.log-body p{color:var(--muted)}
+.log-body code{font-size:13px;background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 4px}
+.log-body a{color:var(--accent)}
+
+#logSheet{z-index:37}   /* sopra le Opzioni da cui si apre */

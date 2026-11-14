@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 76, date: '2026-11-14', note: 'Maniglie per grandezza e rotazione degli adesivi' };
+var APP_VERSION = { v: 77, date: '2026-11-14', note: 'Novità delle versioni dentro l\'app' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1295,7 +1295,7 @@ function toggleRow(id, fromPop) {
   if (el) { el.scrollIntoView({ block: 'nearest' }); var f = el.querySelector(open ? '.chev-btn' : '.sum'); if (f) f.focus({ preventScroll: true }); }
 }
 window.addEventListener('popstate', function (e) {
-  if (!cardPushed || (e.state && e.state.card)) return;
+  if (!cardPushed || (e.state && (e.state.card || e.state.opt || e.state.log))) return;   // si torna a una finestra con la sua cronologia
   if (document.querySelector('.sheet:not([hidden])')) {          // prima la finestra in primo piano, la scheda resta aperta
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     try { history.pushState({ card: cardPushed }, ''); } catch (x) {}
@@ -2061,6 +2061,63 @@ $('#auSheet').addEventListener('click', function (e) { if (e.target === e.curren
 $('#auWeb').addEventListener('click', function () { if (auNow) window.open('https://www.google.com/search?q=' + encodeURIComponent(auNow.name + ' scrittore'), '_blank', 'noopener'); });
 $('#auMine').addEventListener('click', function () { if (!auNow) return; var n = auNow.name; closeAuthor(); applyFacet('a', L.norm(n), n); });
 $('#auEdit').addEventListener('click', function () { if (!auNow) return; var id = auNow.id; closeAuthor(); editAuthor(id); });
+/* ---- novità delle versioni: il registro (REGISTRO_MODIFICHE.md) mostrato nell'app, anche senza rete ---- */
+function logInline(t) {
+  return esc(t)
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https:\/\/[^\s<)]+)/g, function (m, pre, u) { return pre + '<a href="' + u + '" target="_blank" rel="noopener">' + u.replace(/^https:\/\//, '').replace(/\/$/, '') + '</a>'; });
+}
+function logHTML(md) {
+  var out = [], list = false, started = false;
+  md.replace(/\r/g, '').split('\n').forEach(function (line) {
+    var m;
+    if (/^#\s/.test(line)) return;                                         // titolo del file: c'e' gia' quello della finestra
+    if (!started && !/^##\s/.test(line)) return;                           // l'introduzione del file serve solo a chi lo legge sul sito
+    if ((m = line.match(/^##\s+(.*)$/))) {
+      started = true;
+      if (list) { out.push('</ul>'); list = false; }
+      var vm = m[1].match(/^Versione\s+(\d+)\s*·?\s*(.*)$/), cur = vm && +vm[1] === APP_VERSION.v;
+      out.push('</section><section class="log-v' + (cur ? ' cur' : '') + '"><h3>' + (vm ? 'Versione ' + vm[1] + (vm[2] ? ' <small>' + esc(vm[2]) + '</small>' : '') : logInline(m[1])) + (cur ? ' <span class="log-now">questa</span>' : '') + '</h3>');
+      return;
+    }
+    if ((m = line.match(/^\s*[-*]\s+(.*)$/))) { if (!list) { out.push('<ul>'); list = true; } out.push('<li>' + logInline(m[1]) + '</li>'); return; }
+    if (!line.trim()) { if (list) { out.push('</ul>'); list = false; } return; }
+    if (list) { out.push('</ul>'); list = false; }
+    out.push('<p>' + logInline(line) + '</p>');
+  });
+  if (list) out.push('</ul>');
+  return ('<section class="log-intro">' + out.join('') + '</section>').replace(/<section class="log-intro"><\/section>/, '');
+}
+var logPushed = false;
+async function openLog() {
+  $('#logBody').innerHTML = '<p class="desc-wait"><span class="spin" aria-hidden="true"></span>Carico le novità…</p>';
+  $('#logSheet').hidden = false;
+  if (!logPushed) { try { history.pushState({ log: 1 }, ''); logPushed = true; } catch (e) {} }   // Indietro chiude il registro e lascia aperte le Opzioni
+  try {
+    // prima la versione aggiornata; senza rete (o se il sito risponde con un errore) la copia salvata sul telefono
+    var r = await fetch('REGISTRO_MODIFICHE.md', { cache: 'no-cache' }).catch(function () { return null; });
+    if (!r || !r.ok) r = await fetch('REGISTRO_MODIFICHE.md');
+    if (!r || !r.ok) throw new Error('registro');
+    var md = await r.text();
+    if (/^\s*</.test(md)) throw new Error('html');                       // non e' il registro (pagina d'errore)
+    $('#logBody').innerHTML = logHTML(md);
+    var cur = $('#logBody').querySelector('.log-v.cur'); if (cur) cur.scrollIntoView({ block: 'start' }); $('#logBody').scrollTop = 0;
+  } catch (e) {
+    $('#logBody').innerHTML = '<p class="desc-none">Non riesco a caricare il registro delle novità' + (navigator.onLine === false ? ' senza connessione (la prima volta serve la rete)' : '') + '. Riprova più tardi.</p>';
+  }
+}
+function closeLog(fromPop) {
+  if ($('#logSheet').hidden) return;
+  $('#logSheet').hidden = true;
+  if (logPushed && !fromPop) { logPushed = false; try { history.back(); } catch (e) {} }
+  else logPushed = false;
+}
+$('#verLog').addEventListener('click', openLog);
+$('#logClose').addEventListener('click', function () { closeLog(); });
+$('#logSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeLog(); });
+window.addEventListener('popstate', function (e) { if (!$('#logSheet').hidden && !(e.state && e.state.log)) { logPushed = false; closeLog(true); } });
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -3907,7 +3964,7 @@ $('#optBack').addEventListener('click', function () {
   $('#optSheet').hidden = true; optOpen = false;
   openDrawer('opt', had);
 });
-window.addEventListener('popstate', function () { if (optOpen) { optPushed = false; closeOptions(true); } });
+window.addEventListener('popstate', function (e) { if (optOpen && !(e.state && (e.state.opt || e.state.log))) { optPushed = false; closeOptions(true); } });
 $('#drawerX').addEventListener('click', function () { closeDrawer(); });
 $('#drawerShow').addEventListener('click', function () { closeDrawer(); window.scrollTo({ top: 0 }); });
 $('#drawerReset').addEventListener('click', clearFilters);
@@ -4930,6 +4987,7 @@ document.addEventListener('keydown', function (e) {
   if (!$('#ped').hidden) { closePed(null); return; }
   if (!$('#snap').hidden) { closeSnap(null); return; }
   if (!$('#phView').hidden) { closePh(false); return; }
+  if (!$('#logSheet').hidden) { closeLog(); return; }
   if (!$('#auSheet').hidden) { closeAuthor(); return; }
   if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }
   if (!$('#bulkSheet').hidden) { $('#bulkSheet').hidden = true; return; }
