@@ -1139,3 +1139,4 @@ html[data-theme="dark"] .ico.act.fav.on svg{color:#F4C430}
 .phview .ph-scroll img{max-width:94vw;max-height:100%;min-width:0;cursor:zoom-in;border-radius:4px}
 .phview.zoom .ph-scroll{display:block}
 .phview.zoom .ph-scroll img{max-width:none;max-height:none;width:220vw;cursor:zoom-out}
+.aq-all{display:block;font-size:13.5px;margin:-4px 0 6px}

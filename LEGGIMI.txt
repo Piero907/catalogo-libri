@@ -472,6 +472,11 @@ Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
   ti basta il testo; tocca la miniatura per ingrandirla, e tocca la foto
   ingrandita per leggerla piu' da vicino.
 - Le foto delle citazioni sono nel backup, come le tue copertine.
+- Condividere: "Condividi" nella finestra della citazione (manda anche
+  la foto); "Condividi tutte" nel riquadro della scheda e
+  nell'elenco di tutte le citazioni manda in un messaggio solo tutte
+  quelle di un libro, con la pagina e il tuo nome. In fondo c'e'
+  "Inviato con Next Libris" con il link all'app.
 - Puoi indicare la pagina. Tocca una citazione per cambiarla o
   eliminarla. Sono salvate nel libro e nel backup.
 - Tutte insieme: menu laterale (Filtri) > "Leggi tutte le citazioni":
