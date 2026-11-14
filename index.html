@@ -710,7 +710,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
     <b id="pedH">Evidenzia o scrivi</b>
     <button type="button" class="btn primary" id="pedDone">Fatto</button>
   </div>
-  <div class="ped-area" id="pedArea"><canvas id="pedCanvas" aria-label="Foto da evidenziare: trascina il dito per disegnare"></canvas></div>
+  <div class="ped-area" id="pedArea"><div class="ped-stage" id="pedStage"><canvas id="pedCanvas" aria-label="Foto da evidenziare: un dito disegna, due dita ingrandiscono e spostano"></canvas><canvas id="pedLive" aria-hidden="true"></canvas></div></div>
   <div class="ped-bar">
     <div class="ped-tools" role="radiogroup" aria-label="Strumento">
       <button type="button" role="radio" class="ped-t hl" data-tool="hl" data-color="#FFE14D" aria-checked="true" aria-label="Evidenziatore giallo"><span style="background:#FFE14D"></span></button>
@@ -722,7 +722,8 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
       <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#111111" aria-checked="false" aria-label="Penna nera"><span style="background:#111111"></span></button>
     </div>
     <div class="ped-acts">
-      <span class="ped-hint" id="pedHint">Evidenziatore: trascina il dito sulle righe</span>
+      <span class="ped-hint" id="pedHint">Evidenziatore: un dito passa sulle righe, due dita ingrandiscono</span>
+      <button type="button" class="btn" id="pedFit" hidden>Adatta</button>
       <button type="button" class="btn" id="pedUndo" aria-label="Togli l'ultimo segno" disabled>↶</button>
       <button type="button" class="btn" id="pedClear" disabled>Cancella tutto</button>
     </div>

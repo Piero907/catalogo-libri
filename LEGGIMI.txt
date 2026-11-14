@@ -469,7 +469,9 @@ Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
   giallo, verde o rosa (il testo sotto si legge ancora) e penna rossa,
   blu o nera; la freccia toglie l'ultimo segno, "Cancella tutto" li
   toglie tutti. "Fatto" salva la foto con i segni, "Senza segni" la
-  tiene com'era. Per aggiungere segni dopo: la matita verde sulla
+  tiene com'era. Con due dita ingrandisci (fino a 5 volte) e sposti la
+  foto per evidenziare con precisione; "Adatta" torna a vederla intera.
+  Per aggiungere segni dopo: la matita verde sulla
   miniatura. "Leggi il testo" usa sempre la foto senza segni.
 - Si puo' salvare anche solo con le foto, senza testo.
 - Le foto delle citazioni sono nel backup, come le tue copertine.

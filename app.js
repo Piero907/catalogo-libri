@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 65, date: '2026-11-14', note: 'Evidenziatore e penne sulle foto delle citazioni' };
+var APP_VERSION = { v: 66, date: '2026-11-14', note: 'Editor delle foto: ingrandisci con due dita' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1598,37 +1598,63 @@ $('#snapTorch').addEventListener('click', function () {
   $('#snapTorch').setAttribute('aria-pressed', snap.torch ? 'true' : 'false');
 });
 window.addEventListener('popstate', function () { if (!$('#snap').hidden) { snap.pushed = false; closeSnap(null, true); } });
-/* ---- editor della foto: evidenziatore e penna, tratti in coordinate dell'immagine ---- */
-var ped = { img: null, strokes: [], cur: null, tool: 'hl', color: '#FFE14D', done: null, pushed: false, scale: 1 };
+/* ---- editor della foto: evidenziatore e penna, tratti in coordinate dell'immagine.
+   Un dito disegna; due dita ingrandiscono e spostano. Sotto: foto + segni salvati; sopra: il segno che stai facendo. ---- */
+var ped = { img: null, strokes: [], cur: null, tool: 'hl', color: '#FFE14D', done: null, pushed: false, k: 1, view: { z: 1, x: 0, y: 0 }, fit: { w: 0, h: 0, l: 0, t: 0 }, ptr: {}, pinch: null, drawId: null };
 function pedWidth(tool) { var w = ped.img ? Math.max(ped.img.width, ped.img.height) : 1000; return tool === 'hl' ? Math.max(16, w * 0.032) : Math.max(3, w * 0.005); }
-function pedDrawStroke(ctx, st, k) {
+function pedDrawStroke(ctx, st, k, live) {
   if (!st.pts.length) return;
   ctx.save();
   ctx.lineCap = st.tool === 'hl' ? 'butt' : 'round'; ctx.lineJoin = 'round';
   ctx.strokeStyle = st.color; ctx.lineWidth = st.w * k;
-  if (st.tool === 'hl') { ctx.globalAlpha = 0.6; ctx.globalCompositeOperation = 'multiply'; }
+  if (st.tool === 'hl' && !live) { ctx.globalAlpha = 0.6; ctx.globalCompositeOperation = 'multiply'; }   // dal vivo la trasparenza la fa il livello sopra
   ctx.beginPath();
   ctx.moveTo(st.pts[0][0] * k, st.pts[0][1] * k);
   if (st.pts.length === 1) ctx.lineTo(st.pts[0][0] * k + 0.1, st.pts[0][1] * k);
   for (var i = 1; i < st.pts.length; i++) ctx.lineTo(st.pts[i][0] * k, st.pts[i][1] * k);
   ctx.stroke(); ctx.restore();
 }
-function pedRender() {
-  var c = $('#pedCanvas'), ctx = c.getContext('2d'), k = ped.scale;
+function pedRenderBase() {
+  var c = $('#pedCanvas'), ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.drawImage(ped.img, 0, 0, c.width, c.height);
-  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, k); });
-  if (ped.cur) pedDrawStroke(ctx, ped.cur, k);
+  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, ped.k); });
   $('#pedUndo').disabled = $('#pedClear').disabled = !ped.strokes.length;
+}
+function pedRenderLive() {
+  var c = $('#pedLive'), ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (!ped.cur) return;
+  c.classList.toggle('hl', ped.cur.tool === 'hl');
+  pedDrawStroke(ctx, ped.cur, ped.k, true);
+}
+function pedRender() { pedRenderBase(); pedRenderLive(); }
+function pedApplyView() {
+  var v = ped.view;
+  $('#pedStage').style.transform = 'translate(' + v.x + 'px,' + v.y + 'px) scale(' + v.z + ')';
+  $('#pedFit').hidden = v.z <= 1.01;
+}
+function pedClampView() {
+  var v = ped.view, f = ped.fit, a = $('#pedArea');
+  v.z = Math.max(1, Math.min(6, v.z));
+  if (v.z <= 1.001) { v.z = 1; v.x = 0; v.y = 0; return; }
+  var w = f.w * v.z, hh = f.h * v.z, aw = a.clientWidth, ah = a.clientHeight;      // la foto non esce del tutto dallo schermo
+  var minX = Math.min(0, aw - f.l - w), maxX = Math.max(0, -f.l), minY = Math.min(0, ah - f.t - hh), maxY = Math.max(0, -f.t);
+  if (w <= aw) { minX = maxX = (aw - w) / 2 - f.l; }
+  if (hh <= ah) { minY = maxY = (ah - hh) / 2 - f.t; }
+  v.x = Math.max(minX, Math.min(maxX, v.x)); v.y = Math.max(minY, Math.min(maxY, v.y));
 }
 function pedFit() {
   if (!ped.img) return;
-  var area = $('#pedArea'), aw = area.clientWidth - 12, ah = area.clientHeight - 12, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var area = $('#pedArea'), aw = area.clientWidth - 12, ah = area.clientHeight - 12;
   var k = Math.min(aw / ped.img.width, ah / ped.img.height);
-  var c = $('#pedCanvas');
-  c.style.width = Math.round(ped.img.width * k) + 'px'; c.style.height = Math.round(ped.img.height * k) + 'px';
-  c.width = Math.round(ped.img.width * k * dpr); c.height = Math.round(ped.img.height * k * dpr);
-  ped.scale = k * dpr;
+  var w = Math.round(ped.img.width * k), hh = Math.round(ped.img.height * k);
+  ped.fit = { w: w, h: hh, l: Math.round((area.clientWidth - w) / 2), t: Math.round((area.clientHeight - hh) / 2) };
+  var st = $('#pedStage'); st.style.width = w + 'px'; st.style.height = hh + 'px'; st.style.left = ped.fit.l + 'px'; st.style.top = ped.fit.t + 'px';
+  var res = Math.min(1, 2400 / Math.max(ped.img.width, ped.img.height));               // nitida anche ingrandita
+  ['#pedCanvas', '#pedLive'].forEach(function (sel) { var c = $(sel); c.width = Math.round(ped.img.width * res); c.height = Math.round(ped.img.height * res); });
+  ped.k = res;
+  ped.view = { z: 1, x: 0, y: 0 }; pedApplyView();
   pedRender();
 }
 function pedPoint(e) { var r = $('#pedCanvas').getBoundingClientRect(), k = ped.img.width / r.width; return [Math.max(0, Math.min(ped.img.width, (e.clientX - r.left) * k)), Math.max(0, Math.min(ped.img.height, (e.clientY - r.top) * k))]; }
@@ -1641,7 +1667,7 @@ function editPhoto(src) {
       var c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0); if (bmp.close) bmp.close();
       ped.img = c;
     } catch (e) { resolve(null); return; }
-    ped.strokes = []; ped.cur = null; ped.done = resolve;
+    ped.strokes = []; ped.cur = null; ped.done = resolve; ped.ptr = {}; ped.pinch = null; ped.drawId = null;
     $('#ped').hidden = false; document.body.classList.add('snapping');
     try { history.pushState({ ped: 1 }, ''); ped.pushed = true; } catch (e) {}
     requestAnimationFrame(pedFit);
@@ -1650,7 +1676,7 @@ function editPhoto(src) {
 function closePed(result, fromPop) {
   if ($('#ped').hidden) return;
   $('#ped').hidden = true; if ($('#snap').hidden) document.body.classList.remove('snapping');
-  var done = ped.done; ped.done = null; ped.img = null; ped.strokes = []; ped.cur = null;
+  var done = ped.done; ped.done = null; ped.img = null; ped.strokes = []; ped.cur = null; ped.ptr = {}; ped.pinch = null;
   if (ped.pushed && !fromPop) { ped.pushed = false; try { history.back(); } catch (e) {} }
   if (done) done(result || null);
 }
@@ -1663,27 +1689,64 @@ async function pedFinish() {
   closePed(blob);
 }
 (function () {
-  var cv = $('#pedCanvas');
-  cv.addEventListener('pointerdown', function (e) {
+  var area = $('#pedArea');
+  function two() { var ids = Object.keys(ped.ptr); return ids.length >= 2 ? [ped.ptr[ids[0]], ped.ptr[ids[1]]] : null; }
+  function pinchStart() {
+    var p = two(); if (!p) return;
+    var r = area.getBoundingClientRect();
+    ped.pinch = { d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1, mx: (p[0].x + p[1].x) / 2 - r.left, my: (p[0].y + p[1].y) / 2 - r.top, v: Object.assign({}, ped.view) };
+  }
+  area.addEventListener('pointerdown', function (e) {
     if (!ped.img) return;
-    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    e.preventDefault(); try { area.setPointerCapture(e.pointerId); } catch (x) {}
+    ped.ptr[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (Object.keys(ped.ptr).length >= 2) {                     // secondo dito: niente segno, si ingrandisce
+      if (ped.cur) { ped.cur = null; pedRenderLive(); }
+      ped.drawId = null; pinchStart(); return;
+    }
+    if (!e.target.closest('#pedStage')) return;
+    ped.drawId = e.pointerId;
     ped.cur = { tool: ped.tool, color: ped.color, w: pedWidth(ped.tool), pts: [pedPoint(e)] };
-    pedRender();
+    pedRenderLive();
   });
-  cv.addEventListener('pointermove', function (e) {
-    if (!ped.cur) return;
-    var p = pedPoint(e);
-    if (ped.cur.tool === 'hl' && ped.cur.pts.length > 1 && Math.abs(p[0] - ped.cur.pts[0][0]) > Math.abs(p[1] - ped.cur.pts[0][1]) * 2) p[1] = ped.cur.pts[0][1] + (p[1] - ped.cur.pts[0][1]) * 0.25;   // evidenziatore: righe dritte
-    ped.cur.pts.push(p); pedRender();
+  area.addEventListener('pointermove', function (e) {
+    if (!ped.ptr[e.pointerId]) return;
+    ped.ptr[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (ped.pinch) {
+      var p = two(); if (!p) return;
+      var r = area.getBoundingClientRect(), q = ped.pinch, v0 = q.v;
+      var z = Math.max(1, Math.min(6, v0.z * (Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / q.d)));
+      var mx = (p[0].x + p[1].x) / 2 - r.left, my = (p[0].y + p[1].y) / 2 - r.top, f = ped.fit;
+      var cx = (q.mx - f.l - v0.x) / v0.z, cy = (q.my - f.t - v0.y) / v0.z;          // punto della foto sotto le dita all'inizio
+      ped.view = { z: z, x: mx - f.l - cx * z, y: my - f.t - cy * z };
+      pedClampView(); pedApplyView(); return;
+    }
+    if (!ped.cur || e.pointerId !== ped.drawId) return;
+    var pt = pedPoint(e), c0 = ped.cur.pts[0];
+    if (ped.cur.tool === 'hl' && ped.cur.pts.length > 1 && Math.abs(pt[0] - c0[0]) > Math.abs(pt[1] - c0[1]) * 2) pt[1] = c0[1] + (pt[1] - c0[1]) * 0.25;   // evidenziatore: righe dritte
+    ped.cur.pts.push(pt); pedRenderLive();
   });
-  function end() { if (ped.cur) { ped.strokes.push(ped.cur); ped.cur = null; pedRender(); } }
-  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  function up(e) {
+    if (!ped.ptr[e.pointerId]) return;
+    delete ped.ptr[e.pointerId];
+    if (ped.pinch) { if (Object.keys(ped.ptr).length < 2) ped.pinch = null; return; }
+    if (ped.cur && e.pointerId === ped.drawId) { ped.strokes.push(ped.cur); ped.cur = null; ped.drawId = null; pedRender(); }
+  }
+  area.addEventListener('pointerup', up); area.addEventListener('pointercancel', up);
+  area.addEventListener('wheel', function (e) {                    // computer: rotellina per ingrandire
+    if (!ped.img) return; e.preventDefault();
+    var r = area.getBoundingClientRect(), v0 = Object.assign({}, ped.view), f = ped.fit;
+    var z = Math.max(1, Math.min(6, v0.z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    var mx = e.clientX - r.left, my = e.clientY - r.top, cx = (mx - f.l - v0.x) / v0.z, cy = (my - f.t - v0.y) / v0.z;
+    ped.view = { z: z, x: mx - f.l - cx * z, y: my - f.t - cy * z }; pedClampView(); pedApplyView();
+  }, { passive: false });
 })();
+$('#pedFit').addEventListener('click', function () { ped.view = { z: 1, x: 0, y: 0 }; pedApplyView(); });
 $('#ped').querySelector('.ped-tools').addEventListener('click', function (e) {
   var b = e.target.closest('[data-tool]'); if (!b) return;
   ped.tool = b.dataset.tool; ped.color = b.dataset.color;
   Array.prototype.forEach.call(this.querySelectorAll('[data-tool]'), function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
-  $('#pedHint').textContent = ped.tool === 'hl' ? 'Evidenziatore: trascina il dito sulle righe' : 'Penna: scrivi o sottolinea';
+  $('#pedHint').textContent = ped.tool === 'hl' ? 'Evidenziatore: un dito passa sulle righe, due dita ingrandiscono' : 'Penna: un dito scrive, due dita ingrandiscono';
 });
 $('#pedUndo').addEventListener('click', function () { ped.strokes.pop(); pedRender(); });
 $('#pedClear').addEventListener('click', function () { ped.strokes = []; pedRender(); });
