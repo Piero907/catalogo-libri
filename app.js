@@ -80,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 66, date: '2026-11-14', note: 'Editor delle foto: ingrandisci con due dita' };
+var APP_VERSION = { v: 67, date: '2026-11-14', note: 'Descrizione cercata da sola dopo l\'aggiunta, anche senza rete' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -173,11 +173,11 @@ function inTab(b) { return !!b.w === (tab === 'wish'); }
 function tabBooks() { return state.books.filter(inTab); }
 function blankBook(o) {
   var b = Object.assign({ id: newId(), t: '', a: '', e: '', y: '', c: null, i: '', g: [], img: '', nf: false, ts: Date.now(),
-    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '', ds: '', dsf: '', dsl: '', dsn: 0, se: '', sn: '', sq: '', qs: [] }, o || {});
+    sh: '', n: '', gen: '', pg: '', p: '', pd: '', w: tab === 'wish', rs: '', rt: 0, rd: '', cp: false, ck: '', nb: false, xs: '', xd: '', xa: '', fav: false, fr: '', fl: '', ds: '', dsf: '', dsl: '', dsn: 0, dsq: 0, se: '', sn: '', sq: '', qs: [] }, o || {});
   if (!b.w && !(o && o.rs != null)) b.rs = 'da';        // un libro appena entrato in libreria e' da leggere
   return b;
 }
-var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl', 'ds', 'dsf', 'dsl', 'dsn', 'se', 'sn', 'sq', 'qs'];
+var FIELDS = ['id', 't', 'a', 'e', 'y', 'c', 'i', 'g', 'img', 'imgL', 'nf', 'ts', 'sh', 'n', 'gen', 'pg', 'p', 'pd', 'w', 'rs', 'rt', 'rd', 'cp', 'ck', 'nb', 'xs', 'xd', 'xa', 'fav', 'fr', 'fl', 'ds', 'dsf', 'dsl', 'dsn', 'dsq', 'se', 'sn', 'sq', 'qs'];
 function isBusy(b) { var st = (S[b.id] || {}).st; return st === 'queued' || st === 'reading' || st === 'lookup' || st === 'search'; }
 function cleanBook(x) {
   if (!x || typeof x !== 'object') return null;
@@ -209,7 +209,7 @@ function cleanBook(x) {
     fav: !!x.fav,                                   // preferito
     fr: L.str(x.fr).slice(0, 30), fl: L.str(x.fl).slice(0, 40),     // ricevuto da (nome) e da quale lista
     ds: L.str(x.ds).slice(0, L.DESC_MAX + 1), dsf: x.dsf === 'g' || x.dsf === 'o' ? x.dsf : '',   // descrizione e fonte (Google, Open Library)
-    dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0,                     // lingua; quando non e' stata trovata
+    dsl: /^[a-z]{2}$/.test(L.str(x.dsl)) ? x.dsl : '', dsn: Number(x.dsn) || 0, dsq: x.dsq ? 1 : 0,                     // lingua; quando non e' stata trovata
     se: L.str(x.se).slice(0, 80), sn: L.str(x.sn).replace(/\D/g, '').slice(0, 3), sq: L.str(x.sq).replace(/\D/g, '').slice(0, 3),   // serie, volume, di quanti
     qs: (Array.isArray(x.qs) ? x.qs : []).map(function (c) { return c && typeof c === 'object' ? { x: L.str(c.x).slice(0, 1500).trim(), pg: L.str(c.pg).replace(/\D/g, '').slice(0, 5), d: Number(c.d) || 0, phs: (Array.isArray(c.phs) ? c.phs : c.ph ? [c.ph] : []).map(L.str).filter(function (k) { return /^q:[\w-]{4,40}$/.test(k); }).slice(0, 10) } : null; })
       .filter(function (c) { return c && (c.x || c.phs.length); }).slice(0, 200)                                      // citazioni e appunti
@@ -448,6 +448,7 @@ async function doLookup(id) {
       applyResult(b, r, code);
       delete s.st;
       coverPool(function () { return probeCover(id); });
+      queueDesc(id);
     } else {
       b.nf = true;
       guessEditor(b);
@@ -574,6 +575,7 @@ function applyCandidate(id, c) {
   b.nf = false;
   ['st', 'cands', 'lines', 'price', 'err', 'retry'].forEach(function (k) { delete s[k]; });
   touch(); refreshRow(id); updateSummary();
+  queueDesc(id);
 }
 function applyOcrText(id) {
   var b = get(id), s = S[id];
@@ -1788,10 +1790,10 @@ function paintDesc(id) {
   });
 }
 async function findDesc(b) {
-  var isbn = L.toIsbn13(b.i), tries = 0, errs = 0, best = null;
+  var isbn = L.toIsbn13(b.i), tries = 0, errs = 0, best = null, skipped = false;
   var key = settings.gbKey ? '&key=' + encodeURIComponent(settings.gbKey) : '';
   async function gq(q, n) {
-    if (!googleLeft(false)) return null;
+    if (!googleLeft(false)) { skipped = true; return null; }
     tries++;
     try {
       return await L.getJson(apiFetch, 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(q) + '&maxResults=' + n +
@@ -1816,6 +1818,7 @@ async function findDesc(b) {
     if (t) take({ text: t, lang: L.guessLang(t) }, 'o');
   }
   if (!best && errs) throw { net: true };
+  if (!best && skipped) throw { quota: true };
   return best;
 }
 /* tutte le descrizioni che mancano, una alla volta, senza consumare le ricerche Google che servono ai libri nuovi */
@@ -1839,7 +1842,7 @@ async function allDescs() {
     try {
       var r = await findDesc(b);
       b = get(todo[i].id);
-      if (b) { if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; found++; } else b.dsn = Date.now(); touch(); paintDesc(b.id); }
+      if (b) { if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; found++; } else b.dsn = Date.now(); b.dsq = 0; touch(); paintDesc(b.id); }
       fails = 0;
     } catch (e) { if (++fails >= 3) { why = 'net'; break; } }
     done++;
@@ -1852,6 +1855,36 @@ async function allDescs() {
      why === 'net' ? ' La connessione non regge: ne restano ' + left + ', riprova più tardi.' :
      why === 'stop' ? ' Fermato: ne restano ' + left + '.' : ''));
 }
+/* descrizione cercata da sola per i libri appena aggiunti; senza rete (o con Google al limite) resta in sospeso e riparte dopo */
+var descQ = { busy: false, t: 0, retry: 0 };
+function queueDesc(id) {
+  var b = get(id);
+  if (!b || b.ds || b.dsn || b.dsq || !(b.t || L.toIsbn13(b.i))) return;
+  b.dsq = 1; touch();
+  clearTimeout(descQ.t); descQ.t = setTimeout(runDescQueue, 1500);
+}
+async function runDescQueue() {
+  if (descQ.busy || navigator.onLine === false) return;
+  descQ.busy = true; clearTimeout(descQ.retry);
+  try {
+    for (;;) {
+      var b = state.books.find(function (x) { return x.dsq && !x.ds && !descBusy[x.id] && (x.t || L.toIsbn13(x.i)) && !isBusy(x); });
+      if (!b || navigator.onLine === false) break;
+      var id = b.id, stop = false;
+      descBusy[id] = true; paintDesc(id);
+      try {
+        var r = await findDesc(b), x = get(id);
+        if (x) { if (r) { x.ds = r.text; x.dsf = r.src; x.dsl = r.lang || ''; x.dsn = 0; } else x.dsn = Date.now(); x.dsq = 0; touch(); }
+      } catch (e) {
+        stop = true;
+        if (!(e && e.quota)) descQ.retry = setTimeout(runDescQueue, 5 * 60000);   // rete debole: riprovo tra qualche minuto
+      } finally { delete descBusy[id]; paintDesc(id); }
+      if (stop) break;
+      await new Promise(function (ok) { setTimeout(ok, 400); });
+    }
+  } finally { descQ.busy = false; }
+}
+window.addEventListener('online', function () { setTimeout(runDescQueue, 3000); });
 async function loadDesc(id, force) {
   var b = get(id);
   if (!b || descBusy[id] || b.ds || (b.dsn && !force)) return;
@@ -1859,13 +1892,14 @@ async function loadDesc(id, force) {
   delete descErr[id];
   descBusy[id] = true; paintDesc(id);
   var r = null, failed = false;
-  try { r = await findDesc(b); } catch (e) { failed = true; }
+  try { r = await findDesc(b); } catch (e) { failed = e && e.quota ? 'quota' : true; }
   delete descBusy[id];
   b = get(id);
   if (!b) return;
-  if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; touch(); }
-  else if (failed) descErr[id] = navigator.onLine === false ? 'Senza connessione: non sono riuscito a cercarla.' : 'Connessione debole: non sono riuscito a cercarla.';
-  else { b.dsn = Date.now(); touch(); }
+  if (failed) { b.dsq = 1; touch(); }                               // resta da cercare: riprovo da solo
+  if (r) { b.ds = r.text; b.dsf = r.src; b.dsl = r.lang || ''; b.dsn = 0; b.dsq = 0; touch(); }
+  else if (failed) descErr[id] = failed === 'quota' ? 'Ricerche di Google finite per oggi: la cerco da sola domani.' : navigator.onLine === false ? 'Senza connessione: non sono riuscito a cercarla.' : 'Connessione debole: non sono riuscito a cercarla.';
+  else if (!failed) { b.dsn = Date.now(); b.dsq = 0; touch(); }
   paintDesc(id);
 }
 /* ---- serie e collane: quali volumi hai, quali mancano ---- */
@@ -2729,7 +2763,7 @@ function pickTitle(i) {
     return;
   }
   var nb = blankBook({ t: c.t, a: c.a, e: c.e, y: c.y, img: c.img || '', gen: c.gen || '', pg: c.pg || '' });
-  state.books.push(nb); openState[nb.id] = false;
+  state.books.push(nb); openState[nb.id] = false; queueDesc(nb.id);
   $('#isbnSheet').hidden = true;
   touch(); renderList(); updateSummary(); addedToast(nb); askPrice(nb.id);
 }
@@ -4999,7 +5033,7 @@ try { if (navigator.storage && navigator.storage.persisted) navigator.storage.pe
 updateSummary();
 persist();
 checkIncoming();
-loadNews(); setTimeout(autoNews, 12000);
+loadNews(); setTimeout(autoNews, 12000); setTimeout(runDescQueue, 6000);
 /* schermata d'apertura (solo app installata): resta almeno ~0,7 s dall'avvio, poi sfuma */
 (function () {
   var el = document.getElementById('splash');

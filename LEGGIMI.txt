@@ -430,6 +430,13 @@ Open Library.
 DESCRIZIONE DEL LIBRO
 ---------------------
 Nella scheda aperta c'e' il riquadro "Descrizione": toccalo per aprirlo.
+- Per i libri aggiunti (scansione, foto, ISBN o titolo) la descrizione
+  si cerca da sola appena il libro e' riconosciuto, in sottofondo. Senza
+  rete, con la connessione debole o con le ricerche Google del giorno
+  finite resta in sospeso: riparte quando torna la rete, alla prossima
+  apertura dell'app, o (connessione debole) dopo qualche minuto.
+- Per i libri che avevi gia': si cerca quando apri il riquadro, oppure
+  tutte insieme con "Scarica tutte le descrizioni".
 - La prima volta la cerca su Google Libri (per le edizioni italiane di
   solito e' il testo della quarta di copertina); se non c'e', su Open
   Library (spesso in inglese: compare "Traduci in italiano").
