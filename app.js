@@ -79,7 +79,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 60, date: '2026-11-14', note: 'Campi sopra la tastiera, «Cerca sul web» in alto, Condividi su ogni citazione' };
+var APP_VERSION = { v: 61, date: '2026-11-14', note: 'Selezione di più libri: elimina e modifiche di gruppo' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1315,6 +1315,165 @@ var exitArmed = 0;
     setTimeout(function () { if (history.state && history.state.root) { try { push({ guard: 1 }, ''); } catch (x) {} } }, 2500);
   });
 })();
+/* ---- selezione di più libri: tieni premuto un libro, poi tocca gli altri ---- */
+var selOn = false, sel = {}, selPushed = false, lp = { t: 0, x: 0, y: 0, fired: false };
+function selIds() { return Object.keys(sel).filter(function (id) { var b = get(id); return b && inTab(b); }); }
+function selBooks() { return selIds().map(get); }
+function paintSel() {
+  document.body.classList.toggle('selecting', selOn);
+  $('#selBar').hidden = !selOn;
+  if (!selOn) return;
+  Array.prototype.forEach.call($('#list').querySelectorAll('.row[data-id], .cover[data-id]'), function (el) {
+    var on = !!sel[el.dataset.id];
+    el.classList.toggle('sel', on); el.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  var n = selIds().length;
+  $('#selN').innerHTML = '<b>' + n + '</b><small>' + (n === 1 ? 'selezionato' : 'selezionati') + '</small>';
+  $('#selDel').disabled = $('#selEdit').disabled = !n;
+  var all = visible().length;
+  $('#selAll').textContent = n && n >= all ? 'Nessuno' : 'Tutti';
+}
+function startSel(id) {
+  if (scanning) return;
+  if (!selOn) {
+    selOn = true; sel = {};
+    collapseCards(); openState = {};
+    try { history.pushState({ sel: 1 }, ''); selPushed = true; } catch (e) {}
+    renderList();
+    if (!settings.selTip) { settings.selTip = 1; saveSettings(); toast('Tocca altri libri per aggiungerli. Poi Elimina o Modifica qui sotto.', null, 4500); }
+  }
+  if (id) { sel[id] = true; paintSel(); }
+  try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+}
+function toggleSel(id) { if (sel[id]) delete sel[id]; else sel[id] = true; paintSel(); }
+function endSel(fromPop) {
+  if (!selOn) return;
+  selOn = false; sel = {};
+  Array.prototype.forEach.call($('#list').querySelectorAll('.sel'), function (el) { el.classList.remove('sel'); el.removeAttribute('aria-selected'); });
+  paintSel();
+  ['#bulkSheet', '#confirmSheet'].forEach(function (k) { $(k).hidden = true; });
+  if (selPushed && !fromPop) { selPushed = false; try { history.back(); } catch (e) {} }
+}
+window.addEventListener('popstate', function (e) { if (selOn && !(e.state && e.state.sel)) { selPushed = false; endSel(true); } });
+/* pressione lunga sulla riga chiusa o sulla copertina */
+(function () {
+  var listEl = $('#list');
+  function target(e) { var el = e.target.closest('.row:not(.open), .cover'); return el && el.dataset.id && !el.closest('[data-ex]') && el.dataset.ex == null ? el : null; }
+  listEl.addEventListener('pointerdown', function (e) {
+    lp.fired = false;
+    if (e.button > 0) return;
+    var el = target(e); if (!el || e.target.closest('input, textarea, select')) return;
+    lp.x = e.clientX; lp.y = e.clientY; clearTimeout(lp.t);
+    lp.t = setTimeout(function () { lp.fired = true; if (selOn) toggleSel(el.dataset.id); else startSel(el.dataset.id); }, 480);
+  });
+  function cancel() { clearTimeout(lp.t); }
+  listEl.addEventListener('pointermove', function (e) { if (Math.abs(e.clientX - lp.x) > 10 || Math.abs(e.clientY - lp.y) > 10) cancel(); });
+  listEl.addEventListener('pointerup', function () { cancel(); if (lp.fired) setTimeout(function () { lp.fired = false; }, 400); }); listEl.addEventListener('pointercancel', cancel);
+  window.addEventListener('scroll', cancel, { passive: true });
+  listEl.addEventListener('contextmenu', function (e) { if (target(e)) e.preventDefault(); });
+  /* durante la selezione un tocco aggiunge o toglie; dopo la pressione lunga il tocco che segue non apre la scheda */
+  listEl.addEventListener('click', function (e) {
+    if (lp.fired) { lp.fired = false; e.preventDefault(); e.stopPropagation(); return; }
+    if (!selOn) return;
+    var el = e.target.closest('.row[data-id], .cover[data-id]');
+    if (!el) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleSel(el.dataset.id);
+  }, true);
+})();
+$('#selExit').addEventListener('click', function () { endSel(false); });
+$('#selAll').addEventListener('click', function () {
+  var vis = visible(), n = selIds().length;
+  sel = {};
+  if (!(n && n >= vis.length)) vis.forEach(function (b) { sel[b.id] = true; });
+  paintSel();
+});
+/* annulla per le modifiche di gruppo: copia dei libri com'erano */
+function bulkSnap(books) { return books.map(function (b) { return JSON.parse(JSON.stringify(b)); }); }
+function bulkUndo(snap) {
+  return { label: 'Annulla', fn: function () {
+    snap.forEach(function (o) { var i = state.books.findIndex(function (x) { return x.id === o.id; }); if (i >= 0) state.books[i] = o; else state.books.push(o); });
+    touch(); renderList(); updateSummary();
+  } };
+}
+function plural(n, one, many) { return n === 1 ? '1 ' + one : n + ' ' + many; }
+var confirmFn = null;
+function askConfirm(title, msg, okLabel, fn) {
+  $('#confirmH').textContent = title; $('#confirmMsg').textContent = msg; $('#confirmOk').textContent = okLabel;
+  confirmFn = fn; $('#confirmSheet').hidden = false;
+  setTimeout(function () { try { $('#confirmNo').focus(); } catch (e) {} }, 50);
+}
+$('#confirmOk').addEventListener('click', function () { var f = confirmFn; confirmFn = null; $('#confirmSheet').hidden = true; if (f) f(); });
+$('#confirmNo').addEventListener('click', function () { confirmFn = null; $('#confirmSheet').hidden = true; });
+$('#confirmSheet').addEventListener('click', function (e) { if (e.target === e.currentTarget) { confirmFn = null; $('#confirmSheet').hidden = true; } });
+$('#selDel').addEventListener('click', function () {
+  var books = selBooks(), n = books.length;
+  if (!n) return;
+  var names = books.slice(0, 3).map(function (b) { return '«' + (b.t || b.i || 'Senza titolo') + '»'; }).join(', ') + (n > 3 ? ' e altri ' + (n - 3) : '');
+  askConfirm(n === 1 ? 'Eliminare il libro?' : 'Eliminare ' + n + ' libri?', names + '. Subito dopo puoi ancora annullare.', n === 1 ? 'Elimina' : 'Elimina ' + n + ' libri', function () {
+    var snap = bulkSnap(books), ids = {};
+    books.forEach(function (b) { ids[b.id] = 1; delete S[b.id]; });
+    state.books = state.books.filter(function (b) { return !ids[b.id]; });
+    endSel(false); touch(); renderList(); updateSummary();
+    toast(plural(n, 'libro eliminato', 'libri eliminati'), bulkUndo(snap));
+  });
+});
+function openBulk() {
+  var n = selIds().length;
+  if (!n) return;
+  fillDatalists();
+  $('#bulkMsg').textContent = 'Le modifiche valgono per ' + plural(n, 'libro selezionato', 'libri selezionati') + '. Dopo ognuna c\'è «Annulla».';
+  ['#bkSe', '#bkSh', '#bkGen'].forEach(function (k) { $(k).value = ''; });
+  $('#bkSeNum').checked = false;
+  Array.prototype.forEach.call($('#bulkSheet').querySelectorAll('.bk-lib'), function (el) { el.hidden = tab === 'wish'; });
+  $('#bulkSheet').querySelector('[data-bk="move"]').textContent = tab === 'wish' ? 'Sposta in Libreria' : 'Sposta nei Desideri';
+  $('#bulkSheet').hidden = false;
+}
+$('#selEdit').addEventListener('click', openBulk);
+$('#bulkClose').addEventListener('click', function () { $('#bulkSheet').hidden = true; });
+$('#bulkSheet').addEventListener('click', function (e) {
+  if (e.target === e.currentTarget) { $('#bulkSheet').hidden = true; return; }
+  var x = e.target.closest('[data-bk]'); if (!x) return;
+  var k = x.dataset.bk, v = x.dataset.v, books = selBooks(), n = books.length;
+  if (!n) return;
+  if (k === 'share') { $('#bulkSheet').hidden = true; openShare(books, { kind: 'list', title: '' }); return; }
+  var snap = bulkSnap(books), msg = '';
+  if (k === 'se' || k === 'sh' || k === 'gen') {
+    var val = $({ se: '#bkSe', sh: '#bkSh', gen: '#bkGen' }[k]).value.replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (k === 'se' && $('#bkSeNum').checked) {
+      if (!val) { toast('Scrivi il nome della serie per numerare i volumi.'); return; }
+      var order = visible().filter(function (b) { return sel[b.id]; });
+      order.forEach(function (b, i) { b.se = val; b.sn = String(i + 1); });
+      var tot = L.seriesInfo(state.books)[L.serKey(val)];
+      msg = plural(n, 'libro', 'libri') + ' nella serie «' + val + '», numerati da 1 a ' + n + '.';
+      if (tot && tot.total) books.forEach(function (b) { if (!b.sq) b.sq = String(tot.total); });
+    } else {
+      books.forEach(function (b) { b[k] = val; if (k === 'se' && !val) { b.sn = ''; b.sq = ''; } });
+      var what = { se: 'Serie', sh: 'Scaffale', gen: 'Genere' }[k];
+      msg = val ? what + ' «' + val + '» per ' + plural(n, 'libro', 'libri') + '.' : what + ' tolto da ' + plural(n, 'libro', 'libri') + '.';
+    }
+  } else if (k === 'rs') {
+    books.forEach(function (b) { if (b.w) return; b.rs = v; if (v === 'ok' && !b.rd) b.rd = today(); });
+    msg = plural(n, 'libro segnato', 'libri segnati') + ' «' + L.READ_LABEL[v] + '».';
+  } else if (k === 'fav') {
+    books.forEach(function (b) { if (!b.w) b.fav = v === '1'; });
+    msg = v === '1' ? plural(n, 'libro aggiunto', 'libri aggiunti') + ' ai preferiti.' : plural(n, 'libro tolto', 'libri tolti') + ' dai preferiti.';
+  } else if (k === 'verify') {
+    books.forEach(function (b) { b.g = []; });
+    msg = plural(n, 'libro segnato', 'libri segnati') + ' come verificati.';
+  } else if (k === 'move') {
+    var toWish = tab !== 'wish';
+    books.forEach(function (b) {
+      b.w = toWish; b.ts = Date.now();
+      if (toWish) { b.p = ''; b.pd = ''; b.xs = ''; b.xd = ''; b.xa = ''; b.rs = ''; b.rt = 0; b.rd = ''; b.cp = false; b.fav = false; }
+      else if (!b.rs) b.rs = 'da';
+    });
+    msg = plural(n, 'libro spostato', 'libri spostati') + (toWish ? ' nei Desideri.' : ' in Libreria.');
+    $('#bulkSheet').hidden = true; endSel(false);
+  } else return;
+  touch(); renderList(); updateSummary();
+  toast(msg, bulkUndo(snap));
+});
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -2019,6 +2178,7 @@ function fillDatalists() {
   $('#shelfList').innerHTML = opts('sh');
   $('#genreList').innerHTML = opts('gen');
   $('#loanNames').innerHTML = opts('p');
+  $('#seriesList').innerHTML = opts('se');
 }
 var tGrid = null;
 /* Barra in alto (schede, ricerca, filtri, Copertine...) ferma mentre scorri l'elenco compatto;
@@ -2059,10 +2219,11 @@ function renderList() {
       : '<p class="none">Nessun libro corrisponde ' + (activeCount() ? (q ? 'alla ricerca e ai filtri.' : 'ai filtri.') : 'alla ricerca.') + '</p><p><button class="btn" data-act="clearflt">' + (activeCount() ? (q ? 'Azzera ricerca e filtri' : 'Azzera i filtri') : 'Cancella la ricerca') + '</button></p>';
     return;
   }
-  if (settings.view === 'grid') { list.innerHTML = '<div class="grid">' + vis.map(coverHTML).join('') + '</div>'; return; }
+  if (settings.view === 'grid') { list.innerHTML = '<div class="grid">' + vis.map(coverHTML).join('') + '</div>'; paintSel(); return; }
   var dups = computeDups();
   list.innerHTML = vis.map(function (b) { return rowHTML(b, dups); }).join('');
   autosizeAll(list);
+  paintSel();
 }
 function rowEl(id) { return $('#list').querySelector('[data-id="' + id + '"]'); }
 function refreshRow(id) {
@@ -2076,6 +2237,7 @@ function refreshRow(id) {
   t.innerHTML = rowHTML(b, computeDups());
   var fresh = t.content.firstElementChild;
   el.replaceWith(fresh);
+  if (selOn) paintSel();
   autosizeAll(fresh);
 }
 function eur(n) { return eurFmt.format(n); }
@@ -3702,6 +3864,7 @@ function moveToWish(id) {
   toast('Spostato nei Desideri: ' + (b.t || b.i), { label: 'Annulla', fn: function () { var x = get(id); if (x) { Object.assign(x, before); openState[id] = oldOpen; touch(); renderList(); updateSummary(); } } });
 }
 function setTab(t) {
+  if (selOn) endSel(false);
   tab = t === 'wish' ? 'wish' : 'lib';
   flt = ''; shFlt = ''; genFlt = ''; autFlt = ''; autName = ''; edFlt = ''; frFlt = '';
   $('#tipTxt').textContent = tab === 'wish'
@@ -4052,6 +4215,9 @@ document.addEventListener('keydown', function (e) {
   if (!$('#importSheet').hidden) { closeImport(); return; }
   if (!$('#quoteSheet').hidden) { closeQuote(); return; }
   if (!$('#phView').hidden) { closePh(false); return; }
+  if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }
+  if (!$('#bulkSheet').hidden) { $('#bulkSheet').hidden = true; return; }
+  if (selOn) { endSel(false); return; }
   if (!$('#allqSheet').hidden) { closeAllQuotes(); return; }
   if (!$('#newsSheet').hidden) { $('#newsSheet').hidden = true; return; }
   ['#statsSheet', '#exportSheet', '#pubSheet', '#priceAsk', '#dupSheet', '#photoSheet'].forEach(function (k) { $(k).hidden = true; });

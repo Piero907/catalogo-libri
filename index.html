@@ -238,6 +238,59 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   </div>
 </div>
 
+<div class="selbar" id="selBar" hidden role="toolbar" aria-label="Libri selezionati">
+  <div class="selbar-in">
+    <button type="button" class="ico sel-x" id="selExit" aria-label="Esci dalla selezione">×</button>
+    <span class="sel-n" id="selN" aria-live="polite"></span>
+    <button type="button" class="btn" id="selAll">Tutti</button>
+    <button type="button" class="btn danger" id="selDel">Elimina</button>
+    <button type="button" class="btn primary" id="selEdit">Modifica</button>
+  </div>
+</div>
+
+<div class="sheet" id="confirmSheet" hidden>
+  <div class="sheet-in" role="alertdialog" aria-modal="true" aria-labelledby="confirmH" aria-describedby="confirmMsg">
+    <h2 id="confirmH">Conferma</h2>
+    <p class="msg" id="confirmMsg"></p>
+    <div class="row-btns">
+      <button class="btn danger-fill" type="button" id="confirmOk">Elimina</button>
+      <button class="btn" type="button" id="confirmNo">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="bulkSheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="bulkH">
+    <h2 id="bulkH">Modifica i libri selezionati</h2>
+    <p class="msg" id="bulkMsg"></p>
+    <div class="bulk" id="bulkBody">
+      <section class="bk-sec"><h3>Serie o collana</h3>
+        <div class="bk-row"><input id="bkSe" type="text" list="seriesList" maxlength="80" autocomplete="off" placeholder="Nome della serie o collana"><button class="btn" type="button" data-bk="se">Applica</button></div>
+        <label class="check small"><input type="checkbox" id="bkSeNum"><span>Numera i volumi nell'ordine dell'elenco (1, 2, 3…)</span></label>
+      </section>
+      <section class="bk-sec"><h3>Scaffale</h3>
+        <div class="bk-row"><input id="bkSh" type="text" list="shelfList" maxlength="80" autocomplete="off" placeholder="Es. Studio, sala"><button class="btn" type="button" data-bk="sh">Applica</button></div>
+      </section>
+      <section class="bk-sec"><h3>Genere</h3>
+        <div class="bk-row"><input id="bkGen" type="text" list="genreList" maxlength="80" autocomplete="off" placeholder="Es. Romanzo"><button class="btn" type="button" data-bk="gen">Applica</button></div>
+      </section>
+      <section class="bk-sec bk-lib"><h3>Lettura</h3>
+        <div class="bk-btns"><button class="btn" type="button" data-bk="rs" data-v="da">Da leggere</button><button class="btn" type="button" data-bk="rs" data-v="in">In lettura</button><button class="btn" type="button" data-bk="rs" data-v="ok">Letto</button></div>
+      </section>
+      <section class="bk-sec"><h3>Altro</h3>
+        <div class="bk-btns">
+          <button class="btn bk-lib" type="button" data-bk="fav" data-v="1">Metti tra i preferiti</button>
+          <button class="btn bk-lib" type="button" data-bk="fav" data-v="0">Togli dai preferiti</button>
+          <button class="btn" type="button" data-bk="move">Sposta nei Desideri</button>
+          <button class="btn" type="button" data-bk="verify">Segna come verificati</button>
+          <button class="btn" type="button" data-bk="share">Condividi questi libri</button>
+        </div>
+      </section>
+    </div>
+    <button class="btn" type="button" id="bulkClose">Chiudi</button>
+  </div>
+</div>
+
 <div class="sheet" id="allqSheet" hidden>
   <div class="sheet-in wide" role="dialog" aria-modal="true" aria-labelledby="allqH">
     <h2 id="allqH">Citazioni</h2>
@@ -626,6 +679,7 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
 <datalist id="shelfList"></datalist>
 <datalist id="genreList"></datalist>
 <datalist id="loanNames"></datalist>
+<datalist id="seriesList"></datalist>
 
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileQuote" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">

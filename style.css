@@ -1151,3 +1151,36 @@ body.typing .dock,body.typing .edge-tab{display:none}
 .qshare svg{width:15px;height:15px}
 .qshare:hover,.qshare:focus-visible{background:var(--accent-soft)}
 .qshare:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---- selezione di più libri ---- */
+.row:not(.open) .sum,.cover{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.selecting .dock,body.selecting .edge-tab{display:none}
+body.selecting main{padding-bottom:120px}
+body.selecting .row:not(.open){padding-left:48px;cursor:pointer}
+body.selecting .row:not(.open)::before{content:"";position:absolute;left:14px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;border:2px solid var(--muted);background:var(--surface)}
+body.selecting .row.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;background:var(--accent-soft)}
+body.selecting .row.sel::before{border-color:var(--accent);background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/16px no-repeat}
+body.selecting .row .chev{visibility:hidden}
+body.selecting .cover{position:relative}
+body.selecting .cover::after{content:"";position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:#0005;box-shadow:0 1px 3px #0006}
+body.selecting .cover.sel{outline:3px solid var(--accent);outline-offset:2px}
+body.selecting .cover.sel::after{background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/16px no-repeat}
+.selbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 20px #0002;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.selbar-in{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:8px}
+.sel-x{flex:none;width:44px;height:44px;font-size:26px;line-height:1;border-radius:10px}
+.sel-n{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.selbar .btn{min-height:44px;padding:8px 12px}
+.selbar .btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.btn.danger-fill{background:var(--bad);border-color:var(--bad);color:#fff}
+.bulk{display:grid;gap:14px;margin:4px 0 14px}
+.bk-sec h3{font-size:14.5px;margin:0 0 6px}
+.bk-row{display:flex;gap:8px}
+.bk-row input{flex:1;min-width:0;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-size:16px;color:var(--ink)}
+.bk-btns{display:flex;flex-wrap:wrap;gap:8px}
+.bk-btns .btn{min-height:42px}
+#bulkSheet .sheet-in{grid-template-columns:minmax(0,1fr)}
+.bk-sec,.bulk{min-width:0}
+.bk-row .btn{flex:none}
+.sel-n{display:flex;flex-direction:column;line-height:1.1}
+.sel-n b{font:600 20px/1 var(--font-display)}
+.sel-n small{font-size:12px;font-weight:500;color:var(--muted)}

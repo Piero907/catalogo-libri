@@ -504,6 +504,18 @@ interessa". Usa una richiesta Google per autore. Con la chiave Google
 controlla da solo ogni due settimane e avvisa se trova qualcosa (si
 puo' spegnere nella stessa finestra).
 
+SELEZIONARE PIU' LIBRI
+----------------------
+- Tieni premuto un libro (nell'elenco o nelle Copertine): entri nella
+  selezione. Tocca altri libri per aggiungerli o toglierli.
+- In basso: "Tutti" (tutti quelli che vedi, anche filtrati), "Elimina"
+  (chiede conferma; poi c'e' ancora "Annulla") e "Modifica".
+- "Modifica" cambia in gruppo: serie o collana (con "Numera i volumi
+  nell'ordine dell'elenco"), scaffale, genere, stato di lettura,
+  preferiti; sposta tra Libreria e Desideri; segna come verificati;
+  condivide i libri scelti. Ogni modifica ha "Annulla".
+- Per uscire: la X nella barra oppure Indietro.
+
 TASTO INDIETRO
 --------------
 - Una scheda aperta con il tocco si chiude con Indietro (o con la
