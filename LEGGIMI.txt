@@ -469,6 +469,10 @@ Nella scheda aperta, riquadro "Citazioni e appunti": "+ Aggiungi".
   il testo, tu tieni il passaggio che ti interessa e correggi.
 - Puoi indicare la pagina. Tocca una citazione per cambiarla o
   eliminarla. Sono salvate nel libro e nel backup.
+- Tutte insieme: menu laterale (Filtri) > "Leggi tutte le citazioni":
+  elenco per libro, con ricerca e "Condividi" per ognuna; tocca il
+  titolo per aprire il libro. Sempre nel menu, "Con citazioni" mostra
+  solo i libri che ne hanno.
 
 OBIETTIVO DI LETTURA
 --------------------

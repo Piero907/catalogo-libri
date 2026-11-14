@@ -238,6 +238,16 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
   </div>
 </div>
 
+<div class="sheet" id="allqSheet" hidden>
+  <div class="sheet-in wide" role="dialog" aria-modal="true" aria-labelledby="allqH">
+    <h2 id="allqH">Citazioni</h2>
+    <label class="field"><span>Cerca tra le citazioni</span><input id="allqQ" type="search" autocomplete="off" placeholder="Parole, titolo o autore"></label>
+    <p class="msg" id="allqMsg" aria-live="polite"></p>
+    <ul class="allq" id="allqList"></ul>
+    <button class="btn" type="button" id="allqClose">Chiudi</button>
+  </div>
+</div>
+
 <div class="sheet" id="quoteSheet" hidden>
   <form class="sheet-in" id="quoteForm" role="dialog" aria-modal="true" aria-labelledby="quoteH">
     <h2 id="quoteH">Citazione o appunto</h2>
