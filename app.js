@@ -10,6 +10,7 @@ var ls = {
   set: function (k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
 };
 var ICON = {
+  pen: '<path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 7.5l3 3"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
   scan: '<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 8v8M11 8v8M14 8v8M17 8v8"/>',
   cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
@@ -79,7 +80,7 @@ var coll = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 /* ---------- stato ---------- */
 var LS_KEY = 'catalogo-libri-v2', LS_SET = 'catalogo-libri-set';
 /* versione dell'app: la stessa di version.json e del nome della cache in sw.js (si aggiornano insieme) */
-var APP_VERSION = { v: 64, date: '2026-11-14', note: 'Più foto per citazione, lettura del testo a richiesta' };
+var APP_VERSION = { v: 65, date: '2026-11-14', note: 'Evidenziatore e penne sulle foto delle citazioni' };
 var state = { books: [], updated: 0 };
 var S = {};                                  // stato di sessione per riga: st, msg, thumb, err, cands, lines, price, retry
 var settings = { gbKey: '', price: true, extra: true, lastBackup: 0, snooze: 0, view: 'list', openAll: false, sbnUrl: '', loanSnooze: 0, look: 'nuovo', theme: 'light', pal: 'bosco', ft: 'literata', fb: 'plex' };
@@ -1597,6 +1598,99 @@ $('#snapTorch').addEventListener('click', function () {
   $('#snapTorch').setAttribute('aria-pressed', snap.torch ? 'true' : 'false');
 });
 window.addEventListener('popstate', function () { if (!$('#snap').hidden) { snap.pushed = false; closeSnap(null, true); } });
+/* ---- editor della foto: evidenziatore e penna, tratti in coordinate dell'immagine ---- */
+var ped = { img: null, strokes: [], cur: null, tool: 'hl', color: '#FFE14D', done: null, pushed: false, scale: 1 };
+function pedWidth(tool) { var w = ped.img ? Math.max(ped.img.width, ped.img.height) : 1000; return tool === 'hl' ? Math.max(16, w * 0.032) : Math.max(3, w * 0.005); }
+function pedDrawStroke(ctx, st, k) {
+  if (!st.pts.length) return;
+  ctx.save();
+  ctx.lineCap = st.tool === 'hl' ? 'butt' : 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = st.color; ctx.lineWidth = st.w * k;
+  if (st.tool === 'hl') { ctx.globalAlpha = 0.6; ctx.globalCompositeOperation = 'multiply'; }
+  ctx.beginPath();
+  ctx.moveTo(st.pts[0][0] * k, st.pts[0][1] * k);
+  if (st.pts.length === 1) ctx.lineTo(st.pts[0][0] * k + 0.1, st.pts[0][1] * k);
+  for (var i = 1; i < st.pts.length; i++) ctx.lineTo(st.pts[i][0] * k, st.pts[i][1] * k);
+  ctx.stroke(); ctx.restore();
+}
+function pedRender() {
+  var c = $('#pedCanvas'), ctx = c.getContext('2d'), k = ped.scale;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(ped.img, 0, 0, c.width, c.height);
+  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, k); });
+  if (ped.cur) pedDrawStroke(ctx, ped.cur, k);
+  $('#pedUndo').disabled = $('#pedClear').disabled = !ped.strokes.length;
+}
+function pedFit() {
+  if (!ped.img) return;
+  var area = $('#pedArea'), aw = area.clientWidth - 12, ah = area.clientHeight - 12, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var k = Math.min(aw / ped.img.width, ah / ped.img.height);
+  var c = $('#pedCanvas');
+  c.style.width = Math.round(ped.img.width * k) + 'px'; c.style.height = Math.round(ped.img.height * k) + 'px';
+  c.width = Math.round(ped.img.width * k * dpr); c.height = Math.round(ped.img.height * k * dpr);
+  ped.scale = k * dpr;
+  pedRender();
+}
+function pedPoint(e) { var r = $('#pedCanvas').getBoundingClientRect(), k = ped.img.width / r.width; return [Math.max(0, Math.min(ped.img.width, (e.clientX - r.left) * k)), Math.max(0, Math.min(ped.img.height, (e.clientY - r.top) * k))]; }
+/* apre l'editor sull'immagine (Blob o URL); resolve(Blob con i segni) oppure null se lasci com'e' */
+function editPhoto(src) {
+  return new Promise(async function (resolve) {
+    try {
+      var bl = src instanceof Blob ? src : await (await fetch(src)).blob();
+      var bmp = await createImageBitmap(bl);
+      var c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0); if (bmp.close) bmp.close();
+      ped.img = c;
+    } catch (e) { resolve(null); return; }
+    ped.strokes = []; ped.cur = null; ped.done = resolve;
+    $('#ped').hidden = false; document.body.classList.add('snapping');
+    try { history.pushState({ ped: 1 }, ''); ped.pushed = true; } catch (e) {}
+    requestAnimationFrame(pedFit);
+  });
+}
+function closePed(result, fromPop) {
+  if ($('#ped').hidden) return;
+  $('#ped').hidden = true; if ($('#snap').hidden) document.body.classList.remove('snapping');
+  var done = ped.done; ped.done = null; ped.img = null; ped.strokes = []; ped.cur = null;
+  if (ped.pushed && !fromPop) { ped.pushed = false; try { history.back(); } catch (e) {} }
+  if (done) done(result || null);
+}
+async function pedFinish() {
+  if (!ped.strokes.length) { closePed(null); return; }
+  var c = document.createElement('canvas'); c.width = ped.img.width; c.height = ped.img.height;
+  var ctx = c.getContext('2d'); ctx.drawImage(ped.img, 0, 0);
+  ped.strokes.forEach(function (st) { pedDrawStroke(ctx, st, 1); });
+  var blob = await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.85); });
+  closePed(blob);
+}
+(function () {
+  var cv = $('#pedCanvas');
+  cv.addEventListener('pointerdown', function (e) {
+    if (!ped.img) return;
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    ped.cur = { tool: ped.tool, color: ped.color, w: pedWidth(ped.tool), pts: [pedPoint(e)] };
+    pedRender();
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!ped.cur) return;
+    var p = pedPoint(e);
+    if (ped.cur.tool === 'hl' && ped.cur.pts.length > 1 && Math.abs(p[0] - ped.cur.pts[0][0]) > Math.abs(p[1] - ped.cur.pts[0][1]) * 2) p[1] = ped.cur.pts[0][1] + (p[1] - ped.cur.pts[0][1]) * 0.25;   // evidenziatore: righe dritte
+    ped.cur.pts.push(p); pedRender();
+  });
+  function end() { if (ped.cur) { ped.strokes.push(ped.cur); ped.cur = null; pedRender(); } }
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+})();
+$('#ped').querySelector('.ped-tools').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-tool]'); if (!b) return;
+  ped.tool = b.dataset.tool; ped.color = b.dataset.color;
+  Array.prototype.forEach.call(this.querySelectorAll('[data-tool]'), function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+  $('#pedHint').textContent = ped.tool === 'hl' ? 'Evidenziatore: trascina il dito sulle righe' : 'Penna: scrivi o sottolinea';
+});
+$('#pedUndo').addEventListener('click', function () { ped.strokes.pop(); pedRender(); });
+$('#pedClear').addEventListener('click', function () { ped.strokes = []; pedRender(); });
+$('#pedDone').addEventListener('click', pedFinish);
+$('#pedSkip').addEventListener('click', function () { closePed(null); });
+window.addEventListener('resize', function () { if (!$('#ped').hidden) pedFit(); });
+window.addEventListener('popstate', function () { if (!$('#ped').hidden) { ped.pushed = false; closePed(null, true); } });
 /* ---- «Descrizione»: riquadro richiudibile nella scheda aperta; la prima apertura la cerca online, poi resta nel libro ---- */
 var descOpen = {}, descBusy = {}, descFull = {}, descErr = {};
 var DESC_SRC = { g: 'Google Libri', o: 'Open Library' };
@@ -1852,7 +1946,8 @@ function paintQuotePh() {
   $('#quotePh').hidden = !n;
   $('#quoteThumbs').innerHTML = phs.map(function (p, k) {
     return '<li><button type="button" class="q-th" data-k="' + k + '" aria-label="Ingrandisci la foto ' + (k + 1) + '">' + (p.url ? '<img src="' + p.url + '" alt="">' : '') + (n > 1 ? '<span class="q-th-n">' + (k + 1) + '</span>' : '') + '</button>' +
-      '<button type="button" class="q-th-x" data-del="' + k + '" aria-label="Togli la foto ' + (k + 1) + '">' + icon('x') + '</button></li>';
+      '<button type="button" class="q-th-x" data-del="' + k + '" aria-label="Togli la foto ' + (k + 1) + '">' + icon('x') + '</button>' +
+      '<button type="button" class="q-th-ed" data-ed="' + k + '" aria-label="Evidenzia o scrivi sulla foto ' + (k + 1) + '">' + icon('pen') + '</button></li>';
   }).join('');
   if (!$('#quoteOcr').classList.contains('busy')) $('#quoteOcr').textContent = n > 1 ? 'Leggi il testo dalle foto' : 'Leggi il testo dalla foto';
   $('#quotePhoto').textContent = n ? 'Aggiungi un\'altra foto' : 'Aggiungi una foto della pagina';
@@ -1888,7 +1983,7 @@ function delQuote() {
   toast('Citazione eliminata.', { label: 'Annulla', fn: function () { var x = get(id); if (x) { x.qs.splice(Math.min(i, x.qs.length), 0, old); touch(); paintQuotes(id); } } });
 }
 /* foto aggiunta: la tengo (JPEG di al massimo 1600 px); il testo si legge solo su richiesta, o subito se l'opzione e' accesa */
-async function quotePickPhoto(file) {
+async function quotePickPhoto(file, edit) {
   if (!quoteEdit) return;
   var msg = $('#quoteMsg');
   if (quoteEdit.phs.length >= QPH_MAX) { msg.textContent = 'Al massimo ' + QPH_MAX + ' foto per citazione.'; return; }
@@ -1898,6 +1993,12 @@ async function quotePickPhoto(file) {
     var blob = await new Promise(function (res) { small.toBlob(res, 'image/jpeg', 0.8); });
     if (!blob || !quoteEdit) throw new Error('jpeg');
     ph = { key: '', blob: blob, url: URL.createObjectURL(blob), canvas: canvas, read: false };
+    var ed0 = quoteEdit;
+    if (edit) {                                                   // subito l'editor: evidenzia o scrivi (la lettura del testo usa la foto senza segni)
+      var marked = await editPhoto(blob);
+      if (quoteEdit !== ed0) return;
+      if (marked) { URL.revokeObjectURL(ph.url); ph.blob = marked; ph.url = URL.createObjectURL(marked); }
+    }
     quoteEdit.phs.push(ph);
     paintQuotePh();
   } catch (e) { msg.textContent = 'Non riesco ad aprire questa foto: riprova.'; return; }
@@ -1948,7 +2049,7 @@ async function quoteOcr(list) {
 $('#quoteForm').addEventListener('submit', function (e) { e.preventDefault(); saveQuote(); });
 $('#quoteCancel').addEventListener('click', closeQuote);
 $('#quoteDel').addEventListener('click', delQuote);
-$('#quotePhoto').addEventListener('click', function () { snapPhoto('Foto della pagina', '#fileQuote').then(function (f) { if (f) quotePickPhoto(f); }); });
+$('#quotePhoto').addEventListener('click', function () { snapPhoto('Foto della pagina', '#fileQuote').then(function (f) { if (f) quotePickPhoto(f, true); }); });
 $('#fileQuote').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) quotePickPhoto(f); });
 $('#quoteOcr').addEventListener('click', function () { quoteOcr(null); });
 $('#quoteShare').addEventListener('click', shareQuoteForm);
@@ -1960,6 +2061,19 @@ $('#quoteThumbs').addEventListener('click', function (e) {
     if (!p || $('#quoteOcr').classList.contains('busy')) return;
     quoteEdit.phs.splice(k, 1); if (p.blob && p.url) URL.revokeObjectURL(p.url);
     paintQuotePh(); $('#quoteMsg').textContent = 'Foto tolta (salva per confermare).'; return;
+  }
+  var ed = e.target.closest('[data-ed]');
+  if (ed) {
+    var q = quoteEdit, pk = quoteEdit.phs[+ed.dataset.ed];
+    if (!pk || $('#quoteOcr').classList.contains('busy')) return;
+    if (!pk.canvas && pk.url) { fetch(pk.url).then(function (r) { return r.blob(); }).then(function (b) { return loadCanvas(b, 2200); }).then(function (c) { if (!pk.canvas) pk.canvas = c; }).catch(function () {}); }   // per leggere il testo resta la foto di prima
+    editPhoto(pk.blob || pk.url).then(function (marked) {
+      if (!marked || quoteEdit !== q) return;
+      if (pk.blob && pk.url) URL.revokeObjectURL(pk.url);
+      pk.blob = marked; pk.url = URL.createObjectURL(marked); pk.key = '';
+      paintQuotePh(); $('#quoteMsg').textContent = 'Segni aggiunti (salva per confermare).';
+    });
+    return;
   }
   var th = e.target.closest('[data-k]');
   if (th) openPhs(quoteEdit.phs.map(function (p) { return p.url; }).filter(Boolean), +th.dataset.k, $('#quoteBook').textContent);
@@ -4395,6 +4509,7 @@ document.addEventListener('keydown', function (e) {
   if (!$('#shareSheet').hidden) { closeShare(); return; }
   if (!$('#importSheet').hidden) { closeImport(); return; }
   if (!$('#quoteSheet').hidden) { closeQuote(); return; }
+  if (!$('#ped').hidden) { closePed(null); return; }
   if (!$('#snap').hidden) { closeSnap(null); return; }
   if (!$('#phView').hidden) { closePh(false); return; }
   if (!$('#confirmSheet').hidden) { $('#confirmSheet').hidden = true; confirmFn = null; return; }

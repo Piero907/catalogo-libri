@@ -704,6 +704,30 @@ html[data-splash] #splash{position:fixed;top:0;left:0;right:0;bottom:auto;height
     <button type="button" class="btn snap-torch" id="snapTorch" hidden aria-pressed="false">Luce</button>
   </div>
 </div>
+<div class="ped" id="ped" hidden role="dialog" aria-modal="true" aria-labelledby="pedH">
+  <div class="ped-top">
+    <button type="button" class="btn" id="pedSkip">Senza segni</button>
+    <b id="pedH">Evidenzia o scrivi</b>
+    <button type="button" class="btn primary" id="pedDone">Fatto</button>
+  </div>
+  <div class="ped-area" id="pedArea"><canvas id="pedCanvas" aria-label="Foto da evidenziare: trascina il dito per disegnare"></canvas></div>
+  <div class="ped-bar">
+    <div class="ped-tools" role="radiogroup" aria-label="Strumento">
+      <button type="button" role="radio" class="ped-t hl" data-tool="hl" data-color="#FFE14D" aria-checked="true" aria-label="Evidenziatore giallo"><span style="background:#FFE14D"></span></button>
+      <button type="button" role="radio" class="ped-t hl" data-tool="hl" data-color="#7CF29A" aria-checked="false" aria-label="Evidenziatore verde"><span style="background:#7CF29A"></span></button>
+      <button type="button" role="radio" class="ped-t hl" data-tool="hl" data-color="#FF8FC8" aria-checked="false" aria-label="Evidenziatore rosa"><span style="background:#FF8FC8"></span></button>
+      <i class="ped-sep" aria-hidden="true"></i>
+      <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#E5322D" aria-checked="false" aria-label="Penna rossa"><span style="background:#E5322D"></span></button>
+      <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#2457D6" aria-checked="false" aria-label="Penna blu"><span style="background:#2457D6"></span></button>
+      <button type="button" role="radio" class="ped-t pen" data-tool="pen" data-color="#111111" aria-checked="false" aria-label="Penna nera"><span style="background:#111111"></span></button>
+    </div>
+    <div class="ped-acts">
+      <span class="ped-hint" id="pedHint">Evidenziatore: trascina il dito sulle righe</span>
+      <button type="button" class="btn" id="pedUndo" aria-label="Togli l'ultimo segno" disabled>↶</button>
+      <button type="button" class="btn" id="pedClear" disabled>Cancella tutto</button>
+    </div>
+  </div>
+</div>
 <input class="sr" id="fileSnapGal" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileCam" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input class="sr" id="fileQuote" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
